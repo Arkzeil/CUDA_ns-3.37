@@ -1,0 +1,52 @@
+#ifndef CUDA_UDP_CLIENT_H
+#define CUDA_UDP_CLIENT_H
+
+#include "ns3/core-module.h"
+#include "ns3/udp-client.h"
+#include "ns3/socket.h"
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+namespace ns3 {
+
+class GpuUdpClient : public Application {
+public:
+    __host__ static TypeId GetTypeId(void);
+
+    GpuUdpClient();
+    virtual ~GpuUdpClient();
+    void SetRemote(Address ip, uint16_t port);
+    void SetRemote(Address addr);
+
+protected:
+    __host__ virtual void Send(); // Override the Send method.
+
+private:
+    void StartApplication() override;
+    void StopApplication() override;
+    __host__ void OffloadPacketToGpu(Ptr<Packet> packet);
+    __host__ void GeneratePacketsOnGpu(int numPackets, int packetSize);
+    __host__ void InitCudaResources();
+    __host__ void CleanupCudaResources();
+
+    uint32_t m_count; //!< Maximum number of packets the application will send
+    Time m_interval;  //!< Packet inter-send time
+    uint32_t m_size;  //!< Size of the sent packet (including the SeqTsHeader)
+
+    uint32_t m_sent;       //!< Counter for sent packets
+    uint64_t m_totalTx;    //!< Total bytes sent
+    Ptr<Socket> m_socket;  //!< Socket
+    Address m_peerAddress; //!< Remote peer address
+    uint16_t m_peerPort;   //!< Remote peer port
+    EventId m_sendEvent;   //!< Event to send the next packet
+
+    // GPU resources
+    uint8_t* d_packetBuffer;      // Device memory for packet data
+    cudaStream_t m_cudaStream;   // CUDA stream for async processing
+};
+
+__global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);
+
+} // namespace ns3
+
+#endif // GPU_UDP_CLIENT_H

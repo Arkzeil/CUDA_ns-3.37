@@ -1,4 +1,5 @@
 #include "udp_send_kernel.h"
+#include "ns3/ptr.h"
 
 namespace ns3{
     namespace cuda{
@@ -80,54 +81,6 @@ namespace ns3{
             packet[12] = 0x08;  // Type: IPv4
             packet[13] = 0x00;
         }
-
-        // __global__ void GenerateUdpHeaders(GpuSocketInfo *socketInfo, uint8_t *headers, size_t numPackets) {
-        //     int packetIdx = blockIdx.x * blockDim.x + threadIdx.x;
-        //     if (packetIdx < numPackets) {
-        //         // Get header buffer for the packet
-        //         uint8_t *header = &headers[packetIdx * HEADER_SIZE];
-
-        //         // Fill static fields from socket info
-        //         GpuSocketInfo info = *socketInfo;
-        //         header[0] = (info.srcPort >> 8) & 0xFF;  // Source port (high byte)
-        //         header[1] = info.srcPort & 0xFF;         // Source port (low byte)
-        //         header[2] = (info.dstPort >> 8) & 0xFF;  // Destination port (high byte)
-        //         header[3] = info.dstPort & 0xFF;         // Destination port (low byte)
-
-        //         // Fill dynamic fields
-        //         uint16_t length = HEADER_SIZE + PAYLOAD_SIZE;
-        //         header[4] = (length >> 8) & 0xFF;  // Length (high byte)
-        //         header[5] = length & 0xFF;         // Length (low byte)
-
-        //         // Compute checksum (simplified example)
-        //         uint16_t checksum = info.checksumBase + packetIdx;
-        //         header[6] = (checksum >> 8) & 0xFF;  // Checksum (high byte)
-        //         header[7] = checksum & 0xFF;         // Checksum (low byte)
-        //     }
-        // }
-
-        // __global__ void GeneratePacket(size_t payloadSize) {
-            // int threadId = blockIdx.x * blockDim.x + threadIdx.x;
-
-            // // Retrieve socket information from the CUDA context
-            // __shared__ GpuSocketInfo socketInfo;
-            // if (threadId == 0) {
-            //     socketInfo = *d_socketInfo;  // Assume `d_socketInfo` is already initialized
-            // }
-            // __syncthreads();
-
-            // // Construct UDP header
-            // uint8_t header[HEADER_SIZE];
-            // header[0] = (socketInfo.srcPort >> 8) & 0xFF;  // Source port (high byte)
-            // header[1] = socketInfo.srcPort & 0xFF;         // Source port (low byte)
-            // header[2] = (socketInfo.dstPort >> 8) & 0xFF;  // Destination port (high byte)
-            // header[3] = socketInfo.dstPort & 0xFF;         // Destination port (low byte)
-            // header[4] = (payloadSize >> 8) & 0xFF;         // Length (high byte)
-            // header[5] = payloadSize & 0xFF;                // Length (low byte)
-
-            // Simulate payload generation (can remain virtual)
-            // ProcessPayload(payloadSize);
-        // }
 
         __global__ void GenerateIpUdpPackets(
             GpuSocketInfo *socketInfo, uint8_t *packets, size_t payloadSize, size_t numPackets) {
