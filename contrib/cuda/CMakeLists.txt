@@ -33,6 +33,8 @@ build_lib(
         # model/udp_send_kernel.cu
         model/cuda-udp-client.cu
         model/cuda-packet-kernel.cu
+        # model/cuda-ipv4-routing.cu
+        model/cuda-net-device.cu
         helper/cuda-helper.cc
     HEADER_FILES                          # Header files
         # model/cuda_wrapper.h
@@ -41,6 +43,8 @@ build_lib(
         # model/udp_send_kernel.h
         model/cuda-udp-client.h
         model/cuda-packet-kernel.cuh
+        # model/cuda-ipv4-routing.h
+        model/cuda-net-device.h
         helper/cuda-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart

@@ -4,6 +4,7 @@
 #include "ns3/core-module.h"
 #include "ns3/udp-client.h"
 #include "ns3/socket.h"
+#include "ns3/log.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 
@@ -24,8 +25,9 @@ protected:
 private:
     void StartApplication() override;
     void StopApplication() override;
+    // __host__ void GpuUdpClient::OffloadToGpu(void);
+    __host__ void OffloadToGpu(int numPackets, int packetSize);
     __host__ void OffloadPacketToGpu(Ptr<Packet> packet);
-    __host__ void GeneratePacketsOnGpu(int numPackets, int packetSize);
     __host__ void InitCudaResources();
     __host__ void CleanupCudaResources();
 

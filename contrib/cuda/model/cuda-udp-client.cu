@@ -1,5 +1,6 @@
 #include "cuda-udp-client.h"
 #include "cuda-packet-kernel.cuh"
+// #include "cuda-ipv4-routing.h"
 #include <iostream>
 #include <stdint.h>
 
@@ -95,11 +96,31 @@ __host__ void GpuUdpClient::Send() {
     // Ptr<Packet> packet = Create<Packet>(m_size); // Create the packet.
     // OffloadPacketToGpu(packet);                 // Offload packet to GPU for processing.
 
-    // generate packets on GPU
-    GeneratePacketsOnGpu(m_count / 8, m_size);
+    OffloadToGpu(m_count, m_size); // Offload packet generation to GPU.
 
     // Schedule the next send event immediately
     m_sendEvent = Simulator::Schedule(m_interval, &GpuUdpClient::Send, this);
+}
+
+__host__ void GpuUdpClient::OffloadToGpu(int numPackets, int packetSize) {
+    // Allocate and initialize routing table on GPU
+    RoutingTable* d_routingTable;
+    int tableSize = 10;
+    RoutingTable h_routingTable[10] = {
+        {8080, 1}, {8081, 2}, {8082, 3} // Example entries
+    };
+    cudaMalloc(&d_routingTable, tableSize * sizeof(RoutingTable));
+    cudaMemcpy(d_routingTable, h_routingTable, tableSize * sizeof(RoutingTable), cudaMemcpyHostToDevice);
+
+    // Launch packet generation and processing kernel
+    int threadsPerBlock = 256;
+    int blocks = (numPackets + threadsPerBlock - 1) / threadsPerBlock;
+    OffloadToGpuKernel<<<blocks, threadsPerBlock>>>(numPackets, packetSize, d_routingTable, tableSize);
+
+    cudaDeviceSynchronize(); // Ensure all GPU operations complete
+
+    // Free resources
+    cudaFree(d_routingTable);
 }
 
 __host__ void GpuUdpClient::OffloadPacketToGpu(Ptr<Packet> packet) {
@@ -118,18 +139,6 @@ __host__ void GpuUdpClient::OffloadPacketToGpu(Ptr<Packet> packet) {
     delete[] h_packetData;
 
     // Synchronization is optional since CPU doesn’t wait.
-}
-
-__host__ void GpuUdpClient::GeneratePacketsOnGpu(int numPackets, int packetSize) {
-    // Allocate GPU memory for packets
-    cudaMalloc(&d_packetBuffer, numPackets * packetSize);
-
-    // Launch kernel
-    int threadsPerBlock = 256;
-    int blocks = (numPackets + threadsPerBlock - 1) / threadsPerBlock;
-
-    GenerateUdpPackets<<<blocks, threadsPerBlock, 0, m_cudaStream>>>(d_packetBuffer, packetSize, numPackets);
-    cudaDeviceSynchronize(); // Ensure packets are generated
 }
 
 __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize) {
