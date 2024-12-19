@@ -11,6 +11,7 @@ NS_OBJECT_ENSURE_REGISTERED(GpuUdpClient);
 __host__ TypeId GpuUdpClient::GetTypeId(void) {
     static TypeId tid = TypeId("ns3::GpuUdpClient")
         .SetParent<Application>()
+        .SetGroupName("Applications")
         .AddConstructor<GpuUdpClient>()
         .AddAttribute("MaxPackets",
                         "The maximum number of packets the application will send",
@@ -41,7 +42,12 @@ __host__ TypeId GpuUdpClient::GetTypeId(void) {
     return tid;
 }
 
-GpuUdpClient::GpuUdpClient() : d_packetBuffer(nullptr), m_size(1024), m_interval(Seconds(1.0)), m_count(100) {
+GpuUdpClient::GpuUdpClient() 
+    : d_packetBuffer(nullptr), m_size(1024), 
+    m_interval(Seconds(1.0)), m_count(100), 
+    m_peerPort(0), m_socket(nullptr), m_sent(0), 
+    m_totalTx(0), m_running(false) {
+    
     InitCudaResources();
     printf("GpuUdpClient initialized\n");
     printf("Packet size: %d bytes\n", m_size);
@@ -72,6 +78,9 @@ GpuUdpClient::SetRemote(Address addr)
 
 void 
 GpuUdpClient::StartApplication(){
+    m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
+    m_socket->Bind();
+    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &GpuUdpClient::Send, this);
 }
 
@@ -79,12 +88,19 @@ void
 GpuUdpClient::StopApplication()
 {
     // NS_LOG_FUNCTION(this);
-    Simulator::Cancel(m_sendEvent);
+    if(m_sendEvent.IsRunning()){
+        Simulator::Cancel(m_sendEvent);
+    }
+    // Simulator::Cancel(m_sendEvent);
+
+    if(m_socket != nullptr){
+        m_socket->Close();
+    }
 }
 
 __host__ void GpuUdpClient::InitCudaResources() {
     cudaStreamCreate(&m_cudaStream);
-    cudaMalloc(&d_packetBuffer, 1500); // Allocate GPU memory for packets (MTU size).
+    cudaMalloc(&d_packetBuffer, m_size); // Allocate GPU memory for packets (MTU size).
 }
 
 __host__ void GpuUdpClient::CleanupCudaResources() {

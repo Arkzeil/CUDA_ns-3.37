@@ -4,6 +4,7 @@
 #include "ns3/core-module.h"
 #include "ns3/udp-client.h"
 #include "ns3/socket.h"
+#include "ns3/udp-socket-factory.h"
 #include "ns3/log.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -41,6 +42,7 @@ private:
     Address m_peerAddress; //!< Remote peer address
     uint16_t m_peerPort;   //!< Remote peer port
     EventId m_sendEvent;   //!< Event to send the next packet
+    bool m_running;        //!< Flag to indicate if the application is running
 
     // GPU resources
     uint8_t* d_packetBuffer;      // Device memory for packet data

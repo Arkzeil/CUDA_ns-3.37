@@ -1,25 +1,43 @@
 #include "cuda-net-device.h"
 #include "cuda-packet-kernel.cuh"
 
-bool GpuNetDevice::TransmitFromGpuQueue() {
-    // Fetch packets from GPU queue and send them
-    uint8_t* d_packetQueue;
-    cudaMalloc(&d_packetQueue, sizeof(gpuPacketQueue));
+namespace ns3 {
 
-    cudaMemcpyFromSymbol(d_packetQueue, gpuPacketQueue, sizeof(gpuPacketQueue), 0, cudaMemcpyDeviceToHost);
+NS_OBJECT_ENSURE_REGISTERED(GpuNetDevice);
 
-    // for (int i = 0; i < queueSize; ++i) {
-    //     Ptr<Packet> packet = Create<Packet>(d_packetQueue + i * 1500, packetSize);
-    //     SendToLowerLayer(packet);
-    // }
-    cudaFree(d_packetQueue);
-
-    return true;
+TypeId GpuNetDevice::GetTypeId(void) {
+    static TypeId tid = TypeId("ns3::GpuNetDevice")
+        .SetParent<NetDevice>()
+        .SetGroupName("Network");
+    return tid;
 }
 
-void GpuNetDevice::TransmitPacketToNetwork(uint8_t* d_packet, int packetSize) {
-    // This is a placeholder for the actual network transmission
-    // In a real implementation, you would copy the packet to the NIC or CPU
-    // using cudaMemcpyAsync or similar CUDA API calls
-    printf("Transmitting packet of size %d to the network\n", packetSize);
+GpuNetDevice::GpuNetDevice() {
+    // Allocate GPU memory for packet buffers
+    cudaMalloc(&d_packetBuffer, 1024 * 1500); // Example size
 }
+
+GpuNetDevice::~GpuNetDevice() {
+    cudaFree(d_packetBuffer);
+}
+
+bool GpuNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) {
+    // Copy packet to GPU buffer
+    // cudaMemcpy(d_packetBuffer, packet->PeekData(), packet->GetSize(), cudaMemcpyHostToDevice);
+
+    // Offload packet processing to GPU
+    OffloadPacketProcessing();
+
+    return true; // Indicate success
+}
+
+void GpuNetDevice::InitializeGpuBuffers() {
+    // Additional GPU memory initialization if needed
+}
+
+void GpuNetDevice::OffloadPacketProcessing() {
+    // Launch GPU kernel to process packets
+    printf("Launching packet processing kernel at GpuNetDevice\n");
+}
+
+} // namespace ns3

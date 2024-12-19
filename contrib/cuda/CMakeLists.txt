@@ -35,6 +35,8 @@ build_lib(
         model/cuda-packet-kernel.cu
         # model/cuda-ipv4-routing.cu
         model/cuda-net-device.cu
+        model/cuda-node.cu
+        model/cuda-ipv4.cu
         helper/cuda-helper.cc
     HEADER_FILES                          # Header files
         # model/cuda_wrapper.h
@@ -45,6 +47,8 @@ build_lib(
         model/cuda-packet-kernel.cuh
         # model/cuda-ipv4-routing.h
         model/cuda-net-device.h
+        model/cuda-node.h
+        model/cuda-ipv4.h
         helper/cuda-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart
