@@ -37,6 +37,7 @@ build_lib(
         model/cuda-net-device.cu
         model/cuda-node.cu
         model/cuda-ipv4.cu
+        model/cuda-socket.cu
         helper/cuda-helper.cc
     HEADER_FILES                          # Header files
         # model/cuda_wrapper.h
@@ -49,6 +50,7 @@ build_lib(
         model/cuda-net-device.h
         model/cuda-node.h
         model/cuda-ipv4.h
+        model/cuda-socket.h
         helper/cuda-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart

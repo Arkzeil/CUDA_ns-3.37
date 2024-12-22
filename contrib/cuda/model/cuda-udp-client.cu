@@ -6,50 +6,51 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED(GpuUdpClient);
+NS_LOG_COMPONENT_DEFINE("CudaUdpClient");
+NS_OBJECT_ENSURE_REGISTERED(CudaUdpClient);
 
-__host__ TypeId GpuUdpClient::GetTypeId(void) {
-    static TypeId tid = TypeId("ns3::GpuUdpClient")
+__host__ TypeId CudaUdpClient::GetTypeId(void) {
+    static TypeId tid = TypeId("ns3::CudaUdpClient")
         .SetParent<Application>()
         .SetGroupName("Applications")
-        .AddConstructor<GpuUdpClient>()
+        .AddConstructor<CudaUdpClient>()
         .AddAttribute("MaxPackets",
                         "The maximum number of packets the application will send",
                         UintegerValue(100),
-                        MakeUintegerAccessor(&GpuUdpClient::m_count),
+                        MakeUintegerAccessor(&CudaUdpClient::m_count),
                         MakeUintegerChecker<uint32_t>())
         .AddAttribute("Interval",
                         "The time to wait between packets",
                         TimeValue(Seconds(1.0)),
-                        MakeTimeAccessor(&GpuUdpClient::m_interval),
+                        MakeTimeAccessor(&CudaUdpClient::m_interval),
                         MakeTimeChecker())
         .AddAttribute("RemoteAddress",
                         "The destination Address of the outbound packets",
                         AddressValue(),
-                        MakeAddressAccessor(&GpuUdpClient::m_peerAddress),
+                        MakeAddressAccessor(&CudaUdpClient::m_peerAddress),
                         MakeAddressChecker())
         .AddAttribute("RemotePort",
                         "The destination port of the outbound packets",
                         UintegerValue(100),
-                        MakeUintegerAccessor(&GpuUdpClient::m_peerPort),
+                        MakeUintegerAccessor(&CudaUdpClient::m_peerPort),
                         MakeUintegerChecker<uint16_t>())
         .AddAttribute("PacketSize",
                         "Size of packets generated. The minimum packet size is 12 bytes which is "
                         "the size of the header carrying the sequence number and the time stamp.",
                         UintegerValue(1024),
-                        MakeUintegerAccessor(&GpuUdpClient::m_size),
+                        MakeUintegerAccessor(&CudaUdpClient::m_size),
                         MakeUintegerChecker<uint32_t>(12, 65507));
     return tid;
 }
 
-GpuUdpClient::GpuUdpClient() 
+CudaUdpClient::CudaUdpClient() 
     : d_packetBuffer(nullptr), m_size(1024), 
     m_interval(Seconds(1.0)), m_count(100), 
     m_peerPort(0), m_socket(nullptr), m_sent(0), 
     m_totalTx(0), m_running(false) {
     
     InitCudaResources();
-    printf("GpuUdpClient initialized\n");
+    printf("CudaUdpClient initialized\n");
     printf("Packet size: %d bytes\n", m_size);
     printf("Interval: %f seconds\n", m_interval.GetSeconds());
     printf("Max packets: %d\n", m_count);
@@ -57,68 +58,116 @@ GpuUdpClient::GpuUdpClient()
     printf("Remote port: %d\n", m_peerPort);
 }
 
-GpuUdpClient::~GpuUdpClient() {
+CudaUdpClient::~CudaUdpClient() {
     CleanupCudaResources();
 }
 
 void
-GpuUdpClient::SetRemote(Address ip, uint16_t port)
+CudaUdpClient::SetRemote(Address ip, uint16_t port)
 {
-    // NS_LOG_FUNCTION(this << ip << port);
+    NS_LOG_FUNCTION(this << ip << port);
     m_peerAddress = ip;
     m_peerPort = port;
 }
 
 void
-GpuUdpClient::SetRemote(Address addr)
+CudaUdpClient::SetRemote(Address addr)
 {
     // NS_LOG_FUNCTION(this << addr);
     m_peerAddress = addr;
 }
 
-void 
-GpuUdpClient::StartApplication(){
-    m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
-    m_socket->Bind();
-    m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
-    m_sendEvent = Simulator::Schedule(Seconds(0.0), &GpuUdpClient::Send, this);
+void
+CudaUdpClient::SetPacketSize(uint32_t size)
+{
+    // NS_LOG_FUNCTION(this << size);
+    m_size = size;
+    cudaFree(d_packetBuffer);
+    cudaMalloc(&d_packetBuffer, m_size);
 }
 
 void
-GpuUdpClient::StopApplication()
+CudaUdpClient::SetSendInterval(Time interval)
 {
-    // NS_LOG_FUNCTION(this);
-    if(m_sendEvent.IsRunning()){
-        Simulator::Cancel(m_sendEvent);
-    }
-    // Simulator::Cancel(m_sendEvent);
-
-    if(m_socket != nullptr){
-        m_socket->Close();
-    }
+    // NS_LOG_FUNCTION(this << interval);
+    m_interval = interval;
 }
 
-__host__ void GpuUdpClient::InitCudaResources() {
+void 
+CudaUdpClient::StartApplication(){
+    // m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
+    // m_socket->Bind();
+    // m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
+    if (!m_socket) {
+        m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
+        if(m_socket->Bind() == -1){
+            NS_LOG_ERROR("Failed to bind socket");
+            return;
+        }
+        // should check if m_peerAddress already contain port number or not
+        m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
+    }
+    m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
+}
+
+void
+CudaUdpClient::StopApplication()
+{
+    // NS_LOG_FUNCTION(this);
+    // if(m_sendEvent.IsRunning()){
+    //     Simulator::Cancel(m_sendEvent);
+    // }
+    if (m_socket) {
+        m_socket->Close();
+        m_socket = nullptr;
+    }
+    Simulator::Cancel(m_sendEvent);
+}
+
+__host__ void CudaUdpClient::InitCudaResources() {
     cudaStreamCreate(&m_cudaStream);
     cudaMalloc(&d_packetBuffer, m_size); // Allocate GPU memory for packets (MTU size).
 }
 
-__host__ void GpuUdpClient::CleanupCudaResources() {
+__host__ void CudaUdpClient::CleanupCudaResources() {
     cudaFree(d_packetBuffer);
     cudaStreamDestroy(m_cudaStream);
 }
 
-__host__ void GpuUdpClient::Send() {
+__host__ void CudaUdpClient::Send() {
     // Ptr<Packet> packet = Create<Packet>(m_size); // Create the packet.
-    // OffloadPacketToGpu(packet);                 // Offload packet to GPU for processing.
+    // OffloadPacketToCuda(packet);                 // Offload packet to GPU for processing.
 
-    OffloadToGpu(m_count, m_size); // Offload packet generation to GPU.
+    // OffloadToCuda(1, m_size); // Offload packet generation to GPU.
 
+    GeneratePacketOnGpu(); // Generate packet on GPU.
+    uint8_t* h_packetData = new uint8_t[m_size];
+    cudaMemcpy(h_packetData, d_packetBuffer, m_size, cudaMemcpyDeviceToHost);
+    // Wrap the GPU buffer in a ns3::Packet and send
+    Ptr<Packet> packet = Create<Packet>(h_packetData, m_size);
+    m_socket->Send(packet); // Send the packet.
     // Schedule the next send event immediately
-    m_sendEvent = Simulator::Schedule(m_interval, &GpuUdpClient::Send, this);
+    m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
 }
 
-__host__ void GpuUdpClient::OffloadToGpu(int numPackets, int packetSize) {
+__global__ void GeneratePacketKernel(uint8_t* packetBuffer, int packetSize) {
+    int idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx < packetSize) {
+        packetBuffer[idx] = (char)((idx) % 256); // Example payload logic
+    }
+    // printf("Generated packet on GPU, idx: %d\n", idx);
+}
+
+void CudaUdpClient::GeneratePacketOnGpu() {
+//   static uint32_t seqNumber = 0; // the sequence number of the packet, but it will not auto increment at kernel
+  int blockSize = 256;
+  int gridSize = (m_size + blockSize - 1) / blockSize;
+
+  GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(d_packetBuffer, m_size);
+  cudaStreamSynchronize(m_cudaStream);
+}
+
+__host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {
     // Allocate and initialize routing table on GPU
     RoutingTable* d_routingTable;
     int tableSize = 10;
@@ -139,7 +188,7 @@ __host__ void GpuUdpClient::OffloadToGpu(int numPackets, int packetSize) {
     cudaFree(d_routingTable);
 }
 
-__host__ void GpuUdpClient::OffloadPacketToGpu(Ptr<Packet> packet) {
+__host__ void CudaUdpClient::OffloadPacketToCuda(Ptr<Packet> packet) {
     // Copy packet data to GPU memory
     uint8_t* h_packetData = new uint8_t[packet->GetSize()];
     packet->CopyData(h_packetData, packet->GetSize());

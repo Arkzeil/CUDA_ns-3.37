@@ -6,19 +6,22 @@
 #include "ns3/socket.h"
 #include "ns3/udp-socket-factory.h"
 #include "ns3/log.h"
+#include "cuda-socket.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 
 namespace ns3 {
 
-class GpuUdpClient : public Application {
+class CudaUdpClient : public Application {
 public:
     __host__ static TypeId GetTypeId(void);
 
-    GpuUdpClient();
-    virtual ~GpuUdpClient();
+    CudaUdpClient();
+    virtual ~CudaUdpClient();
     void SetRemote(Address ip, uint16_t port);
     void SetRemote(Address addr);
+    void SetPacketSize(uint32_t size);
+    void SetSendInterval(Time interval);
 
 protected:
     __host__ virtual void Send(); // Override the Send method.
@@ -26,9 +29,10 @@ protected:
 private:
     void StartApplication() override;
     void StopApplication() override;
-    // __host__ void GpuUdpClient::OffloadToGpu(void);
-    __host__ void OffloadToGpu(int numPackets, int packetSize);
-    __host__ void OffloadPacketToGpu(Ptr<Packet> packet);
+    // __host__ void CudaUdpClient::OffloadToCuda(void);
+    void GeneratePacketOnGpu();
+    __host__ void OffloadToCuda(int numPackets, int packetSize);
+    __host__ void OffloadPacketToCuda(Ptr<Packet> packet);
     __host__ void InitCudaResources();
     __host__ void CleanupCudaResources();
 
