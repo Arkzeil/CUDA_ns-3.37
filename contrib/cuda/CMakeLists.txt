@@ -22,7 +22,7 @@ find_package(CUDAToolkit REQUIRED)
 
 #project(cuda LAUGUAGE CUDA CXX)
 # By adding this to suppress the warning "warning: style of line directive is a GCC extension"
-add_compile_options(-Wno-pedantic)
+add_compile_options(-Wno-pedantic -g)
 # Declare the ns-3 module
 build_lib(
     LIBNAME "cuda"                 # Module name

@@ -3,85 +3,130 @@
 
 namespace ns3 {
 
-NS_OBJECT_ENSURE_REGISTERED(CudaNetDevice);
+  NS_OBJECT_ENSURE_REGISTERED(CudaNetDevice);
 
-TypeId CudaNetDevice::GetTypeId(void) {
-    static TypeId tid = TypeId("ns3::CudaNetDevice")
-        .SetParent<PointToPointNetDevice>()
-        .SetGroupName("Network")
-        .AddConstructor<CudaNetDevice>();
-    return tid;
-}
-
-CudaNetDevice::CudaNetDevice() {
-    // Allocate GPU memory for packet buffers
-    cudaStreamCreate(&m_stream);
-    cudaMalloc(&d_packetBuffer, 1024 * 1500); // Example size
-}
-
-CudaNetDevice::~CudaNetDevice() {
-    cudaStreamDestroy(m_stream);
-    cudaFree(d_packetBuffer);
-}
-
-bool CudaNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) {
-    uint8_t* buffer = new uint8_t[packet->GetSize()];
-    packet->CopyData(buffer, packet->GetSize());
-
-    // Copy packet to GPU
-    cudaMemcpyAsync(d_packetBuffer, buffer, packet->GetSize(), cudaMemcpyHostToDevice, m_stream);
-
-    // Launch a simple GPU kernel to process the packet
-    ProcessPacketOnCuda(packet);
-
-    delete[] buffer; // Clean up
-
-    return true; // Indicate success
-}
-
-void CudaNetDevice::SetReceiveCallback(NetDevice::ReceiveCallback cb) {
-    m_rxCallback = cb;
-}
-
-__global__ void PacketProcessingKernel(uint8_t* packet, int packetSize) {
-  int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  printf("Processing packet on GPU, idx: %d\n", idx);
-  if (idx < packetSize) {
-    // Example: Increment each byte
-    packet[idx] += 1;
+  TypeId CudaNetDevice::GetTypeId(void) {
+      static TypeId tid = TypeId("ns3::CudaNetDevice")
+                          .SetParent<PointToPointNetDevice>()
+                          .SetGroupName("Network")
+                          .AddConstructor<CudaNetDevice>();
+      return tid;
   }
-}
 
-void CudaNetDevice::ProcessPacketOnCuda(Ptr<Packet> packet) {
-  int packetSize = packet->GetSize();
-  int blockSize = 256;
-  int gridSize = (packetSize + blockSize - 1) / blockSize;
+  CudaNetDevice::CudaNetDevice() {
+      // Allocate GPU memory for packet buffers
+      m_queueSize = 1024;
+      cudaStreamCreate(&m_stream);
+      cudaMalloc(&d_packetQueue, m_queueSize * 1500); // Example size
+      cudaMallocManaged(&d_queueFront, sizeof(int));
+      cudaMallocManaged(&d_queueRear, sizeof(int));
+      *d_queueFront = *d_queueRear = 0;
+  }
 
-  PacketProcessingKernel<<<gridSize, blockSize, 0, m_stream>>>(d_packetBuffer, packetSize);
+  CudaNetDevice::~CudaNetDevice() {
+      cudaStreamDestroy(m_stream);
+      cudaFree(d_packetQueue);
+      cudaFree(d_queueFront);
+      cudaFree(d_queueRear);
+  }
 
-  // Wait for GPU to finish processing
-  cudaStreamSynchronize(m_stream);
+  bool CudaNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) {
+      // Copy packet to GPU
+      uint8_t* d_packet;
+      cudaMalloc(&d_packet, packet->GetSize());
+      packet->CopyData(reinterpret_cast<uint8_t*>(d_packet), packet->GetSize());
 
-  // Optionally, copy data back to CPU
-  uint8_t* processedPacket = new uint8_t[packetSize];
-  cudaMemcpy(processedPacket, d_packetBuffer, packetSize, cudaMemcpyDeviceToHost);
+      // Enqueue packet on GPU
+      EnqueuePacket(d_packet, packet->GetSize());
 
-  // Forward the processed packet using the receive callback
-  Ptr<Packet> newPacket = Create<Packet>(processedPacket, packetSize);
-//   m_rxCallback(newPacket, this, 0);
+      // Free temporary packet
+      cudaFree(d_packet);
 
-  delete[] processedPacket;
-}
+      return true; // Indicate success
+  }
 
+  void CudaNetDevice::SetReceiveCallback(NetDevice::ReceiveCallback cb) {
+      m_rxCallback = cb;
+  }
 
+  bool CudaNetDevice::SupportsSendFrom() const {
+      return false;
+  }
 
-void CudaNetDevice::InitializeCudaBuffers() {
-    // Additional GPU memory initialization if needed
-}
+  __global__ void PacketProcessingKernel(uint8_t* packet, int packetSize) {
+      int idx = threadIdx.x + blockIdx.x * blockDim.x;
+      printf("Processing packet on GPU, idx: %d\n", idx);
+      if (idx < packetSize) {
+        // Example: Increment each byte
+        packet[idx] += 1;
+      }
+  }
+  __global__ void TransmitKernel(uint8_t* queue, int* front, int* rear, int queueSize, float bandwidthMbps, float delayMs) {
+      if (*front == *rear) return; // Queue is empty
 
-void CudaNetDevice::OffloadPacketProcessing() {
-    // Launch GPU kernel to process packets
-    printf("Launching packet processing kernel at CudaNetDevice\n");
-}
+      // Simulate delay (dummy computation)
+      clock_t start = clock();
+      while ((clock() - start) < delayMs * 1e6 / CLOCKS_PER_SEC);
+
+      // Transmit logic
+      int pos = (*front) % queueSize;
+      uint8_t* packet = queue + pos * 1500; // Access packet
+      printf("Transmitting packet: %s\n", packet);
+
+      if (threadIdx.x == 0) {
+        *front = (*front + 1) % queueSize;
+      }
+  }
+
+  void CudaNetDevice::ProcessPacketOnCuda(Ptr<Packet> packet) {
+      int packetSize = packet->GetSize();
+      int blockSize = 256;
+      int gridSize = (packetSize + blockSize - 1) / blockSize;
+
+      PacketProcessingKernel<<<gridSize, blockSize, 0, m_stream>>>(d_packetQueue, packetSize);
+
+      // Wait for GPU to finish processing
+      cudaStreamSynchronize(m_stream);
+
+      // Optionally, copy data back to CPU
+      uint8_t* processedPacket = new uint8_t[packetSize];
+      cudaMemcpy(processedPacket, d_packetQueue, packetSize, cudaMemcpyDeviceToHost);
+
+      // Forward the processed packet using the receive callback
+      Ptr<Packet> newPacket = Create<Packet>(processedPacket, packetSize);
+    //   m_rxCallback(newPacket, this, 0);
+
+      delete[] processedPacket;
+  }
+
+  void CudaNetDevice::TransmitPackets() {
+      TransmitKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, 100.0, 1.0); // 100 Mbps, 1 ms delay
+      cudaStreamSynchronize(m_stream); // Ensure transmission completes
+  }
+
+  __global__ void EnqueueKernel(uint8_t* queue, int* front, int* rear, int queueSize, const uint8_t* packet, uint32_t size) {
+      int pos = (*rear) % queueSize;
+      uint8_t* entry = queue + pos * 1500; // Move to the position for the packet
+      for (int i = threadIdx.x; i < size; i += blockDim.x) {
+        entry[i] = packet[i];
+      }
+      if (threadIdx.x == 0) {
+        *rear = (*rear + 1) % queueSize;
+      }
+  }
+
+  void CudaNetDevice::EnqueuePacket(const uint8_t* d_packet, uint32_t size) {
+    EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
+    cudaDeviceSynchronize(); // Ensure enqueue completes
+  }
+
+  void CudaNetDevice::InitializeCudaBuffers() {
+      // Additional GPU memory initialization if needed
+  }
+
+  void CudaNetDevice::OffloadPacketProcessing() {
+      // Launch GPU kernel to process packets
+      printf("Launching packet processing kernel at CudaNetDevice\n");
+  }
 
 } // namespace ns3

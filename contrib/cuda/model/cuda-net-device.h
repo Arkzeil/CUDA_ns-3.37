@@ -20,6 +20,7 @@ public:
 
     // Overridden methods for packet transmission
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
+    virtual bool SupportsSendFrom(void) const;
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
 
     // GPU-specific methods
@@ -31,8 +32,15 @@ private:
 
     // CUDA-related members
     cudaStream_t m_stream;
-    uint8_t* d_packetBuffer; // GPU packet buffer
+    uint8_t* d_packetQueue; // GPU packet queue
     NetDevice::ReceiveCallback m_rxCallback;
+    int* d_queueFront;
+    int* d_queueRear;
+    int m_queueSize;
+
+    // Helper functions
+    void EnqueuePacket(const uint8_t* d_packet, uint32_t size);
+    void TransmitPackets();
 };
 
 } // namespace ns3

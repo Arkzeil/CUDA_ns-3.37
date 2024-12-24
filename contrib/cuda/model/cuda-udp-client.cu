@@ -95,17 +95,20 @@ CudaUdpClient::SetSendInterval(Time interval)
 
 void 
 CudaUdpClient::StartApplication(){
-    // m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
-    // m_socket->Bind();
-    // m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
-    if (!m_socket) {
-        m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
-        if(m_socket->Bind() == -1){
-            NS_LOG_ERROR("Failed to bind socket");
-            return;
-        }
-        // should check if m_peerAddress already contain port number or not
-        m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
+    // NS_LOG_FUNCTION(this);
+    // if (!m_socket) {
+    //     m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
+    //     if(m_socket->Bind() == -1){
+    //         NS_LOG_ERROR("Failed to bind socket");
+    //         return;
+    //     }
+    //     // should check if m_peerAddress already contain port number or not
+    //     m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
+    // }
+    if(m_cudaSocket == nullptr){
+        m_cudaSocket = CreateObject<CudaSocket>();
+        m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
+        m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     }
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
 }
@@ -120,6 +123,10 @@ CudaUdpClient::StopApplication()
     if (m_socket) {
         m_socket->Close();
         m_socket = nullptr;
+    }
+    else if(m_cudaSocket){
+        m_cudaSocket->Close();
+        m_cudaSocket = nullptr;
     }
     Simulator::Cancel(m_sendEvent);
 }
@@ -145,10 +152,10 @@ __host__ void CudaUdpClient::Send() {
     cudaMemcpy(h_packetData, d_packetBuffer, m_size, cudaMemcpyDeviceToHost);
     // Wrap the GPU buffer in a ns3::Packet and send
     Ptr<Packet> packet = Create<Packet>(h_packetData, m_size);
-    m_socket->Send(packet); // Send the packet.
+    m_cudaSocket->Send(h_packetData, m_size); // Send the packet.
     // Schedule the next send event immediately
     m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
-}
+}   
 
 __global__ void GeneratePacketKernel(uint8_t* packetBuffer, int packetSize) {
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
