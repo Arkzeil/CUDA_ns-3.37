@@ -25,7 +25,7 @@ namespace ns3{
             int ShutdownRecv() override;
             int ShutdownSend() override;
             int Send(Ptr<Packet> p, uint32_t flags) override;
-            void Send(const uint8_t* d_buffer, uint32_t size);
+            __device__ void Send(const uint8_t* d_buffer, uint32_t size);
             Ptr<Packet> Recv(uint32_t maxSize, uint32_t flags) override;
             Ptr<Packet> RecvFrom(uint32_t maxSize, uint32_t flags, Address& fromAddress) override;
             int GetSockName(Address& address) const override;

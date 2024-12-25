@@ -43,7 +43,7 @@ private:
     uint32_t m_sent;       //!< Counter for sent packets
     uint64_t m_totalTx;    //!< Total bytes sent
     Ptr<Socket> m_socket;  //!< Socket
-    Ptr<CudaSocket> m_cudaSocket; //!< CUDA socket
+    CudaSocket* m_cudaSocket; //!< CUDA socket
     Address m_peerAddress; //!< Remote peer address
     uint16_t m_peerPort;   //!< Remote peer port
     EventId m_sendEvent;   //!< Event to send the next packet

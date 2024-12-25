@@ -100,16 +100,17 @@ namespace ns3{
         uint32_t size = p->GetSize();
         uint8_t* buffer = new uint8_t[size];
         p->CopyData(buffer, size);
-        Send(buffer, size);
+        // Send(buffer, size);
         delete[] buffer;
         return 0;
     }
 
-    void CudaSocket::Send(const uint8_t* d_buffer, uint32_t size){
+    __device__ void CudaSocket::Send(const uint8_t* d_buffer, uint32_t size){
         // Send data to the socket
-        cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
+        // cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
         // Send data to the network device
-        SendToNetDevice(d_sendBuffer, size);
+        // SendToNetDevice(d_sendBuffer, size);
+        printf("Sending packet from CUDA Socket\n");
     }
 
     void CudaSocket::SendToNetDevice(const uint8_t* d_buffer, uint32_t size){

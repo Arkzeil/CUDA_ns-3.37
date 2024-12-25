@@ -1,5 +1,5 @@
 #include "cuda-udp-client.h"
-#include "cuda-packet-kernel.cuh"
+// #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>
 #include <stdint.h>
@@ -106,7 +106,7 @@ CudaUdpClient::StartApplication(){
     //     m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     // }
     if(m_cudaSocket == nullptr){
-        m_cudaSocket = CreateObject<CudaSocket>();
+        cudaMallocManaged(&m_cudaSocket, sizeof(CudaSocket));
         m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
         m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     }
@@ -148,21 +148,29 @@ __host__ void CudaUdpClient::Send() {
     // OffloadToCuda(1, m_size); // Offload packet generation to GPU.
 
     GeneratePacketOnGpu(); // Generate packet on GPU.
-    uint8_t* h_packetData = new uint8_t[m_size];
-    cudaMemcpy(h_packetData, d_packetBuffer, m_size, cudaMemcpyDeviceToHost);
-    // Wrap the GPU buffer in a ns3::Packet and send
-    Ptr<Packet> packet = Create<Packet>(h_packetData, m_size);
-    m_cudaSocket->Send(h_packetData, m_size); // Send the packet.
+    // uint8_t* h_packetData = new uint8_t[m_size];
+    // cudaMemcpy(h_packetData, d_packetBuffer, m_size, cudaMemcpyDeviceToHost);
+    // // Wrap the GPU buffer in a ns3::Packet and send
+    // Ptr<Packet> packet = Create<Packet>(h_packetData, m_size);
+    // m_cudaSocket->Send(h_packetData, m_size); // Send the packet.
     // Schedule the next send event immediately
     m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
 }   
 
-__global__ void GeneratePacketKernel(uint8_t* packetBuffer, int packetSize) {
+__global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, int packetSize) {
+    // Allocate packet data in shared memory or local GPU memory
+    // printf("Generating packet on GPU\n");
+    __shared__ uint8_t packet[1500]; // Example size of a packet
     int idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (idx < packetSize) {
         packetBuffer[idx] = (char)((idx) % 256); // Example payload logic
     }
     // printf("Generated packet on GPU, idx: %d\n", idx);
+    __syncthreads();
+    // Call the socket's Send logic directly
+    if (threadIdx.x == 0) { // Single thread handles the send
+        socket->Send(packet, packetSize);
+    }
 }
 
 void CudaUdpClient::GeneratePacketOnGpu() {
@@ -170,30 +178,33 @@ void CudaUdpClient::GeneratePacketOnGpu() {
   int blockSize = 256;
   int gridSize = (m_size + blockSize - 1) / blockSize;
 
-  GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(d_packetBuffer, m_size);
+  GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size);
+  cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) 
+        printf("Error: %s\n", cudaGetErrorString(err));
   cudaStreamSynchronize(m_cudaStream);
 }
 
-__host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {
-    // Allocate and initialize routing table on GPU
-    RoutingTable* d_routingTable;
-    int tableSize = 10;
-    RoutingTable h_routingTable[10] = {
-        {8080, 1}, {8081, 2}, {8082, 3} // Example entries
-    };
-    cudaMalloc(&d_routingTable, tableSize * sizeof(RoutingTable));
-    cudaMemcpy(d_routingTable, h_routingTable, tableSize * sizeof(RoutingTable), cudaMemcpyHostToDevice);
+// __host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {
+//     // Allocate and initialize routing table on GPU
+//     RoutingTable* d_routingTable;
+//     int tableSize = 10;
+//     RoutingTable h_routingTable[10] = {
+//         {8080, 1}, {8081, 2}, {8082, 3} // Example entries
+//     };
+//     cudaMalloc(&d_routingTable, tableSize * sizeof(RoutingTable));
+//     cudaMemcpy(d_routingTable, h_routingTable, tableSize * sizeof(RoutingTable), cudaMemcpyHostToDevice);
 
-    // Launch packet generation and processing kernel
-    int threadsPerBlock = 256;
-    int blocks = (numPackets + threadsPerBlock - 1) / threadsPerBlock;
-    OffloadToGpuKernel<<<blocks, threadsPerBlock>>>(numPackets, packetSize, d_routingTable, tableSize);
+//     // Launch packet generation and processing kernel
+//     int threadsPerBlock = 256;
+//     int blocks = (numPackets + threadsPerBlock - 1) / threadsPerBlock;
+//     OffloadToGpuKernel<<<blocks, threadsPerBlock>>>(numPackets, packetSize, d_routingTable, tableSize);
 
-    cudaDeviceSynchronize(); // Ensure all GPU operations complete
+//     cudaDeviceSynchronize(); // Ensure all GPU operations complete
 
-    // Free resources
-    cudaFree(d_routingTable);
-}
+//     // Free resources
+//     cudaFree(d_routingTable);
+// }
 
 __host__ void CudaUdpClient::OffloadPacketToCuda(Ptr<Packet> packet) {
     // Copy packet data to GPU memory
