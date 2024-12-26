@@ -16,10 +16,14 @@ namespace ns3{
             CudaSocket();
             virtual ~CudaSocket();
 
+            void test();
+            void getBufferSize();
+
             int Bind() override;
             int Bind(const Address& address) override;
             int Bind6() override;
             int Close() override;
+            int Close(int sockId);
             int Connect(const Address& address) override;
             int Listen() override;
             int ShutdownRecv() override;

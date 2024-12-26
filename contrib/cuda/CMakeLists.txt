@@ -342,7 +342,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -G -keep")
 # set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -rdc=true")
 # Find the CUDA Toolkit
 find_package(CUDAToolkit REQUIRED)
-find_package(CUDA REQUIRED)
+# find_package(CUDA REQUIRED)
 
 #project(cuda LAUGUAGE CUDA CXX)
 # cuda_add_library(cuda_lib SHARED

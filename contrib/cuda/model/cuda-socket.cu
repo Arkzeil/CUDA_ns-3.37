@@ -35,6 +35,10 @@ namespace ns3{
         cudaStreamDestroy(m_cudaStream);
     }
 
+    void CudaSocket::test(){
+        printf("Testing CudaSocket\n");
+    }
+
     int CudaSocket::Bind(){
         // Bind the socket to the default address
         // It should allocate a new socket and bind it to the default address
@@ -54,9 +58,15 @@ namespace ns3{
     }
 
     int CudaSocket::Close(){
+        printf("Closing socket\n");
         // Close the socket
-        cudaFree(d_sendBuffer);
-        cudaStreamDestroy(m_cudaStream);
+        // cudaFree(d_sendBuffer);
+        // cudaStreamDestroy(m_cudaStream);
+        return 0;
+    }
+
+    int CudaSocket::Close(int sockId){
+        // Close the specified socket
         return 0;
     }
 
