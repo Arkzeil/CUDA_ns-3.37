@@ -16,7 +16,7 @@ namespace ns3 {
   CudaNetDevice::CudaNetDevice() {
       // Allocate GPU memory for packet buffers
       m_queueSize = 1024;
-      cudaStreamCreate(&m_stream);
+      // cudaStreamCreate(&m_stream);
       cudaMalloc(&d_packetQueue, m_queueSize * 1500); // Example size
       cudaMallocManaged(&d_queueFront, sizeof(int));
       cudaMallocManaged(&d_queueRear, sizeof(int));
@@ -24,7 +24,7 @@ namespace ns3 {
   }
 
   CudaNetDevice::~CudaNetDevice() {
-      cudaStreamDestroy(m_stream);
+      // cudaStreamDestroy(m_stream);
       cudaFree(d_packetQueue);
       cudaFree(d_queueFront);
       cudaFree(d_queueRear);
@@ -37,7 +37,7 @@ namespace ns3 {
       packet->CopyData(reinterpret_cast<uint8_t*>(d_packet), packet->GetSize());
 
       // Enqueue packet on GPU
-      EnqueuePacket(d_packet, packet->GetSize());
+      // EnqueuePacket(d_packet, packet->GetSize());
 
       // Free temporary packet
       cudaFree(d_packet);
@@ -115,9 +115,18 @@ namespace ns3 {
       }
   }
 
-  void CudaNetDevice::EnqueuePacket(const uint8_t* d_packet, uint32_t size) {
-    EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
-    cudaDeviceSynchronize(); // Ensure enqueue completes
+  __device__ void CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {
+    // EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
+    // cudaDeviceSynchronize(); // Ensure enqueue completes
+    int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
+    uint8_t* entry = d_packetQueue + pos * 1500;         // Get position in the queue
+
+    for (int i = threadIdx.x; i < size; i += blockDim.x) {
+      entry[i] = packet[i];
+    }
+
+    printf("Enqueued packet on GPU\n");
+    __syncthreads();
   }
 
   void CudaNetDevice::InitializeCudaBuffers() {

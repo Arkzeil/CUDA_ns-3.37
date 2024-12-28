@@ -7,23 +7,21 @@
 #include "ns3/ipv4-end-point.h"
 #include <cuda_runtime.h>
 #include <queue>
+#include "helper.h"
+#include "cuda-net-device.h"
 
 namespace ns3{
-    class CudaSocket : public Socket{
+    class CudaSocket : public Socket, public Managed{
         public:
             static TypeId GetTypeId(void);
             
             CudaSocket();
             virtual ~CudaSocket();
 
-            void test();
-            void getBufferSize();
-
             int Bind() override;
             int Bind(const Address& address) override;
             int Bind6() override;
             int Close() override;
-            int Close(int sockId);
             int Connect(const Address& address) override;
             int Listen() override;
             int ShutdownRecv() override;
@@ -48,6 +46,7 @@ namespace ns3{
         private:
             uint8_t* d_sendBuffer;
             cudaStream_t m_cudaStream;
+            CudaNetDevice *m_netDevice;
             // Connections to other layers of TCP/IP
             Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
             // Ipv6EndPoint* m_endPoint6; //!< the IPv6 endpoint

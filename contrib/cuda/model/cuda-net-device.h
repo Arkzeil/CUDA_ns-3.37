@@ -7,11 +7,12 @@
 #include <iostream>
 #include <stdint.h>
 #include <cuda_runtime.h>
+#include "helper.h"
 
 
 namespace ns3 {
 
-class CudaNetDevice : public PointToPointNetDevice {
+class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
     static TypeId GetTypeId(void);
 
@@ -26,6 +27,9 @@ public:
     // GPU-specific methods
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
+    // Helper functions
+    __device__ void EnqueuePacket(const uint8_t* packet, uint32_t size);
+    void TransmitPackets();
 
 private:
     void ProcessPacketOnCuda(Ptr<Packet> packet);
@@ -37,10 +41,6 @@ private:
     int* d_queueFront;
     int* d_queueRear;
     int m_queueSize;
-
-    // Helper functions
-    void EnqueuePacket(const uint8_t* d_packet, uint32_t size);
-    void TransmitPackets();
 };
 
 } // namespace ns3

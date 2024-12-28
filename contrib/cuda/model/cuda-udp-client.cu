@@ -47,7 +47,7 @@ CudaUdpClient::CudaUdpClient()
     : d_packetBuffer(nullptr), m_size(1024), 
     m_interval(Seconds(1.0)), m_count(100), 
     m_peerPort(0), m_socket(nullptr), m_sent(0), 
-    m_totalTx(0), m_running(false) {
+    m_totalTx(0), m_running(false), m_cudaSocket(nullptr) {
     
     InitCudaResources();
     printf("CudaUdpClient initialized\n");
@@ -106,8 +106,9 @@ CudaUdpClient::StartApplication(){
     //     m_socket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     // }
     if(m_cudaSocket == nullptr){
-        cudaMallocManaged(&m_cudaSocket, sizeof(CudaSocket));
-        cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
+        // cudaMallocManaged(&m_cudaSocket, sizeof(CudaSocket));
+        m_cudaSocket = new CudaSocket();
+        // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
         m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
         m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     }
@@ -126,12 +127,10 @@ CudaUdpClient::StopApplication()
         m_socket = nullptr;
     }
     else if(m_cudaSocket){
-        printf("%p\n", m_cudaSocket);
-        m_cudaSocket->test();
-        // cudaDeviceSynchronize();
-        printf("%p\n", m_cudaSocket);
-        m_cudaSocket->Close(1);
-        cudaFree(m_cudaSocket);
+        cudaDeviceSynchronize();
+        m_cudaSocket->Close();
+        delete m_cudaSocket;
+        m_cudaSocket = nullptr;
     }
     Simulator::Cancel(m_sendEvent);
 }
@@ -182,16 +181,12 @@ void CudaUdpClient::GeneratePacketOnGpu() {
 //   static uint32_t seqNumber = 0; // the sequence number of the packet, but it will not auto increment at kernel
   int blockSize = 256;
   int gridSize = (m_size + blockSize - 1) / blockSize;
-    cudaDeviceSynchronize();
-    m_cudaSocket->test();
+
   GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size);
-  cudaDeviceSynchronize();
-  m_cudaSocket->test();
   cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) 
         printf("Error: %s\n", cudaGetErrorString(err));
   cudaStreamSynchronize(m_cudaStream);
-//   cudaDeviceSynchronize();
 }
 
 // __host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {

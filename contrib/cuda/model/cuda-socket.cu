@@ -19,12 +19,13 @@ namespace ns3{
         return tid;
     }
 
-    CudaSocket::CudaSocket(){
+    CudaSocket::CudaSocket() : m_netDevice(nullptr){
         // Constructor
-        cudaStreamCreate(&m_cudaStream);
+        // cudaStreamCreate(&m_cudaStream);
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
         cudaMallocManaged(&m_defaultAddress, sizeof(Address));
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
+        m_netDevice = new CudaNetDevice();
     }
 
     CudaSocket::~CudaSocket(){
@@ -32,11 +33,7 @@ namespace ns3{
         cudaFree(d_sendBuffer);
         cudaFree(m_defaultAddress);
         cudaFree(m_defaultPort);
-        cudaStreamDestroy(m_cudaStream);
-    }
-
-    void CudaSocket::test(){
-        printf("Testing CudaSocket\n");
+        // cudaStreamDestroy(m_cudaStream);
     }
 
     int CudaSocket::Bind(){
@@ -58,15 +55,9 @@ namespace ns3{
     }
 
     int CudaSocket::Close(){
-        printf("Closing socket\n");
         // Close the socket
-        // cudaFree(d_sendBuffer);
-        // cudaStreamDestroy(m_cudaStream);
-        return 0;
-    }
-
-    int CudaSocket::Close(int sockId){
-        // Close the specified socket
+        cudaFree(d_sendBuffer);
+        cudaStreamDestroy(m_cudaStream);
         return 0;
     }
 
@@ -121,6 +112,11 @@ namespace ns3{
         // Send data to the network device
         // SendToNetDevice(d_sendBuffer, size);
         printf("Sending packet from CUDA Socket\n");
+        if(m_netDevice == nullptr){
+            // m_netDevice = new CudaNetDevice();
+            printf("NetDevice is null\n");
+        }
+        m_netDevice->EnqueuePacket(d_buffer, size);
     }
 
     void CudaSocket::SendToNetDevice(const uint8_t* d_buffer, uint32_t size){
