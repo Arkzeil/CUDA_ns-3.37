@@ -368,6 +368,7 @@ build_cuda_lib(
         # model/cuda-node.cu
         # model/cuda-ipv4.cu
         model/cuda-socket.cu
+        model/cuda-p2p-channel.cu
         # helper/cuda-helper.cc
     HEADER_FILES                          # Header files
         # model/cuda_wrapper.h
@@ -381,6 +382,7 @@ build_cuda_lib(
         # model/cuda-node.h
         # model/cuda-ipv4.h
         model/cuda-socket.h
+        model/cuda-p2p-channel.h
         # helper/cuda-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart

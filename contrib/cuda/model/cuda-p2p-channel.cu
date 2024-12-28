@@ -18,8 +18,7 @@ namespace ns3 {
         return tid;
     }
 
-    CudaP2PChannel::CudaP2PChannel() {
-        m_delay = Seconds(0.0);
+    CudaP2PChannel::CudaP2PChannel(): m_delay(Seconds(0.0)), m_stream(nullptr), m_nDevices(0) {
         // cudaStreamCreate(&m_stream);
     }
     
@@ -29,12 +28,14 @@ namespace ns3 {
 
     void CudaP2PChannel::Attach(CudaNetDevice *device) {
         // Attach the device to the channel
-        for (uint32_t i = 0; i < N_DEVICES; i++) {
-            if (m_link[i].m_state == INITIALIZING) {
-                m_link[i].m_src = device;
-                m_link[i].m_state = IDLE;
-                return;
-            }
+        m_link[m_nDevices++].m_src = device;
+
+        if(m_nDevices == N_DEVICES) {
+            // Both devices are attached, set the destination for each device
+            m_link[0].m_dst = m_link[1].m_src;
+            m_link[1].m_dst = m_link[0].m_src;
+            m_link[0].m_state = IDLE;
+            m_link[1].m_state = IDLE;
         }
     }
 
@@ -42,15 +43,28 @@ namespace ns3 {
         m_delay = delay;
     }
 
-    __device__ void CudaP2PChannel::TransmitPacket(const uint8_t* packet, uint32_t size) {
+    __device__ void CudaP2PChannel::TransmitPacket(CudaNetDevice* src, const uint8_t* packet, uint32_t size) {
         // Transmit packet from one device to another
         // For simplicity, we will just copy the packet to the destination device
         // and process it there
-        uint8_t* d_packet;
-        cudaMalloc(&d_packet, size);
-        cudaMemcpy(d_packet, packet, size, cudaMemcpyDeviceToDevice);
-        m_link[1].m_dst->Receive(d_packet, size, 0, m_stream);
+        if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
+            printf("Channel not initialized\n");
+            return;
+        }
+
+        // uint8_t* d_packet;
+        // cudaMalloc(&d_packet, size);
+        // cudaMemcpy(d_packet, packet, size, cudaMemcpyDeviceToDevice);
+        // m_link[1].m_dst->Receive(d_packet, size, 0, m_stream);
     }
 
+    __device__ void ReceivePacket(const uint8_t* packet, uint32_t size){
+        // Receive packet from another device
+        // For simplicity, we will just print the packet contents
+        for (uint32_t i = 0; i < size; i++) {
+            printf("%c", packet[i]);
+        }
+        printf("\n");
+    }
 
 } // namespace ns3

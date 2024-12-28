@@ -22,9 +22,11 @@ namespace ns3
             void SetDelay(Time delay);
 
             // GPU-specific methods
-            __device__ void TransmitPacket(const uint8_t* packet, uint32_t size);
+            __device__ void TransmitPacket(CudaNetDevice* src, const uint8_t* packet, uint32_t size);
+            __device__ void ReceivePacket(const uint8_t* packet, uint32_t size);
         private:
-            static const uint32_t N_DEVICES = 2;
+            static const uint32_t N_DEVICES = 2;    // Number of devices in the channel
+            uint32_t m_nDevices;    // Number of devices attached to the channel
             Time m_delay;       // Delay in nanoseconds
             cudaStream_t m_stream;  // CUDA stream for async processing
 

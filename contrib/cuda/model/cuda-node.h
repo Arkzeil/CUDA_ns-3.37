@@ -2,25 +2,33 @@
 #define CUDA_NODE_H
 
 #include "ns3/node.h"
+#include "ns3/log.h"
 #include "cuda_runtime.h"
+#include "cuda-net-device.h"
+#include "helper.h"
 
 namespace ns3 {
 
-class GpuNode : public Node {
-public:
-    static TypeId GetTypeId(void);
+class CudaNode : public Node, public Managed{
+    public:
+        static TypeId GetTypeId(void);
 
-    GpuNode();
-    virtual ~GpuNode();
+        CudaNode();
+        virtual ~CudaNode();
 
-    // Initialize GPU memory for the node
-    void InitializeGpuMemory();
+        // Initialize GPU memory for the node
+        void InitializeGpuMemory();
 
-    // Synchronize state back to CPU if needed
-    void SynchronizeCpuState();
+        // Synchronize state back to CPU if needed
+        void SynchronizeCpuState();
 
-private:
-    uint8_t* d_nodeMemory; // GPU memory for node-specific data
+        uint32_t AddDevice(CudaNetDevice* device);
+
+    private:
+        uint8_t* d_nodeMemory; // GPU memory for node-specific data
+        uint32_t m_deviceCount; // Number of devices attached to the node
+        std::vector<CudaNetDevice*> m_devices; // List of devices attached to the node
+        uint32_t m_id; // Node ID
 };
 
 } // namespace ns3
