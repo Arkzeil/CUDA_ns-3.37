@@ -3,6 +3,7 @@
 
 #include "ns3/net-device.h"
 #include "ns3/point-to-point-net-device.h"
+#include "ns3/cuda-p2p-channel.h"
 #include "ns3/log.h"
 #include <iostream>
 #include <stdint.h>
@@ -27,6 +28,7 @@ public:
     // GPU-specific methods
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
+    __device__ void Send(const uint8_t* packet, uint32_t size);
     // Helper functions
     __device__ void EnqueuePacket(const uint8_t* packet, uint32_t size);
     void TransmitPackets();
@@ -34,10 +36,19 @@ public:
 private:
     void ProcessPacketOnCuda(Ptr<Packet> packet);
 
+    enum TxMachineState
+    {
+        READY, /**< The transmitter is ready to begin transmission of a packet */
+        BUSY   /**< The transmitter is busy transmitting a packet */
+    };
+
+    TxMachineState m_txMachineState;
+
     // CUDA-related members
     cudaStream_t m_stream;
     uint8_t* d_packetQueue; // GPU packet queue
     NetDevice::ReceiveCallback m_rxCallback;
+    CudaP2PChannel *m_channel;
     int* d_queueFront;
     int* d_queueRear;
     int m_queueSize;

@@ -13,9 +13,9 @@ namespace ns3 {
       return tid;
   }
 
-  CudaNetDevice::CudaNetDevice() {
+  CudaNetDevice::CudaNetDevice(): m_queueSize(1024), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr) {
       // Allocate GPU memory for packet buffers
-      m_queueSize = 1024;
+      // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
       cudaMalloc(&d_packetQueue, m_queueSize * 1500); // Example size
       cudaMallocManaged(&d_queueFront, sizeof(int));
@@ -115,9 +115,32 @@ namespace ns3 {
       }
   }
 
+  __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
+      // Transmit packet from one device to another
+      // For simplicity, we will just copy the packet to the destination device
+      // and process it there
+      if(m_channel->m_link[0].m_state == INITIALIZING || m_channel->m_link[1].m_state == INITIALIZING) {
+          printf("Channel not initialized\n");
+          return;
+      }
+
+      // uint8_t* d_packet;
+      // cudaMalloc(&d_packet, size);
+      // cudaMemcpy(d_packet, packet, size, cudaMemcpyDeviceToDevice);
+      // m_channel->m_link[1].m_dst->Receive(d_packet, size, 0, m_stream);
+  }
+
   __device__ void CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {
     // EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
     // cudaDeviceSynchronize(); // Ensure enqueue completes
+    if(m_txMachineState == BUSY) {
+      printf("Transmitter busy, dropping packet\n");
+      cudaFree((void*)packet);
+      return;
+    }
+
+    m_txMachineState = BUSY;
+
     int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
     uint8_t* entry = d_packetQueue + pos * 1500;         // Get position in the queue
 
@@ -125,7 +148,7 @@ namespace ns3 {
       entry[i] = packet[i];
     }
 
-    printf("Enqueued packet on GPU\n");
+    printf("Enqueued packet on GPU, pos: %d\n", pos);
     __syncthreads();
   }
 
