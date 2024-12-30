@@ -1,4 +1,5 @@
 #include "cuda-p2p-channel.h"
+#include "cuda-net-device.h"
 
 namespace ns3 {
 
@@ -51,6 +52,7 @@ namespace ns3 {
             printf("Channel not initialized\n");
             return;
         }
+        printf("transmitting packet in channel\n");
 
         // uint8_t* d_packet;
         // cudaMalloc(&d_packet, size);

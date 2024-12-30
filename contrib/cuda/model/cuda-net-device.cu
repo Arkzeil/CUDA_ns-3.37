@@ -13,7 +13,7 @@ namespace ns3 {
       return tid;
   }
 
-  CudaNetDevice::CudaNetDevice(): m_queueSize(1024), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr) {
+  CudaNetDevice::CudaNetDevice(): m_queueSize(1024), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr), m_linkUp(false) {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
@@ -115,21 +115,24 @@ namespace ns3 {
       }
   }
 
-  __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
-      // Transmit packet from one device to another
-      // For simplicity, we will just copy the packet to the destination device
-      // and process it there
-      if(m_channel->m_link[0].m_state == INITIALIZING || m_channel->m_link[1].m_state == INITIALIZING) {
-          printf("Channel not initialized\n");
-          return;
-      }
-
-      // uint8_t* d_packet;
-      // cudaMalloc(&d_packet, size);
-      // cudaMemcpy(d_packet, packet, size, cudaMemcpyDeviceToDevice);
-      // m_channel->m_link[1].m_dst->Receive(d_packet, size, 0, m_stream);
+  bool CudaNetDevice::attach(CudaP2PChannel *channel) {
+      m_channel = channel;
+      m_channel->Attach(this);
+      m_linkUp = true;
+      return true;
   }
 
+  __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
+      if(m_linkUp == false) {
+        printf("Link is down, dropping packet\n");
+        cudaFree((void*)packet);
+        return;
+      }
+
+      EnqueuePacket(packet, size);
+
+  }
+  // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ void CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {
     // EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
     // cudaDeviceSynchronize(); // Ensure enqueue completes
@@ -150,6 +153,12 @@ namespace ns3 {
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
     __syncthreads();
+
+    if(m_channel == nullptr) {
+      m_channel = new CudaP2PChannel();
+    }
+
+    m_channel->TransmitPacket(this, entry, size); // Start transmission
   }
 
   void CudaNetDevice::InitializeCudaBuffers() {

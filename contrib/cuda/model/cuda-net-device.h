@@ -24,6 +24,7 @@ public:
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
     virtual bool SupportsSendFrom(void) const;
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
+    bool attach(CudaP2PChannel *channel);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
@@ -43,6 +44,8 @@ private:
     };
 
     TxMachineState m_txMachineState;
+
+    bool m_linkUp;
 
     // CUDA-related members
     cudaStream_t m_stream;

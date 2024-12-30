@@ -5,8 +5,9 @@
 #include "ns3/point-to-point-net-device.h"
 #include "ns3/log.h"
 #include <cuda_runtime.h>
-#include "cuda-net-device.h"
 #include "helper.h"
+
+class CudaNetDevice;
 
 namespace ns3
 {
