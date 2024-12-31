@@ -173,6 +173,7 @@ __global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, 
     __syncthreads();
     // Call the socket's Send logic directly
     if (threadIdx.x == 0) { // Single thread handles the send
+        printf("Sending packet from CUDA UDP client\n");
         socket->Send(packet, packetSize);
     }
 }

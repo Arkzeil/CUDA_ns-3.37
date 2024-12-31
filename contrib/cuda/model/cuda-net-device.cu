@@ -138,7 +138,7 @@ namespace ns3 {
     // cudaDeviceSynchronize(); // Ensure enqueue completes
     if(m_txMachineState == BUSY) {
       printf("Transmitter busy, dropping packet\n");
-      cudaFree((void*)packet);
+      // cudaFree((void*)packet);
       return;
     }
 
@@ -155,7 +155,7 @@ namespace ns3 {
     __syncthreads();
 
     if(m_channel == nullptr) {
-      m_channel = new CudaP2PChannel();
+      cudaMalloc(&m_channel, sizeof(CudaP2PChannel));
     }
 
     m_channel->TransmitPacket(this, entry, size); // Start transmission

@@ -7,10 +7,10 @@
 #include <cuda_runtime.h>
 #include "helper.h"
 
-class CudaNetDevice;
-
 namespace ns3
 {
+    class CudaNetDevice;
+    
     class CudaP2PChannel: public PointToPointChannel, public Managed
     {
         public:
