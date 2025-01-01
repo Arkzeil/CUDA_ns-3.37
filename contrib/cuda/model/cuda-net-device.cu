@@ -160,6 +160,7 @@ namespace ns3 {
     __syncthreads();
 
     if(m_channel == nullptr) {
+      printf("Channel not attached\n");
       cudaMalloc(&m_channel, sizeof(CudaP2PChannel));
     }
 

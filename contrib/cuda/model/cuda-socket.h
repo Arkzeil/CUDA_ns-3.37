@@ -38,6 +38,7 @@ namespace ns3{
             enum SocketErrno GetErrno() const override;
             enum SocketType GetSocketType() const override;
             Ptr<Node> GetNode() const override;
+            void SetNode(Ptr<Node> node);
             int GetPeerName(Address& address) const override;
             bool SetAllowBroadcast(bool allowBroadcast) override;
             bool GetAllowBroadcast() const override;

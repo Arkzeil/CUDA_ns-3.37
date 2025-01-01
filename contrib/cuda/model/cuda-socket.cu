@@ -170,6 +170,11 @@ namespace ns3{
         return m_node;
     }
 
+    void CudaSocket::SetNode(Ptr<Node> node){
+        // Set the associated node
+        m_node = node;
+    }
+
     int CudaSocket::GetPeerName(Address& address) const{
         // Get the peer name
         return 0;
