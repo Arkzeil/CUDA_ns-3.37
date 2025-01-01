@@ -115,11 +115,16 @@ namespace ns3 {
       }
   }
 
-  bool CudaNetDevice::attach(CudaP2PChannel *channel) {
+  bool CudaNetDevice::Attach(CudaP2PChannel *channel) {
       m_channel = channel;
       m_channel->Attach(this);
       m_linkUp = true;
+      printf("Attached CudaNetDevice to channel\n");
       return true;
+  }
+
+  void CudaNetDevice::SetDataRate(DataRate bps) {
+      m_bps = bps;
   }
 
   __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {

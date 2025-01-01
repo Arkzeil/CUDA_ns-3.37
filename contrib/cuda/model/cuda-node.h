@@ -3,6 +3,7 @@
 
 #include "ns3/node.h"
 #include "ns3/log.h"
+#include "ns3/uinteger.h"
 #include "cuda_runtime.h"
 #include "cuda-net-device.h"
 #include "helper.h"

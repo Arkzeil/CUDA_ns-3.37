@@ -17,6 +17,7 @@ namespace ns3
             static TypeId GetTypeId(void);
 
             CudaP2PChannel();
+            CudaP2PChannel(Time delay);
             virtual ~CudaP2PChannel();
 
             void Attach(CudaNetDevice *device);

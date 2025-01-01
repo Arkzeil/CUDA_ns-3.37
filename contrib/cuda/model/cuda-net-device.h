@@ -4,7 +4,10 @@
 #include "ns3/net-device.h"
 #include "ns3/point-to-point-net-device.h"
 #include "ns3/cuda-p2p-channel.h"
+#include "ns3/net-device-container.h"
+#include "ns3/node-container.h"
 #include "ns3/log.h"
+#include "ns3/data-rate.h"
 #include <iostream>
 #include <stdint.h>
 #include <cuda_runtime.h>
@@ -24,7 +27,8 @@ public:
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
     virtual bool SupportsSendFrom(void) const;
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
-    bool attach(CudaP2PChannel *channel);
+    bool Attach(CudaP2PChannel *channel);
+    void SetDataRate(DataRate bps);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
@@ -46,6 +50,7 @@ private:
     TxMachineState m_txMachineState;
 
     bool m_linkUp;
+    DataRate m_bps;
 
     // CUDA-related members
     cudaStream_t m_stream;

@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
     uint16_t port = 8080;
     Address serverAddress(InetSocketAddress(interfaces.GetAddress(1), port));
 
-    Ptr<GpuUdpClient> client = CreateObject<GpuUdpClient>();
+    Ptr<CudaUdpClient> client = CreateObject<CudaUdpClient>();
     client->SetRemote(serverAddress);
     client->SetAttribute("MaxPackets", UintegerValue(100));
     client->SetAttribute("Interval", TimeValue(MilliSeconds(100)));

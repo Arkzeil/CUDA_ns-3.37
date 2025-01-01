@@ -22,6 +22,10 @@ namespace ns3 {
     CudaP2PChannel::CudaP2PChannel(): m_delay(Seconds(0.0)), m_stream(nullptr), m_nDevices(0) {
         // cudaStreamCreate(&m_stream);
     }
+
+    CudaP2PChannel::CudaP2PChannel(Time delay): m_delay(delay), m_stream(nullptr), m_nDevices(0) {
+        // cudaStreamCreate(&m_stream);
+    }
     
     CudaP2PChannel::~CudaP2PChannel() {
         // cudaStreamDestroy(m_stream);
