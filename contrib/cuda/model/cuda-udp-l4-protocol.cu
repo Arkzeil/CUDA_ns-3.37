@@ -41,7 +41,7 @@ namespace ns3 {
         return socket;
     }
 
-    __device__ void Send(const uint8_t packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){
+    __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){
         // Send a packet
         // For simplicity, we will just print the packet contents
         printf("Sending packet from %s to %s\n", src.GetIpv4().GetLocal(), dst.GetIpv4().GetLocal());

@@ -19,8 +19,8 @@ namespace ns3{
             
             CudaSocket();
             virtual ~CudaSocket();
-
-            CudaSocket *CreateSocket();
+            // must be static to be called from other classes
+            static CudaSocket *CreateSocket(Ptr<Node> node);
             int FinishBind();
             int Bind() override;
             int Bind(const Address& address) override;
@@ -54,10 +54,10 @@ namespace ns3{
             cudaStream_t m_cudaStream;
             CudaNetDevice *m_netDevice;
             // Connections to other layers of TCP/IP
-            Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
+            static Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
             // Ipv6EndPoint* m_endPoint6; //!< the IPv6 endpoint
-            Ptr<Node> m_node;          //!< the associated node
-            CudaUdpL4Protocol *m_udp;  //!< the associated UDP L4 protocol
+            static Ptr<Node> m_node;          //!< the associated node
+            static CudaUdpL4Protocol *m_udp;  //!< the associated UDP L4 protocol
             Callback<void, Ipv4Address, uint8_t, uint8_t, uint8_t, uint32_t>
                 m_icmpCallback; //!< ICMP callback
             // Callback<void, Ipv6Address, uint8_t, uint8_t, uint8_t, uint32_t>

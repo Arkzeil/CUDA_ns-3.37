@@ -37,9 +37,15 @@ namespace ns3{
         // cudaStreamDestroy(m_cudaStream);
     }
 
-    CudaSocket* CudaSocket::CreateSocket(){
+    CudaSocket* CudaSocket::CreateSocket(Ptr<Node> node){
         // Create a new socket
-        return new CudaSocket();
+        // This is not a good way to create a socket, but it is just for demonstration
+        // should use cuda node and call its socket factory
+        if(m_udp == nullptr){
+            m_udp = new CudaUdpL4Protocol();
+            m_udp->SetNode(node);
+        }
+        return m_udp->CreateSocket();
     }
 
     int CudaSocket::FinishBind(){
@@ -59,7 +65,7 @@ namespace ns3{
         if (done){
             return 0;
         }
-        
+
         return -1;
     }
 

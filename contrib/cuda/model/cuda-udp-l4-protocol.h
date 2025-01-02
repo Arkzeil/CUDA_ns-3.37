@@ -12,7 +12,7 @@ namespace ns3
     class Ipv4EndPointDemux;
     class Ipv4EndPoint;
     
-    class CudaUdpL4Protocol : public UdpL4Protocol{
+    class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
         public:
             static TypeId GetTypeId(void);
             static const uint8_t PROT_NUMBER; //!< protocol number (0x11)
@@ -28,7 +28,7 @@ namespace ns3
             CudaUdpL4Protocol &operator=(const CudaUdpL4Protocol &) = delete;
 
             CudaSocket* CreateSocket();
-            __device__ void Send(const uint8_t packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport);
+            __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport);
 
         private:
             Ptr<Node> m_node; //!< the node this stack is associated with

@@ -110,12 +110,17 @@ CudaUdpClient::StartApplication(){
         // TypeId tid = TypeId::LookupByName("ns3::CudaSocket");
         // m_cudaSocket = new CudaSocket();
         Ptr<Node> node = GetNode();
-        m_cudaSocket = new CudaSocket();
-        m_cudaSocket->SetNode(node);
+        m_cudaSocket = CudaSocket::CreateSocket(node);
+        // m_cudaSocket->SetNode(node);
         // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
-        m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
+        // m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
+        if(m_cudaSocket->Bind() == -1){
+            NS_LOG_ERROR("Failed to bind socket");
+            return;
+        }
         m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     }
+    // m_socket->SetRecvCallback(MakeCallback(&CudaUdpClient::Receive, this));
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
 }
 
