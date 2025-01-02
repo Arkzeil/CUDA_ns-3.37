@@ -11,6 +11,8 @@
 #include "cuda-net-device.h"
 
 namespace ns3{
+    class CudaUdpL4Protocol;
+
     class CudaSocket : public Socket, public Managed{
         public:
             static TypeId GetTypeId(void);
@@ -18,6 +20,8 @@ namespace ns3{
             CudaSocket();
             virtual ~CudaSocket();
 
+            CudaSocket *CreateSocket();
+            int FinishBind();
             int Bind() override;
             int Bind(const Address& address) override;
             int Bind6() override;
@@ -38,6 +42,7 @@ namespace ns3{
             enum SocketErrno GetErrno() const override;
             enum SocketType GetSocketType() const override;
             Ptr<Node> GetNode() const override;
+            void SetUdp(CudaUdpL4Protocol *udp);
             void SetNode(Ptr<Node> node);
             int GetPeerName(Address& address) const override;
             bool SetAllowBroadcast(bool allowBroadcast) override;
@@ -52,7 +57,7 @@ namespace ns3{
             Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
             // Ipv6EndPoint* m_endPoint6; //!< the IPv6 endpoint
             Ptr<Node> m_node;          //!< the associated node
-            Ptr<UdpL4Protocol> m_udp;  //!< the associated UDP L4 protocol
+            CudaUdpL4Protocol *m_udp;  //!< the associated UDP L4 protocol
             Callback<void, Ipv4Address, uint8_t, uint8_t, uint8_t, uint32_t>
                 m_icmpCallback; //!< ICMP callback
             // Callback<void, Ipv6Address, uint8_t, uint8_t, uint8_t, uint32_t>

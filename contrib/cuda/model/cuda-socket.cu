@@ -1,4 +1,5 @@
 #include "cuda-socket.h"
+#include "cuda-udp-l4-protocol.h"
 
 namespace ns3{
     NS_LOG_COMPONENT_DEFINE("CudaSocket");
@@ -36,10 +37,41 @@ namespace ns3{
         // cudaStreamDestroy(m_cudaStream);
     }
 
+    CudaSocket* CudaSocket::CreateSocket(){
+        // Create a new socket
+        return new CudaSocket();
+    }
+
+    int CudaSocket::FinishBind(){
+        // Finish binding the socket
+        bool done = false;
+        if (m_endPoint != nullptr)
+        {
+            // m_endPoint->SetRxCallback(
+            //     MakeCallback(&UdpSocketImpl::ForwardUp, Ptr<UdpSocketImpl>(this)));
+            // m_endPoint->SetIcmpCallback(
+            //     MakeCallback(&UdpSocketImpl::ForwardIcmp, Ptr<UdpSocketImpl>(this)));
+            // m_endPoint->SetDestroyCallback(
+            //     MakeCallback(&UdpSocketImpl::Destroy, Ptr<UdpSocketImpl>(this)));
+            done = true;
+        }
+
+        if (done){
+            return 0;
+        }
+        
+        return -1;
+    }
+
     int CudaSocket::Bind(){
         // Bind the socket to the default address
         // It should allocate a new socket and bind it to the default address
-        return Bind(*m_defaultAddress);
+        m_endPoint = m_udp->Allocate();
+        if(m_boundnetdevice){
+            // if not set, the socket is not bound to a net device, and device will be found at Ipv4L3Protocol::SendRealOut using route
+            m_endPoint->BindToNetDevice(m_boundnetdevice);            
+        }
+        return FinishBind();
     }
 
     int CudaSocket::Bind(const Address& address){
@@ -173,6 +205,11 @@ namespace ns3{
     void CudaSocket::SetNode(Ptr<Node> node){
         // Set the associated node
         m_node = node;
+    }
+
+    void CudaSocket::SetUdp(CudaUdpL4Protocol* udp){
+        // Set the associated UDP L4 protocol
+        m_udp = udp;
     }
 
     int CudaSocket::GetPeerName(Address& address) const{
