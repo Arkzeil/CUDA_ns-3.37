@@ -5,7 +5,7 @@
 #include "helper.h"
 
 namespace ns3{
-    class CudaIpv4L3Protocol : public Ipv4L3Protocol, public Managed{
+    class CudaIpv4L3Protocol : public Ipv4L3Protocol{
         public:
             static TypeId GetTypeId(void);
             CudaIpv4L3Protocol();

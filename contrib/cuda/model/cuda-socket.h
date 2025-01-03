@@ -13,7 +13,7 @@ namespace ns3{
     class CudaUdpL4Protocol;
     class CudaNetDevice;
 
-    class CudaSocket : public Socket, public Managed{
+    class CudaSocket : public Socket{
         public:
             static TypeId GetTypeId(void);
             

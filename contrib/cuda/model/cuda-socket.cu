@@ -4,7 +4,7 @@
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
-    
+
     NS_LOG_COMPONENT_DEFINE("CudaSocket");
 
     NS_OBJECT_ENSURE_REGISTERED(CudaSocket);

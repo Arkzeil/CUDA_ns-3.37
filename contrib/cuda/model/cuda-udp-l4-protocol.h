@@ -12,7 +12,7 @@ namespace ns3
     class Ipv4EndPoint;
     class CudaSocket;
     
-    class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
+    class CudaUdpL4Protocol : public UdpL4Protocol{
         public:
             static TypeId GetTypeId(void);
             static const uint8_t PROT_NUMBER; //!< protocol number (0x11)

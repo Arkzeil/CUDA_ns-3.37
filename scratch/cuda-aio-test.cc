@@ -51,6 +51,15 @@ int main(int argc, char* argv[]) {
 
   // Install CUDA UDP application on node 0
   Ptr<CudaUdpClient> app = CreateObject<CudaUdpClient>();
+  
+  uint32_t ipAddress = cudaInterfaces.GetAddress(1).Get();
+  char ipAddr[16];
+  snprintf(ipAddr,sizeof ipAddr,"%u.%u.%u.%u" ,(ipAddress & 0xff000000) >> 24 
+                                          ,(ipAddress & 0x00ff0000) >> 16
+                                          ,(ipAddress & 0x0000ff00) >> 8
+                                          ,(ipAddress & 0x000000ff));
+  printf("address: %s\n", ipAddr);
+
   app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
   app->SetPacketSize(512);
   app->SetSendInterval(Seconds(1.0));
