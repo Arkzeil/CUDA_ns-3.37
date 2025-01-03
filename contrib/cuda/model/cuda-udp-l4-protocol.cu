@@ -1,6 +1,7 @@
 #include "cuda-udp-l4-protocol.h"
 #include "ns3/ipv4-end-point-demux.h"
 #include "ns3/ipv4-end-point.h"
+#include "cuda-socket.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
@@ -44,18 +45,18 @@ namespace ns3 {
     __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){
         // Send a packet
         // For simplicity, we will just print the packet contents
-        printf("Sending packet from %s to %s\n", src.GetIpv4().GetLocal(), dst.GetIpv4().GetLocal());
-        uint8_t* buffer = new uint8_t[packet->GetSize()];
-        packet->CopyData(buffer, packet->GetSize());
-        printf("Packet contents: %s\n", buffer);
+        // printf("Sending packet from %s to %s\n", saddr.GetLocal(), daddr.GetLocal());
+        // printf("Packet contents: %s\n", packet);
+        // call the send function of callback
+        
     }
 
-    void CudaUdpL4Protocol::Receive(Ptr<Packet> packet, const Address& src, const Address& dst) {
-        // Receive a packet
-        // For simplicity, we will just print the packet contents
-        printf("Receiving packet from %s to %s\n", src.GetIpv4().GetLocal(), dst.GetIpv4().GetLocal());
-        uint8_t* buffer = new uint8_t[packet->GetSize()];
-        packet->CopyData(buffer, packet->GetSize());
-        printf("Packet contents: %s\n", buffer);
-    }
+    // void CudaUdpL4Protocol::Receive(Ptr<Packet> packet, const Address& src, const Address& dst) {
+    //     // Receive a packet
+    //     // For simplicity, we will just print the packet contents
+    //     printf("Receiving packet from %s to %s\n", src.GetIpv4().GetLocal(), dst.GetIpv4().GetLocal());
+    //     uint8_t* buffer = new uint8_t[packet->GetSize()];
+    //     packet->CopyData(buffer, packet->GetSize());
+    //     printf("Packet contents: %s\n", buffer);
+    // }
 }

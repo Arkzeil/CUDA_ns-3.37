@@ -369,6 +369,8 @@ build_cuda_lib(
         # model/cuda-ipv4.cu
         model/cuda-socket.cu
         model/cuda-p2p-channel.cu
+        model/cuda-udp-l4-protocol.cu
+        model/cuda-ipv4-l3-protocol.cu
         # helper/cuda-helper.cc
         helper/cuda-p2p-helper.cu
     HEADER_FILES                          # Header files
@@ -384,6 +386,8 @@ build_cuda_lib(
         # model/cuda-ipv4.h
         model/cuda-socket.h
         model/cuda-p2p-channel.h
+        model/cuda-udp-l4-protocol.h
+        model/cuda-ipv4-l3-protocol.h
         # helper/cuda-helper.h
         helper/cuda-p2p-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries

@@ -2,7 +2,6 @@
 #define CUDA_UDP_L4_PROTOCOL_H
 
 #include "ns3/udp-l4-protocol.h"
-#include "cuda-socket.h"
 #include <cuda_runtime.h>
 #include "helper.h"
 // #include "ns3/udp-socket-factory-impl.h"
@@ -11,6 +10,7 @@ namespace ns3
 {
     class Ipv4EndPointDemux;
     class Ipv4EndPoint;
+    class CudaSocket;
     
     class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
         public:
@@ -30,11 +30,14 @@ namespace ns3
             CudaSocket* CreateSocket();
             __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport);
 
+        typedef Callback<void, const uint8_t, Ipv4Address, Ipv4Address, uint8_t, Ptr<Ipv4Route>> DownTargetCallback;
+        
         private:
             Ptr<Node> m_node; //!< the node this stack is associated with
             Ipv4EndPointDemux *m_endPoints; //!< A list of IPv4 end points.
             // Ptr<CudaUdpSocketFactoryImpl> m_socketFactory;
             std::vector<CudaSocket*> m_sockets; //!< list of sockets
+            DownTargetCallback m_downTarget;   //!< Callback to send packets over IPv4
     };
 } // namespace ns3
 

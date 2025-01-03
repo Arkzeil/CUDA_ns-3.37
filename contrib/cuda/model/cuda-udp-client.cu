@@ -1,4 +1,5 @@
 #include "cuda-udp-client.h"
+#include "cuda-socket.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>

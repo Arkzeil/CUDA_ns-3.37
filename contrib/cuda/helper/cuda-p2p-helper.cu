@@ -1,4 +1,6 @@
 #include "cuda-p2p-helper.h"
+#include "ns3/cuda-net-device.h"
+#include "ns3/cuda-p2p-channel.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaPointToPointHelper");
@@ -32,8 +34,10 @@ namespace ns3 {
     NetDeviceContainer CudaP2PHelper::Install(Ptr<Node> a, Ptr<Node> b) {
         // Install P2P net devices on the nodes
         NetDeviceContainer container;
-        CudaNetDevice* deviceA = new CudaNetDevice();
-        CudaNetDevice* deviceB = new CudaNetDevice();
+        CudaNetDevice* deviceA;
+        CudaNetDevice* deviceB;
+        cudaMallocManaged(&deviceA, sizeof(CudaNetDevice));
+        cudaMallocManaged(&deviceB, sizeof(CudaNetDevice));
         CudaP2PChannel* channel = new CudaP2PChannel(delay);
         
         deviceA->SetDataRate(bandwidth);

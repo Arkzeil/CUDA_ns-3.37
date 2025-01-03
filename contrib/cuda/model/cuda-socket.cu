@@ -1,7 +1,10 @@
 #include "cuda-socket.h"
 #include "cuda-udp-l4-protocol.h"
+#include "cuda-net-device.h"
 
 namespace ns3{
+    CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
+    
     NS_LOG_COMPONENT_DEFINE("CudaSocket");
 
     NS_OBJECT_ENSURE_REGISTERED(CudaSocket);
@@ -26,7 +29,7 @@ namespace ns3{
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
         cudaMallocManaged(&m_defaultAddress, sizeof(Address));
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
-        m_netDevice = new CudaNetDevice();
+        // m_netDevice = new CudaNetDevice();
     }
 
     CudaSocket::~CudaSocket(){
@@ -150,11 +153,12 @@ namespace ns3{
         // Send data to the network device
         // SendToNetDevice(d_sendBuffer, size);
         printf("Sending packet from CUDA Socket\n");
-        if(m_netDevice == nullptr){
-            // m_netDevice = new CudaNetDevice();
-            printf("NetDevice is null\n");
-        }
-        m_netDevice->EnqueuePacket(d_buffer, size);
+        // if(m_netDevice == nullptr){
+        //     // m_netDevice = new CudaNetDevice();
+        //     printf("NetDevice is null\n");
+        // }
+        // m_udp->Send(d_buffer, size);
+        // m_netDevice->EnqueuePacket(d_buffer, size);
     }
 
     void CudaSocket::SendToNetDevice(const uint8_t* d_buffer, uint32_t size){

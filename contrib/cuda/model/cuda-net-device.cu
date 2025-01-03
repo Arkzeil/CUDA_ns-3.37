@@ -20,7 +20,7 @@ namespace ns3 {
       cudaMalloc(&d_packetQueue, m_queueSize * 1500); // Example size
       cudaMallocManaged(&d_queueFront, sizeof(int));
       cudaMallocManaged(&d_queueRear, sizeof(int));
-      *d_queueFront = *d_queueRear = 0;
+      // *d_queueFront = *d_queueRear = 0;
   }
 
   CudaNetDevice::~CudaNetDevice() {

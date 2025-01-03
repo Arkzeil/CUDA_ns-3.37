@@ -1,14 +1,19 @@
 #ifndef CUDA_P2P_HELPER_H
 #define CUDA_P2P_HELPER_H
 
-#include "ns3/cuda-net-device.h"
-#include "ns3/cuda-p2p-channel.h"
+#include <cuda_runtime.h>
 #include "ns3/node-container.h"
 #include "ns3/net-device-container.h"
+#include "ns3/nstime.h"
+#include "ns3/data-rate.h"
+#include "../model/helper.h"
 
 namespace ns3
 {
-    class CudaP2PHelper
+    class CudaNetDevice;
+    class CudaP2PChannel;
+
+    class CudaP2PHelper: public Managed
     {
     public:
         CudaP2PHelper();

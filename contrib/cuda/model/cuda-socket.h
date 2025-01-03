@@ -8,10 +8,10 @@
 #include <cuda_runtime.h>
 #include <queue>
 #include "helper.h"
-#include "cuda-net-device.h"
 
 namespace ns3{
     class CudaUdpL4Protocol;
+    class CudaNetDevice;
 
     class CudaSocket : public Socket, public Managed{
         public:
@@ -54,9 +54,9 @@ namespace ns3{
             cudaStream_t m_cudaStream;
             CudaNetDevice *m_netDevice;
             // Connections to other layers of TCP/IP
-            static Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
+            Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
             // Ipv6EndPoint* m_endPoint6; //!< the IPv6 endpoint
-            static Ptr<Node> m_node;          //!< the associated node
+            Ptr<Node> m_node;          //!< the associated node
             static CudaUdpL4Protocol *m_udp;  //!< the associated UDP L4 protocol
             Callback<void, Ipv4Address, uint8_t, uint8_t, uint8_t, uint32_t>
                 m_icmpCallback; //!< ICMP callback
