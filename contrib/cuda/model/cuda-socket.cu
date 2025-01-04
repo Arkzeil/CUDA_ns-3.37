@@ -26,8 +26,12 @@ namespace ns3{
     CudaSocket::CudaSocket() : m_netDevice(nullptr){
         // Constructor
         // cudaStreamCreate(&m_cudaStream);
+        printf("CudaSocket initialized\n");
+        // void *d_temp;
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
-        cudaMallocManaged(&m_defaultAddress, sizeof(Address));
+        // cudaMallocManaged(&d_temp, sizeof(Address));
+        // m_defaultAddress = new(d_temp) Address();
+        m_defaultAddress = new Address();
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
         // m_netDevice = new CudaNetDevice();
     }
@@ -75,11 +79,14 @@ namespace ns3{
     int CudaSocket::Bind(){
         // Bind the socket to the default address
         // It should allocate a new socket and bind it to the default address
+        printf("%d\n", m_defaultAddress->GetLength());
         m_endPoint = m_udp->Allocate();
+        printf("%d\n", m_defaultAddress->GetLength());
         if(m_boundnetdevice){
             // if not set, the socket is not bound to a net device, and device will be found at Ipv4L3Protocol::SendRealOut using route
             m_endPoint->BindToNetDevice(m_boundnetdevice);            
         }
+        printf("%d\n", m_defaultAddress->GetLength());
         return FinishBind();
     }
 
@@ -107,7 +114,15 @@ namespace ns3{
         if (InetSocketAddress::IsMatchingType(address) == true){
             InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
             *m_defaultAddress = Address(transport.GetIpv4());
-            *m_defaultPort = transport.GetPort();
+            printf("%p\n", m_defaultPort);
+            if(m_defaultPort == nullptr){
+                cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
+            }
+            printf("%p\n", m_defaultPort);
+            // printf("Before: m_defaultPort=%p, value=%d\n", m_defaultPort, *m_defaultPort);
+            // *m_defaultPort = transport.GetPort();
+            uint16_t port = transport.GetPort();
+            memcpy(m_defaultPort, &port, sizeof(uint16_t));
             // SetIpTos(transport.GetTos());
             m_connected = true;
             // NotifyConnectionSucceeded();

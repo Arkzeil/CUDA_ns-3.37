@@ -6,6 +6,7 @@
 #include "ns3/cuda-udp-client.h"
 #include "ns3/cuda-node.h"
 #include "ns3/cuda-p2p-helper.h"
+#include "ns3/cuda-helper.h"
 
 using namespace ns3;
 
@@ -13,6 +14,11 @@ int main(int argc, char* argv[]) {
   LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
 //   LogComponentEnable("Socket", LOG_LEVEL_INFO);
   LogComponentEnable("CudaUdpClient", LOG_LEVEL_INFO);
+
+  cudaDeviceProp prop;
+  if (!InitCUDA(prop)) {
+    return 1;
+  }
   // NodeContainer nodes;
   // nodes.Create(2);
   Ptr<Node> node0 = CreateObject<Node>();
