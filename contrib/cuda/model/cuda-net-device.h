@@ -16,7 +16,7 @@
 
 namespace ns3 {
 
-class CudaNetDevice : public PointToPointNetDevice{
+class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
     static TypeId GetTypeId(void);
 

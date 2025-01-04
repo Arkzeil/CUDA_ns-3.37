@@ -34,9 +34,12 @@ namespace ns3 {
     NetDeviceContainer CudaP2PHelper::Install(Ptr<Node> a, Ptr<Node> b) {
         // Install P2P net devices on the nodes
         NetDeviceContainer container;
-        Ptr<CudaNetDevice> deviceA = CreateObject<CudaNetDevice>();
-        Ptr<CudaNetDevice> deviceB = CreateObject<CudaNetDevice>();
-        Ptr<CudaP2PChannel> channel = CreateObject<CudaP2PChannel>();
+        // Ptr<CudaNetDevice> deviceA = CreateObject<CudaNetDevice>();
+        // Ptr<CudaNetDevice> deviceB = CreateObject<CudaNetDevice>();
+        // Ptr<CudaP2PChannel> channel = CreateObject<CudaP2PChannel>();
+        CudaNetDevice* deviceA = new CudaNetDevice();
+        CudaNetDevice* deviceB = new CudaNetDevice();
+        CudaP2PChannel* channel = new CudaP2PChannel();
         
         deviceA->SetDataRate(bandwidth);
         deviceA->SetAddress(Mac48Address::Allocate());
@@ -44,8 +47,10 @@ namespace ns3 {
         deviceB->SetAddress(Mac48Address::Allocate());
         channel->SetDelay(delay);
         
-        deviceA->Attach(GetPointer(channel));
-        deviceB->Attach(GetPointer(channel));
+        // deviceA->Attach(GetPointer(channel));
+        // deviceB->Attach(GetPointer(channel));
+        deviceA->Attach(channel);
+        deviceB->Attach(channel);
         
         a->AddDevice(deviceA);
         b->AddDevice(deviceB);

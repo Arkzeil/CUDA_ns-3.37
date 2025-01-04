@@ -29,9 +29,9 @@ namespace ns3{
         printf("CudaSocket initialized\n");
         // void *d_temp;
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
-        // cudaMallocManaged(&d_temp, sizeof(Address));
-        // m_defaultAddress = new(d_temp) Address();
-        m_defaultAddress = new Address();
+        cudaMallocManaged(&m_defaultAddress, sizeof(Address));
+        m_defaultAddress = new(m_defaultAddress) Address();
+        // m_defaultAddress = new Address();
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
         // m_netDevice = new CudaNetDevice();
     }
@@ -105,7 +105,7 @@ namespace ns3{
     int CudaSocket::Close(){
         // Close the socket
         cudaFree(d_sendBuffer);
-        cudaStreamDestroy(m_cudaStream);
+        // cudaStreamDestroy(m_cudaStream);
         return 0;
     }
 
@@ -114,15 +114,15 @@ namespace ns3{
         if (InetSocketAddress::IsMatchingType(address) == true){
             InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
             *m_defaultAddress = Address(transport.GetIpv4());
-            printf("%p\n", m_defaultPort);
-            if(m_defaultPort == nullptr){
-                cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
-            }
-            printf("%p\n", m_defaultPort);
+            // printf("%p\n", m_defaultPort);
+            // if(m_defaultPort == nullptr){
+            //     cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
+            // }
+            // printf("%p\n", m_defaultPort);
             // printf("Before: m_defaultPort=%p, value=%d\n", m_defaultPort, *m_defaultPort);
-            // *m_defaultPort = transport.GetPort();
-            uint16_t port = transport.GetPort();
-            memcpy(m_defaultPort, &port, sizeof(uint16_t));
+            *m_defaultPort = transport.GetPort();
+            // uint16_t port = transport.GetPort();
+            // memcpy(m_defaultPort, &port, sizeof(uint16_t));
             // SetIpTos(transport.GetTos());
             m_connected = true;
             // NotifyConnectionSucceeded();

@@ -11,7 +11,7 @@ namespace ns3
 {
     class CudaNetDevice;
     
-    class CudaP2PChannel: public PointToPointChannel{
+    class CudaP2PChannel: public PointToPointChannel, public Managed{
         public:
             static TypeId GetTypeId(void);
 

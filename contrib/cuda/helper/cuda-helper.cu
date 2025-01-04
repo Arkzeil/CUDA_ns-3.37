@@ -8,6 +8,7 @@ namespace ns3
         /* 取得支援 CUDA 的裝置的數目，如果系統上沒有支援 CUDA 的裝置，則它會傳回 1，
         而 device 0 會是一個模擬的裝置，但不支援 CUDA 1.0 以上的功能。
         */
+        printf("----------------InitCUDA, make sure CUDA is available-------------------\n");
         cudaGetDeviceCount(&count);
         if(count == 0) {
             fprintf(stderr, "There is no device.\n");
@@ -51,6 +52,8 @@ namespace ns3
         }
         /* 在找到支援 CUDA 1.0 以上的裝置之後，就可以呼叫 cudaSetDevice 函式，把它設為目前要使用的裝置。 */
         cudaSetDevice(i);
+
+        printf("----------------InitCUDA, CUDA check completed-------------------\n");
 
         return true;
     }
