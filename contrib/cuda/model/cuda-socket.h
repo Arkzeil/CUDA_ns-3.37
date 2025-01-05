@@ -13,7 +13,7 @@ namespace ns3{
     class CudaUdpL4Protocol;
     class CudaNetDevice;
 
-    class CudaSocket : public Socket{
+    class CudaSocket : public Socket, public Managed{
         public:
             static TypeId GetTypeId(void);
             
@@ -32,6 +32,9 @@ namespace ns3{
             int ShutdownSend() override;
             int Send(Ptr<Packet> p, uint32_t flags) override;
             __device__ void Send(const uint8_t* d_buffer, uint32_t size);
+            __device__ void DoSendTo(const uint8_t* d_buffer, uint32_t dest, uint16_t port, uint8_t tos, uint32_t size);
+            // We can't use host-only class in device code
+            // __device__ void DoSendTo(const uint8_t* d_buffer, Ipv4Address dest, uint16_t port, uint8_t tos, uint32_t size);
             Ptr<Packet> Recv(uint32_t maxSize, uint32_t flags) override;
             Ptr<Packet> RecvFrom(uint32_t maxSize, uint32_t flags, Address& fromAddress) override;
             int GetSockName(Address& address) const override;

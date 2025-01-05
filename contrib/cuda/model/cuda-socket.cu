@@ -4,6 +4,7 @@
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
+    __device__ CudaUdpL4Protocol* d_m_udp;
 
     NS_LOG_COMPONENT_DEFINE("CudaSocket");
 
@@ -49,8 +50,13 @@ namespace ns3{
         // This is not a good way to create a socket, but it is just for demonstration
         // should use cuda node and call its socket factory
         if(m_udp == nullptr){
+            // cudaMallocManaged(&m_udp, sizeof(CudaUdpL4Protocol));
+            // new (m_udp) CudaUdpL4Protocol();  // Explicitly call constructor
             m_udp = new CudaUdpL4Protocol();
             m_udp->SetNode(node);
+            cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol));  // Copy pointer to GPU
+            // m_udp = new CudaUdpL4Protocol();
+            // m_udp->SetNode(node);
         }
         return m_udp->CreateSocket();
     }
@@ -172,8 +178,20 @@ namespace ns3{
         //     // m_netDevice = new CudaNetDevice();
         //     printf("NetDevice is null\n");
         // }
-        // m_udp->Send(d_buffer, size);
+        // printf("%p\n", d_m_udp);
+        DoSendTo(d_buffer, 0, *m_defaultPort, 0, size);
+        // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
+        // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
         // m_netDevice->EnqueuePacket(d_buffer, size);
+    }
+
+    __device__ void CudaSocket::DoSendTo(const uint8_t* d_buffer, uint32_t dest, uint16_t port, uint8_t tos, uint32_t size){
+        // Send data to the specified address
+        // Send data to the network device
+        // SendToNetDevice(d_buffer, size);
+        printf("DoSendTo: Sending packet from CUDA Socket\n");
+        d_m_udp->test();  
+        // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }
 
     void CudaSocket::SendToNetDevice(const uint8_t* d_buffer, uint32_t size){

@@ -17,6 +17,10 @@ namespace ns3 {
 
     CudaUdpL4Protocol::CudaUdpL4Protocol(): m_endPoints(new Ipv4EndPointDemux()) {
         // Constructor
+        setDownTarget([](const uint8_t* packet, uint32_t size, uint32_t saddr, uint8_t protocol, uint32_t daddr){
+            // Default down target callback
+            printf("UdpL4: Default down target callback\n");
+        });
     }
 
     CudaUdpL4Protocol::~CudaUdpL4Protocol() {
@@ -33,6 +37,11 @@ namespace ns3 {
         return m_endPoints->Allocate();
     }
 
+    void CudaUdpL4Protocol::setDownTarget(DownTargetCallback callback) {
+        // Set the down target
+        m_downTarget = callback;
+    }
+
     CudaSocket* CudaUdpL4Protocol::CreateSocket() {
         // Create a new socket
         CudaSocket* socket = new CudaSocket();
@@ -42,13 +51,19 @@ namespace ns3 {
         return socket;
     }
 
+    __device__ void CudaUdpL4Protocol::test() {
+        // Test function
+        printf("UdpL4: Test function\n");
+    }
+
     __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", saddr.GetLocal(), daddr.GetLocal());
         // printf("Packet contents: %s\n", packet);
         // call the send function of callback
-        
+        printf("UdpL4: Sending packet\n");
+        // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 
     // void CudaUdpL4Protocol::Receive(Ptr<Packet> packet, const Address& src, const Address& dst) {
