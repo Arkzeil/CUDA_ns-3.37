@@ -14,7 +14,9 @@ namespace ns3{
             void Insert(Ptr<IpL4Protocol> protocol, uint32_t interfaceIndex) override;
             void Remove(Ptr<IpL4Protocol> protocol) override;
             void SetNode(Ptr<Node> node);
-            void Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route);
+            // void Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route);
+            __device__ void test();
+            __device__ void Send(const uint8_t *packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);
         
         private:

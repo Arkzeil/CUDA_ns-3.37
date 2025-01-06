@@ -2,10 +2,12 @@
 #include "ns3/ipv4-end-point-demux.h"
 #include "ns3/ipv4-end-point.h"
 #include "cuda-socket.h"
+#include "cuda-ipv4-l3-protocol.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
     NS_OBJECT_ENSURE_REGISTERED(CudaUdpL4Protocol);
+    __device__ CudaIpv4L3Protocol* d_m_ipv4;
 
     TypeId CudaUdpL4Protocol::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpL4Protocol")
@@ -17,10 +19,12 @@ namespace ns3 {
 
     CudaUdpL4Protocol::CudaUdpL4Protocol(): m_endPoints(new Ipv4EndPointDemux()) {
         // Constructor
-        setDownTarget([](const uint8_t* packet, uint32_t size, uint32_t saddr, uint8_t protocol, uint32_t daddr){
-            // Default down target callback
-            printf("UdpL4: Default down target callback\n");
-        });
+        // cudaMallocManaged(&m_downTarget, sizeof(DownDeviceFunctionPtr));
+        m_ipv4 = new CudaIpv4L3Protocol();
+        cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol));
+        // m_downTarget = CudaIpv4L3Protocol::Send;
+        // Ptr<CudaIpv4L3Protocol> ipv4 = this->GetObject<CudaIpv4L3Protocol>();
+        // m_downTarget = ipv4->Send();
     }
 
     CudaUdpL4Protocol::~CudaUdpL4Protocol() {
@@ -30,6 +34,10 @@ namespace ns3 {
     void CudaUdpL4Protocol::SetNode(Ptr<Node> node) {
         // Set the node
         m_node = node;
+        if(m_ipv4 == nullptr){
+            m_ipv4->SetNode(node);
+            cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol));
+        }
     }
 
     Ipv4EndPoint* CudaUdpL4Protocol::Allocate() {
@@ -37,9 +45,9 @@ namespace ns3 {
         return m_endPoints->Allocate();
     }
 
-    void CudaUdpL4Protocol::setDownTarget(DownTargetCallback callback) {
+    void CudaUdpL4Protocol::setDownTarget(DownDeviceFunctionPtr callback) {
         // Set the down target
-        m_downTarget = callback;
+        // m_downTarget = callback;
     }
 
     CudaSocket* CudaUdpL4Protocol::CreateSocket() {
@@ -54,6 +62,7 @@ namespace ns3 {
     __device__ void CudaUdpL4Protocol::test() {
         // Test function
         printf("UdpL4: Test function\n");
+        d_m_ipv4->test();
     }
 
     __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){
@@ -63,6 +72,7 @@ namespace ns3 {
         // printf("Packet contents: %s\n", packet);
         // call the send function of callback
         printf("UdpL4: Sending packet\n");
+        // d_m_ipv4->Send(packet, saddr, daddr, sport, dport);
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 

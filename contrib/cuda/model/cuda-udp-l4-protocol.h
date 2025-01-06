@@ -11,7 +11,8 @@ namespace ns3
     class Ipv4EndPointDemux;
     class Ipv4EndPoint;
     class CudaSocket;
-    typedef Callback<void, const uint8_t, uint32_t, uint32_t, uint8_t, uint32_t> DownTargetCallback;
+    class CudaIpv4L3Protocol;
+    typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
     class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
         public:
@@ -24,7 +25,7 @@ namespace ns3
             void SetNode(Ptr<Node> node);
             Ipv4EndPoint* Allocate();
 
-            void setDownTarget(DownTargetCallback callback);
+            void setDownTarget(DownDeviceFunctionPtr callback);
 
             // Delete copy constructor and assignment operator to avoid misuse
             CudaUdpL4Protocol(const CudaUdpL4Protocol &) = delete;
@@ -38,9 +39,10 @@ namespace ns3
         private:
             Ptr<Node> m_node; //!< the node this stack is associated with
             Ipv4EndPointDemux *m_endPoints; //!< A list of IPv4 end points.
+            CudaIpv4L3Protocol *m_ipv4; //!< A pointer to the IPv4 L3 protocol
             // Ptr<CudaUdpSocketFactoryImpl> m_socketFactory;
             std::vector<CudaSocket*> m_sockets; //!< list of sockets
-            DownTargetCallback m_downTarget;   //!< Callback to send packets over IPv4
+            // DownDeviceFunctionPtr m_downTarget;   //!< Callback to send packets over IPv4
     };
 } // namespace ns3
 

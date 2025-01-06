@@ -41,11 +41,21 @@ namespace ns3 {
         m_node = node;
     }
 
-    void CudaIpv4L3Protocol::Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route) {
+    // void CudaIpv4L3Protocol::Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route) {
+    //     // Send a packet
+    //     // For simplicity, we will just print the packet contents
+    //     // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
+    //     printf("Packet contents: %s\n", packet);
+    // }
+    __device__ void CudaIpv4L3Protocol::test() {
+        // Test function
+        printf("Ipv4L3: Test function\n");
+    }
+    __device__ void CudaIpv4L3Protocol::Send(const uint8_t *packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route) {
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
-        printf("Packet contents: %s\n", packet);
+        printf("CudaIpv4L3Protocol: Packet sending\n");
     }
 
     void CudaIpv4L3Protocol::SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader) {

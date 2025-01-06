@@ -7,6 +7,8 @@
 #include "ns3/cuda-node.h"
 #include "ns3/cuda-p2p-helper.h"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-ipv4-l3-protocol.h"
+#include "ns3/cuda-udp-l4-protocol.h"
 
 using namespace ns3;
 
