@@ -1,5 +1,6 @@
 #include "cuda-ipv4-l3-protocol.h"
 #include "ns3/node.h"
+#include "cuda-ipv4-interface.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaIpv4L3Protocol");
@@ -41,6 +42,23 @@ namespace ns3 {
         m_node = node;
     }
 
+    uint32_t CudaIpv4L3Protocol::AddInterface(CudaNetDevice* device) {
+        // Add an interface
+        // m_interfaces.push_back(device);
+        // Should also set traffic control layer, skip for now
+        CudaIpv4Interface *interface = new CudaIpv4Interface();
+        interface->SetDevice(device);
+        interface->SetNode(m_node);
+        AddIpv4Interface(interface);
+        return 0;
+    }
+
+    uint32_t CudaIpv4L3Protocol::AddIpv4Interface(CudaIpv4Interface* interface) {
+        // Add an IPv4 interface
+        m_ipv4Interfaces.push_back(interface);
+        return 0;
+    }
+
     // void CudaIpv4L3Protocol::Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route) {
     //     // Send a packet
     //     // For simplicity, we will just print the packet contents
@@ -50,6 +68,11 @@ namespace ns3 {
     __device__ void CudaIpv4L3Protocol::test() {
         // Test function
         printf("Ipv4L3: Test function\n");
+        // uint32_t a, b;
+        // for(uint32_t i = 0; i < 10000000; i++){
+        //     a = i;
+        //     b = a + 1;
+        // }
     }
     __device__ void CudaIpv4L3Protocol::Send(const uint8_t *packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route) {
         // Send a packet

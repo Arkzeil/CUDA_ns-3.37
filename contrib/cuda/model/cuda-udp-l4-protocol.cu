@@ -62,6 +62,11 @@ namespace ns3 {
     __device__ void CudaUdpL4Protocol::test() {
         // Test function
         printf("UdpL4: Test function\n");
+        // uint32_t a, b;
+        // for(uint32_t i = 0; i < 1000000; i++){
+        //     a = i / 2;
+        //     b = a * i / 5;
+        // }
         d_m_ipv4->test();
     }
 
