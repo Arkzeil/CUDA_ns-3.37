@@ -3,11 +3,12 @@
 #include "ns3/ipv4-end-point.h"
 #include "cuda-socket.h"
 #include "cuda-ipv4-l3-protocol.h"
+#include "cuda-udp-socket-factory-impl.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
     NS_OBJECT_ENSURE_REGISTERED(CudaUdpL4Protocol);
-    __device__ CudaIpv4L3Protocol* d_m_ipv4;
+    __device__ CudaIpv4L3Protocol* d_m_ipv4 = nullptr;
 
     TypeId CudaUdpL4Protocol::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpL4Protocol")
@@ -20,8 +21,16 @@ namespace ns3 {
     CudaUdpL4Protocol::CudaUdpL4Protocol(): m_endPoints(new Ipv4EndPointDemux()) {
         // Constructor
         // cudaMallocManaged(&m_downTarget, sizeof(DownDeviceFunctionPtr));
-        m_ipv4 = new CudaIpv4L3Protocol();
-        cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol));
+        printf("CudaUdpL4Protocol initialized\n");
+        // m_ipv4 = new CudaIpv4L3Protocol();
+        cudaMallocManaged(&m_ipv4, sizeof(CudaIpv4L3Protocol));
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) 
+            printf("CudaUdpL4Protocol malloc Error: %s\n", cudaGetErrorString(err));
+        cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
+        err = cudaGetLastError();
+        if (err != cudaSuccess) 
+            printf("CudaUdpL4Protocol memcpy Error: %s\n", cudaGetErrorString(err));
         // m_downTarget = CudaIpv4L3Protocol::Send;
         // Ptr<CudaIpv4L3Protocol> ipv4 = this->GetObject<CudaIpv4L3Protocol>();
         // m_downTarget = ipv4->Send();
@@ -79,6 +88,34 @@ namespace ns3 {
         printf("UdpL4: Sending packet\n");
         // d_m_ipv4->Send(packet, saddr, daddr, sport, dport);
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
+    }
+
+    void CudaUdpL4Protocol::NotifyNewAggregate() {
+        // Notify a new aggregate
+        Ptr<Node> node = this->GetObject<Node>();
+        Ptr<Ipv4> ipv4 = this->GetObject<Ipv4>();
+        if(ipv4 == nullptr){
+            printf("UdpL4: No Ipv4 object found\n");
+            return;
+        }
+        if(node == nullptr){
+            printf("UdpL4: No Node object found\n");
+            return;
+        }
+        printf("UdpL4: Notify new aggregate\n");
+        if(m_node == nullptr){
+            if(node && ipv4){
+                this->SetNode(node);
+                Ptr<CudaUdpSocketFactoryImpl> socketFactory = CreateObject<CudaUdpSocketFactoryImpl>();
+                if(socketFactory == nullptr){
+                    printf("Failed to create socket factory\n");
+                    return;
+                }
+                socketFactory->SetUdp(this);
+                node->AggregateObject(socketFactory);
+            }
+        }
+        // Ptr<Ipv6> ipv6 = node->GetObject<Ipv6>();
     }
 
     // void CudaUdpL4Protocol::Receive(Ptr<Packet> packet, const Address& src, const Address& dst) {

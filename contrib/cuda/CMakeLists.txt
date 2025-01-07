@@ -372,6 +372,7 @@ build_cuda_lib(
         model/cuda-udp-l4-protocol.cu
         model/cuda-ipv4-l3-protocol.cu
         model/cuda-ipv4-interface.cu
+        model/cuda-udp-socket-factory-impl.cu
         helper/cuda-helper.cu
         helper/cuda-p2p-helper.cu
         helper/cuda-ipv4-address-helper.cu
@@ -392,6 +393,7 @@ build_cuda_lib(
         model/cuda-udp-l4-protocol.h
         model/cuda-ipv4-l3-protocol.h
         model/cuda-ipv4-interface.h
+        model/cuda-udp-socket-factory-impl.h
         helper/cuda-helper.h
         helper/cuda-p2p-helper.h
         helper/cuda-ipv4-address-helper.h

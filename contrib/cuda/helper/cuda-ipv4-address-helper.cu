@@ -59,13 +59,26 @@ namespace ns3{
             Ptr<NetDevice> device = c.Get(i);
             Ptr<Node> node = device->GetNode();
             // Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
-            CudaIpv4L3Protocol* ipv4 = node->GetObject<CudaIpv4L3Protocol>();
-            Ptr<Ipv4Interface> interface = ipv4->GetInterface(0);
-            Ipv4InterfaceAddress address = interface->GetAddress(0);
-            address.SetLocal(Ipv4Address(m_base | (m_address & m_max)));
-            address.SetMask(Ipv4Mask(m_mask));
-            interface->SetAddress(address);
-            m_address = (m_address + 1) & m_max;
+            // CudaIpv4L3Protocol* ipv4 = node->GetObject<CudaIpv4L3Protocol>();
+            // Ptr<Ipv4Interface> interface = ipv4->GetInterface(0);
+            // Ipv4InterfaceAddress address = interface->GetAddress(0);
+            // address.SetLocal(Ipv4Address(m_base | (m_address & m_max)));
+            // address.SetMask(Ipv4Mask(m_mask));
+            // interface->SetAddress(address);
+            // m_address = (m_address + 1) & m_max;
         }
+    }
+
+    uint32_t CudaIpv4AddressHelper::NumAddressBits(uint32_t maskbits) const {
+        //
+        // Calculate the number of address bits
+        //
+        uint32_t bits = 0;
+        for(uint32_t i = 0; i < 32; i++) {
+            if(maskbits & (1 << i)) {
+                bits++;
+            }
+        }
+        return bits;
     }
 }

@@ -9,6 +9,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-ipv4-l3-protocol.h"
 #include "ns3/cuda-udp-l4-protocol.h"
+#include "ns3/cuda-internet-stack-helper.h"
 
 using namespace ns3;
 
@@ -29,6 +30,7 @@ int main(int argc, char* argv[]) {
   // CudaNode *cudaNode1 = new CudaNode();
 
   // Install the Internet stack
+  // Cuda_InternetStackHelper internet;
   InternetStackHelper internet;
   internet.SetIpv6StackInstall(false);
   internet.Install(node0);
@@ -77,10 +79,10 @@ int main(int argc, char* argv[]) {
   // cudaNode0->AddApplication(app);
 
   // Install a UDP echo server on node 1
-  UdpEchoServerHelper server(9);
-  ApplicationContainer serverApp = server.Install(node1);
-  serverApp.Start(Seconds(1.0));
-  serverApp.Stop(Seconds(10.0));
+  // UdpEchoServerHelper server(9);
+  // ApplicationContainer serverApp = server.Install(node1);
+  // serverApp.Start(Seconds(1.0));
+  // serverApp.Stop(Seconds(10.0));
 
   Simulator::Run();
   Simulator::Destroy();

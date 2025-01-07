@@ -8,16 +8,17 @@
 #include "ns3/ipv4-interface.h"
 #include "ns3/ipv4-interface-address.h"
 #include "ns3/ipv4-interface-container.h"
+#include "ns3/node.h"
 
 namespace ns3{
     class CudaIpv4AddressHelper: public Ipv4AddressHelper{
         public:
             CudaIpv4AddressHelper();
             CudaIpv4AddressHelper(const Ipv4Address network, const Ipv4Mask mask, const Ipv4Address address);
+            virtual ~CudaIpv4AddressHelper();
             void SetBase(const Ipv4Address network, const Ipv4Mask mask, const Ipv4Address address);
             Ipv4Address NewAddress();
             Ipv4InterfaceContainer Assign(const NetDeviceContainer& c);
-            Ipv4Address NewAddress();
             uint32_t NumAddressBits(uint32_t maskbits) const;
         private:
             uint32_t m_network;

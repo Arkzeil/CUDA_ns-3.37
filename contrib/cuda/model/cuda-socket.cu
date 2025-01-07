@@ -52,7 +52,19 @@ namespace ns3{
         if(m_udp == nullptr){
             // cudaMallocManaged(&m_udp, sizeof(CudaUdpL4Protocol));
             // new (m_udp) CudaUdpL4Protocol();  // Explicitly call constructor
-            m_udp = new CudaUdpL4Protocol();
+            cudaError_t err = cudaGetLastError();
+            if (err != cudaSuccess) 
+                printf("!!!: %s\n", cudaGetErrorString(err));
+            // m_udp = new CudaUdpL4Protocol();
+            cudaMallocManaged((void**)&m_udp, sizeof(CudaUdpL4Protocol));
+            m_udp = new(m_udp) CudaUdpL4Protocol();
+            
+            err = cudaGetLastError();
+            if (err != cudaSuccess) 
+                printf("Error: %s\n", cudaGetErrorString(err));
+            else
+                printf("Success\n");
+            printf("%p\n", GetPointer(node));
             m_udp->SetNode(node);
             cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol));  // Copy pointer to GPU
             // m_udp = new CudaUdpL4Protocol();

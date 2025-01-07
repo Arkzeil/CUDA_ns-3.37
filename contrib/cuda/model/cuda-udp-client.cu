@@ -1,5 +1,6 @@
 #include "cuda-udp-client.h"
 #include "cuda-socket.h"
+#include "cuda-udp-socket-factory-impl.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>
@@ -111,6 +112,9 @@ CudaUdpClient::StartApplication(){
         // TypeId tid = TypeId::LookupByName("ns3::CudaSocket");
         // m_cudaSocket = new CudaSocket();
         Ptr<Node> node = GetNode();
+        if(node == nullptr){
+            printf("Node is null\n");
+        }
         m_cudaSocket = CudaSocket::CreateSocket(node);
         // m_cudaSocket->SetNode(node);
         // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
@@ -148,6 +152,9 @@ CudaUdpClient::StopApplication()
 __host__ void CudaUdpClient::InitCudaResources() {
     cudaStreamCreate(&m_cudaStream);
     cudaMalloc(&d_packetBuffer, m_size); // Allocate GPU memory for packets (MTU size).
+    if(d_packetBuffer == nullptr){
+        printf("Failed to allocate GPU memory for packet buffer\n");
+    }
 }
 
 __host__ void CudaUdpClient::CleanupCudaResources() {
@@ -193,10 +200,16 @@ void CudaUdpClient::GeneratePacketOnGpu() {
   int blockSize = 256;
   int gridSize = (m_size + blockSize - 1) / blockSize;
 
+  if(d_packetBuffer == nullptr){
+      printf("Packet buffer is null\n");
+  }
+  if(m_cudaSocket == nullptr){
+      printf("Cuda socket is null\n");
+  }
+
+cudaDeviceSynchronize();
   GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size);
-  cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) 
-        printf("Error: %s\n", cudaGetErrorString(err));
+  
   cudaStreamSynchronize(m_cudaStream);
 }
 

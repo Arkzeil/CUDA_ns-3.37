@@ -14,7 +14,7 @@ namespace ns3
     class CudaIpv4L3Protocol;
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
-    class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
+    class CudaUdpL4Protocol : public UdpL4Protocol{
         public:
             static TypeId GetTypeId(void);
             static const uint8_t PROT_NUMBER; //!< protocol number (0x11)
@@ -34,7 +34,9 @@ namespace ns3
             CudaSocket* CreateSocket();
             __device__ void test();
             __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport);
-
+        protected:
+            // void DoDispose() override;
+            void NotifyNewAggregate() override;
         
         private:
             Ptr<Node> m_node; //!< the node this stack is associated with

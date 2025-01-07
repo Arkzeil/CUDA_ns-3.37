@@ -78,24 +78,24 @@ namespace ns3{
         m_isUp = false;
     }
 
-    void CudaIpv4Interface::DoDispose(void) {
-        // Dispose of the object
-        m_device = nullptr;
-        m_node = nullptr;
-        m_tc = nullptr;
-        m_address = Ipv4InterfaceAddress();
-        m_isUp = false;
-    }
+    // void CudaIpv4Interface::DoDispose(void) {
+    //     // Dispose of the object
+    //     m_device = nullptr;
+    //     m_node = nullptr;
+    //     m_tc = nullptr;
+    //     m_address = Ipv4InterfaceAddress();
+    //     m_isUp = false;
+    // }
     
-    void CudaIpv4Interface::DoInitialize(void) {
-        // Initialize the object
-    }
+    // void CudaIpv4Interface::DoInitialize(void) {
+    //     // Initialize the object
+    // }
 
-    void CudaIpv4Interface::Receive(Ptr<Packet> packet, const Address& from) {
-        // Receive a packet
-    }
+    // void CudaIpv4Interface::Receive(Ptr<Packet> packet, const Address& from) {
+    //     // Receive a packet
+    // }
 
-    void CudaIpv4Interface::Send(Ptr<Packet> packet, const Address& to, uint8_t protocolNumber) {
-        // Send a packet
-    }
+    // void CudaIpv4Interface::Send(Ptr<Packet> packet, const Address& to, uint8_t protocolNumber) {
+    //     // Send a packet
+    // }
 }
