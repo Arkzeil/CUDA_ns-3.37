@@ -371,8 +371,11 @@ build_cuda_lib(
         model/cuda-p2p-channel.cu
         model/cuda-udp-l4-protocol.cu
         model/cuda-ipv4-l3-protocol.cu
+        model/cuda-ipv4-interface.cu
         helper/cuda-helper.cu
         helper/cuda-p2p-helper.cu
+        helper/cuda-ipv4-address-helper.cu
+        helper/cuda-internet-stack-helper.cc
     HEADER_FILES                          # Header files
         # model/cuda_wrapper.h
         # model/cuda_module.h
@@ -388,8 +391,11 @@ build_cuda_lib(
         model/cuda-p2p-channel.h
         model/cuda-udp-l4-protocol.h
         model/cuda-ipv4-l3-protocol.h
+        model/cuda-ipv4-interface.h
         helper/cuda-helper.h
         helper/cuda-p2p-helper.h
+        helper/cuda-ipv4-address-helper.h
+        helper/cuda-internet-stack-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart
 )

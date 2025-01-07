@@ -1,4 +1,5 @@
 #include "cuda-ipv4-address-helper.h"
+#include "ns3/cuda-ipv4-l3-protocol.h"
 
 namespace ns3{
     NS_LOG_COMPONENT_DEFINE("CudaIpv4AddressHelper");
@@ -35,6 +36,21 @@ namespace ns3{
         m_max = (1 << NumAddressBits(m_mask)) - 1;
     }
 
+    Ipv4Address CudaIpv4AddressHelper::NewAddress() {
+        //
+        // Generate a new address
+        //
+        Ipv4Address addr((m_network << m_shift) | m_address);
+        ++m_address;
+        //
+        // The Ipv4AddressGenerator allows us to keep track of the addresses we have
+        // allocated and will assert if we accidentally generate a duplicate.  This
+        // avoids some really hard to debug problems.
+        //
+        Ipv4AddressGenerator::AddAllocated(addr);
+        return addr;
+    }
+
     Ipv4InterfaceContainer CudaIpv4AddressHelper::Assign(const NetDeviceContainer& c) {
         //
         // Assign addresses to the devices in the container
@@ -42,7 +58,8 @@ namespace ns3{
         for(uint32_t i = 0; i < c.GetN(); i++) {
             Ptr<NetDevice> device = c.Get(i);
             Ptr<Node> node = device->GetNode();
-            Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
+            // Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
+            CudaIpv4L3Protocol* ipv4 = node->GetObject<CudaIpv4L3Protocol>();
             Ptr<Ipv4Interface> interface = ipv4->GetInterface(0);
             Ipv4InterfaceAddress address = interface->GetAddress(0);
             address.SetLocal(Ipv4Address(m_base | (m_address & m_max)));
