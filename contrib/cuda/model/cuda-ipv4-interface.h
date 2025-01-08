@@ -31,6 +31,7 @@ namespace ns3{
 
             void SetAddress (Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress (void) const;
+            void SetMetric (uint16_t metric);
 
             bool IsUp (void) const;
             void SetUp (void);
@@ -42,6 +43,7 @@ namespace ns3{
             Ptr<TrafficControlLayer> m_tc;
             Ipv4InterfaceAddress m_address;
             bool m_isUp;
+            uint16_t m_metric;
     };
 }
 

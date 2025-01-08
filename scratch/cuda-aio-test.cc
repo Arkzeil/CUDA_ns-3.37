@@ -10,6 +10,7 @@
 #include "ns3/cuda-ipv4-l3-protocol.h"
 #include "ns3/cuda-udp-l4-protocol.h"
 #include "ns3/cuda-internet-stack-helper.h"
+#include "ns3/cuda-ipv4-address-helper.h"
 
 using namespace ns3;
 
@@ -53,7 +54,8 @@ int main(int argc, char* argv[]) {
   // NetDeviceContainer cudaDevices = p2p.Install(cudaNode0, cudaNode1);
 
   // Assign IP addresses
-  Ipv4AddressHelper ipv4;
+  CudaIpv4AddressHelper ipv4;
+  // Ipv4AddressHelper ipv4;
   ipv4.SetBase("10.1.1.0", "255.255.255.0");
   // Ipv4InterfaceContainer interfaces = ipv4.Assign(devices);
   Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(cudaDevices);

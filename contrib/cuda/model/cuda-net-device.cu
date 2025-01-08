@@ -127,6 +127,14 @@ namespace ns3 {
       m_bps = bps;
   }
 
+  Ptr<Node> CudaNetDevice::GetNode() const {
+      return m_node;
+  }
+
+  void CudaNetDevice::SetNode(Ptr<Node> node) {
+      m_node = node;
+  }
+
   __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
       if(m_linkUp == false) {
         printf("Link is down, dropping packet\n");

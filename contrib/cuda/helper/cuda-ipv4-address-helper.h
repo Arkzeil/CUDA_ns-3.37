@@ -16,7 +16,7 @@ namespace ns3{
             CudaIpv4AddressHelper();
             CudaIpv4AddressHelper(const Ipv4Address network, const Ipv4Mask mask, const Ipv4Address address);
             virtual ~CudaIpv4AddressHelper();
-            void SetBase(const Ipv4Address network, const Ipv4Mask mask, const Ipv4Address address);
+            void SetBase(const Ipv4Address network, const Ipv4Mask mask, Ipv4Address base = "0.0.0.1");
             Ipv4Address NewAddress();
             Ipv4InterfaceContainer Assign(const NetDeviceContainer& c);
             uint32_t NumAddressBits(uint32_t maskbits) const;

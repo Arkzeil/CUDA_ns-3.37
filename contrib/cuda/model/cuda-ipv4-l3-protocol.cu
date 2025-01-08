@@ -59,6 +59,74 @@ namespace ns3 {
         return 0;
     }
 
+    CudaIpv4Interface* CudaIpv4L3Protocol::GetInterface(uint32_t interfaceIndex) const {
+        // Get an interface
+        if(interfaceIndex < m_ipv4Interfaces.size()){
+            return m_ipv4Interfaces[interfaceIndex];
+        }
+        return nullptr;
+    }
+
+    int32_t CudaIpv4L3Protocol::GetInterfaceForDevice(CudaNetDevice* device) {
+        // Get the interface for a device
+        for(uint32_t i = 0; i < m_ipv4Interfaces.size(); i++){
+            if(m_ipv4Interfaces[i]->GetDevice() == device){
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    bool CudaIpv4L3Protocol::AddAddress(uint32_t interfaceIndex, Ipv4InterfaceAddress address) {
+        // Add an address to an interface
+        CudaIpv4Interface* interface = GetInterface(interfaceIndex);
+        if(interface != nullptr){
+            interface->SetAddress(address);
+            return true;
+        }
+        return false;
+    }
+
+    Ipv4InterfaceAddress CudaIpv4L3Protocol::GetAddress(uint32_t interfaceIndex, uint32_t addressIndex) const {
+        // Get an address
+        CudaIpv4Interface* interface = GetInterface(interfaceIndex);
+        // currently only one address per interface
+        if(interface != nullptr){
+            return interface->GetAddress();
+        }
+        return Ipv4InterfaceAddress();
+    }
+
+    void CudaIpv4L3Protocol::SetMetric(uint32_t i, uint16_t metric) {
+        // Set the metric
+        CudaIpv4Interface* interface = GetInterface(i);
+        if(interface != nullptr){
+            interface->SetMetric(metric);
+        }
+        // m_metrics[i] = metric;
+    }
+
+    void CudaIpv4L3Protocol::SetUp(uint32_t interfaceIndex) {
+        // Set the interface up
+        CudaIpv4Interface* interface = GetInterface(interfaceIndex);
+        if(interface != nullptr){
+            interface->SetUp();
+        }
+    }
+
+    void CudaIpv4L3Protocol::SetDown(uint32_t interfaceIndex) {
+        // Set the interface down
+        CudaIpv4Interface* interface = GetInterface(interfaceIndex);
+        if(interface != nullptr){
+            interface->SetDown();
+        }
+    }
+
+    void CudaIpv4L3Protocol::SetForwarding(uint32_t interfaceIndex, bool enable) {
+        // Set forwarding
+        // m_forwarding[interfaceIndex] = enable;
+    }
+
     // void CudaIpv4L3Protocol::Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route) {
     //     // Send a packet
     //     // For simplicity, we will just print the packet contents
@@ -85,5 +153,21 @@ namespace ns3 {
         // Send a packet out
         // For simplicity, we will just print the packet contents
         printf("Sending packet out\n");
+    }
+
+    void CudaIpv4L3Protocol::DoDispose() {
+        // Dispose of the object
+    }
+
+    void CudaIpv4L3Protocol::NotifyNewAggregate() {
+        printf("CudaIpv4L3Protocol: New aggregate\n");
+        // Notify of a new aggregate
+        if(m_node == nullptr){
+            Ptr<Node> node = this->GetObject<Node>();
+            // verify that it's a valid node and that
+            // the node has not been set before
+            if(node)
+                this->SetNode(node);
+        }
     }
 }

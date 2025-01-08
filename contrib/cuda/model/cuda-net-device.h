@@ -29,6 +29,8 @@ public:
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
     bool Attach(CudaP2PChannel *channel);
     void SetDataRate(DataRate bps);
+    Ptr<Node> GetNode() const;
+    void SetNode(Ptr<Node> node);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
@@ -51,6 +53,7 @@ private:
 
     bool m_linkUp;
     DataRate m_bps;
+    Ptr<Node> m_node;
 
     // CUDA-related members
     cudaStream_t m_stream;

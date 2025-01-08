@@ -20,11 +20,23 @@ namespace ns3{
             void SetNode(Ptr<Node> node);
             uint32_t AddInterface(CudaNetDevice* device);
             uint32_t AddIpv4Interface(CudaIpv4Interface* interface);
+            int32_t GetInterfaceForDevice(CudaNetDevice* device);
+            CudaIpv4Interface* GetInterface(uint32_t interfaceIndex) const;
+            bool AddAddress(uint32_t interfaceIndex, Ipv4InterfaceAddress address);
+            Ipv4InterfaceAddress GetAddress(uint32_t interfaceIndex, uint32_t addressIndex) const;
+            void SetMetric(uint32_t i, uint16_t metric);
+            void SetUp(uint32_t interfaceIndex);
+            void SetDown(uint32_t interfaceIndex);
+            void SetForwarding(uint32_t interfaceIndex, bool enable);
             // void Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route);
             __device__ void test();
             __device__ void Send(const uint8_t *packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);
         
+        protected:
+            void DoDispose() override;
+            void NotifyNewAggregate() override;
+
         private:
             Ptr<Node> m_node;
             std::vector<CudaIpv4Interface*> m_ipv4Interfaces;

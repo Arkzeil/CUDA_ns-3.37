@@ -105,13 +105,13 @@ namespace ns3 {
         if(m_node == nullptr){
             if(node && ipv4){
                 this->SetNode(node);
-                Ptr<CudaUdpSocketFactoryImpl> socketFactory = CreateObject<CudaUdpSocketFactoryImpl>();
-                if(socketFactory == nullptr){
-                    printf("Failed to create socket factory\n");
-                    return;
-                }
-                socketFactory->SetUdp(this);
-                node->AggregateObject(socketFactory);
+                // Ptr<CudaUdpSocketFactoryImpl> socketFactory = CreateObject<CudaUdpSocketFactoryImpl>();
+                // if(socketFactory == nullptr){
+                //     printf("Failed to create socket factory\n");
+                //     return;
+                // }
+                // socketFactory->SetUdp(this);
+                // node->AggregateObject(socketFactory);
             }
         }
         // Ptr<Ipv6> ipv6 = node->GetObject<Ipv6>();

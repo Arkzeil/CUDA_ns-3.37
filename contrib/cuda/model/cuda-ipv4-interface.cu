@@ -63,6 +63,11 @@ namespace ns3{
         return m_address;
     }
 
+    void CudaIpv4Interface::SetMetric(uint16_t metric) {
+        // Set the metric
+        m_metric = metric;
+    }
+
     bool CudaIpv4Interface::IsUp(void) const {
         // Check if the interface is up
         return m_isUp;

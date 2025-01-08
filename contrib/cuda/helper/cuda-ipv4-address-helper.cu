@@ -1,5 +1,6 @@
 #include "cuda-ipv4-address-helper.h"
 #include "ns3/cuda-ipv4-l3-protocol.h"
+#include "ns3/cuda-net-device.h"
 
 namespace ns3{
     NS_LOG_COMPONENT_DEFINE("CudaIpv4AddressHelper");
@@ -18,6 +19,13 @@ namespace ns3{
         m_max = 0xffffffff;
     }
 
+    CudaIpv4AddressHelper::CudaIpv4AddressHelper(const Ipv4Address network, const Ipv4Mask mask, const Ipv4Address address) {
+        //
+        // Set the base address
+        //
+        SetBase(network, mask, address);
+    }
+
     CudaIpv4AddressHelper::~CudaIpv4AddressHelper() {
         //
         // Nothing to do
@@ -30,10 +38,10 @@ namespace ns3{
         //
         m_network = network.Get();
         m_mask = mask.Get();
-        m_address = address.Get();
-        m_base = m_network & m_mask;
-        m_shift = 32 - NumAddressBits(m_mask);
-        m_max = (1 << NumAddressBits(m_mask)) - 1;
+        m_base = m_address = address.Get();
+        m_shift = NumAddressBits(m_mask);
+        m_max = (1 << m_shift) - 2;
+        m_network >>= m_shift;
     }
 
     Ipv4Address CudaIpv4AddressHelper::NewAddress() {
@@ -55,11 +63,27 @@ namespace ns3{
         //
         // Assign addresses to the devices in the container
         //
+        Ipv4InterfaceContainer retval;
+
         for(uint32_t i = 0; i < c.GetN(); i++) {
             Ptr<NetDevice> device = c.Get(i);
             Ptr<Node> node = device->GetNode();
             // Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
-            // CudaIpv4L3Protocol* ipv4 = node->GetObject<CudaIpv4L3Protocol>();
+            Ptr<CudaIpv4L3Protocol> ipv4 = node->GetObject<CudaIpv4L3Protocol>();
+            if(ipv4 == nullptr){
+                NS_LOG_ERROR("No Ipv4L3Protocol found for node");
+                return retval;
+            }
+            int32_t interface = ipv4->GetInterfaceForDevice(GetPointer(DynamicCast<CudaNetDevice>(device)));
+            if(interface == -1) {
+                NS_LOG_ERROR("No interface found for device");
+                ipv4->AddInterface(GetPointer(DynamicCast<CudaNetDevice>(device)));
+            }
+            Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress(NewAddress(), m_mask);
+            ipv4->AddAddress(interface, ipv4Addr);
+            ipv4->SetMetric(interface, 1);
+            ipv4->SetUp(interface);
+            retval.Add(ipv4, interface);
             // Ptr<Ipv4Interface> interface = ipv4->GetInterface(0);
             // Ipv4InterfaceAddress address = interface->GetAddress(0);
             // address.SetLocal(Ipv4Address(m_base | (m_address & m_max)));
@@ -67,6 +91,8 @@ namespace ns3{
             // interface->SetAddress(address);
             // m_address = (m_address + 1) & m_max;
         }
+        printf("retval.GetN() = %d\n", retval.GetN());
+        return retval;
     }
 
     uint32_t CudaIpv4AddressHelper::NumAddressBits(uint32_t maskbits) const {
