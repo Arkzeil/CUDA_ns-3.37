@@ -15,16 +15,23 @@ public:
     
     cudaDeviceSynchronize();
     
-    // cudaError_t err = cudaGetLastError();
-    // if (err != cudaSuccess) 
-    //   printf("Error: %s\n", cudaGetErrorString(err));
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) 
+      printf("Error: %s\n", cudaGetErrorString(err));
     return ptr;
+
   }
 
   void operator delete(void *ptr) {
     cudaDeviceSynchronize();
     cudaFree(ptr);
+
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) 
+      printf("Error: %s\n", cudaGetErrorString(err));
   }
 };
+
+
 
 #endif // HELPER_H

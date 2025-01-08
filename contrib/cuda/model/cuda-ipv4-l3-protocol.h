@@ -9,7 +9,7 @@ namespace ns3{
     class CudaNetDevice;
     class CudaIpv4Interface;
 
-    class CudaIpv4L3Protocol : public Ipv4L3Protocol{
+    class CudaIpv4L3Protocol : public Ipv4L3Protocol, public Managed{
         public:
             static TypeId GetTypeId(void);
             CudaIpv4L3Protocol();

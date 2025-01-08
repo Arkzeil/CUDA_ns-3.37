@@ -1,6 +1,7 @@
 #include "cuda-socket.h"
 #include "cuda-udp-l4-protocol.h"
 #include "cuda-net-device.h"
+#include "ns3/cuda-helper.h"
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
@@ -52,21 +53,15 @@ namespace ns3{
         if(m_udp == nullptr){
             // cudaMallocManaged(&m_udp, sizeof(CudaUdpL4Protocol));
             // new (m_udp) CudaUdpL4Protocol();  // Explicitly call constructor
-            cudaError_t err = cudaGetLastError();
-            if (err != cudaSuccess) 
-                printf("!!!: %s\n", cudaGetErrorString(err));
-            // m_udp = new CudaUdpL4Protocol();
-            cudaMallocManaged((void**)&m_udp, sizeof(CudaUdpL4Protocol));
-            m_udp = new(m_udp) CudaUdpL4Protocol();
+            checkCudaErr();
+            m_udp = new CudaUdpL4Protocol();
+            // cudaMallocManaged((void**)&m_udp, sizeof(CudaUdpL4Protocol));
+            // m_udp = new(m_udp) CudaUdpL4Protocol();
             
-            err = cudaGetLastError();
-            if (err != cudaSuccess) 
-                printf("Error: %s\n", cudaGetErrorString(err));
-            else
-                printf("Success\n");
-            printf("%p\n", GetPointer(node));
+            checkCudaErr();
             m_udp->SetNode(node);
-            cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol));  // Copy pointer to GPU
+            cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol*));  // Copy pointer to GPU
+            checkCudaErr();
             // m_udp = new CudaUdpL4Protocol();
             // m_udp->SetNode(node);
         }

@@ -11,7 +11,7 @@ namespace ns3
 
 /* ... */
     bool InitCUDA(cudaDeviceProp &prop);
-
+    void checkCudaErr();
 }
 
 #endif /* CUDA_HELPER_H */

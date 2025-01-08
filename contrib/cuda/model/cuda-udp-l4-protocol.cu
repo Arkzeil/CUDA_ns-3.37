@@ -4,6 +4,7 @@
 #include "cuda-socket.h"
 #include "cuda-ipv4-l3-protocol.h"
 #include "cuda-udp-socket-factory-impl.h"
+#include "ns3/cuda-helper.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
@@ -22,15 +23,13 @@ namespace ns3 {
         // Constructor
         // cudaMallocManaged(&m_downTarget, sizeof(DownDeviceFunctionPtr));
         printf("CudaUdpL4Protocol initialized\n");
-        // m_ipv4 = new CudaIpv4L3Protocol();
-        cudaMallocManaged(&m_ipv4, sizeof(CudaIpv4L3Protocol));
-        cudaError_t err = cudaGetLastError();
-        if (err != cudaSuccess) 
-            printf("CudaUdpL4Protocol malloc Error: %s\n", cudaGetErrorString(err));
+        m_ipv4 = new CudaIpv4L3Protocol();
+        // cudaMallocManaged(&m_ipv4, sizeof(CudaIpv4L3Protocol));
+        checkCudaErr();
         cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
-        err = cudaGetLastError();
-        if (err != cudaSuccess) 
-            printf("CudaUdpL4Protocol memcpy Error: %s\n", cudaGetErrorString(err));
+        // cudaMalloc(&d_m_ipv4, sizeof(CudaIpv4L3Protocol));
+        // cudaMemcpy(d_m_ipv4, m_ipv4, sizeof(CudaIpv4L3Protocol), cudaMemcpyHostToDevice);
+        checkCudaErr();
         // m_downTarget = CudaIpv4L3Protocol::Send;
         // Ptr<CudaIpv4L3Protocol> ipv4 = this->GetObject<CudaIpv4L3Protocol>();
         // m_downTarget = ipv4->Send();

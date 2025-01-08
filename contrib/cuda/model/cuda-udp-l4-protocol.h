@@ -14,7 +14,7 @@ namespace ns3
     class CudaIpv4L3Protocol;
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
-    class CudaUdpL4Protocol : public UdpL4Protocol{
+    class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
         public:
             static TypeId GetTypeId(void);
             static const uint8_t PROT_NUMBER; //!< protocol number (0x11)

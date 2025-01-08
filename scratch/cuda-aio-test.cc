@@ -30,8 +30,8 @@ int main(int argc, char* argv[]) {
   // CudaNode *cudaNode1 = new CudaNode();
 
   // Install the Internet stack
-  // Cuda_InternetStackHelper internet;
-  InternetStackHelper internet;
+  Cuda_InternetStackHelper internet;
+  // InternetStackHelper internet;
   internet.SetIpv6StackInstall(false);
   internet.Install(node0);
   internet.Install(node1);

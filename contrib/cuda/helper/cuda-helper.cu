@@ -58,5 +58,9 @@ namespace ns3
         return true;
     }
 /* ... */
-
+    void checkCudaErr(){
+        cudaError_t err = cudaGetLastError();
+        if (err != cudaSuccess) 
+            printf("Error: %s\n", cudaGetErrorString(err));
+    }
 }
