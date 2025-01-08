@@ -1,6 +1,7 @@
 #include "cuda-udp-client.h"
 #include "cuda-socket.h"
 #include "cuda-udp-socket-factory-impl.h"
+#include "ns3/cuda-helper.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>
@@ -85,7 +86,9 @@ CudaUdpClient::SetPacketSize(uint32_t size)
     // NS_LOG_FUNCTION(this << size);
     m_size = size;
     cudaFree(d_packetBuffer);
+    checkCudaErr();
     cudaMalloc(&d_packetBuffer, m_size);
+    checkCudaErr();
 }
 
 void
@@ -143,7 +146,10 @@ CudaUdpClient::StopApplication()
     else if(m_cudaSocket){
         cudaDeviceSynchronize();
         m_cudaSocket->Close();
+        // checkCudaErr();
+        // printf("Deleting m_cudaSocket: %p\n", m_cudaSocket);
         delete m_cudaSocket;
+        // checkCudaErr();
         m_cudaSocket = nullptr;
     }
     Simulator::Cancel(m_sendEvent);
@@ -159,7 +165,9 @@ __host__ void CudaUdpClient::InitCudaResources() {
 
 __host__ void CudaUdpClient::CleanupCudaResources() {
     cudaFree(d_packetBuffer);
+    checkCudaErr();
     cudaStreamDestroy(m_cudaStream);
+    checkCudaErr(); 
 }
 
 __host__ void CudaUdpClient::Send() {

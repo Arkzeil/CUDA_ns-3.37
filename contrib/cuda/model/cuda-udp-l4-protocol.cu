@@ -61,6 +61,7 @@ namespace ns3 {
     CudaSocket* CudaUdpL4Protocol::CreateSocket() {
         // Create a new socket
         CudaSocket* socket = new CudaSocket();
+        checkCudaErr();
         socket->SetNode(m_node);
         socket->SetUdp(this);
         m_sockets.push_back(socket);

@@ -31,18 +31,25 @@ namespace ns3{
         printf("CudaSocket initialized\n");
         // void *d_temp;
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
-        cudaMallocManaged(&m_defaultAddress, sizeof(Address));
-        m_defaultAddress = new(m_defaultAddress) Address();
-        // m_defaultAddress = new Address();
+        // cudaMallocManaged(&m_defaultAddress, sizeof(Address));
+        // m_defaultAddress = new(m_defaultAddress) Address();
+        m_defaultAddress = new Address();
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
         // m_netDevice = new CudaNetDevice();
     }
 
     CudaSocket::~CudaSocket(){
         // Destructor
-        cudaFree(d_sendBuffer);
-        cudaFree(m_defaultAddress);
+        if(d_sendBuffer != nullptr){
+            cudaFree(d_sendBuffer);
+        }
+        // cudaFree(d_sendBuffer);
+        checkCudaErr();
+        // cudaFree(m_defaultAddress);
+        delete m_defaultAddress;
+        // checkCudaErr();
         cudaFree(m_defaultPort);
+        checkCudaErr();
         // cudaStreamDestroy(m_cudaStream);
     }
 
@@ -118,6 +125,8 @@ namespace ns3{
     int CudaSocket::Close(){
         // Close the socket
         cudaFree(d_sendBuffer);
+        checkCudaErr();
+        d_sendBuffer = nullptr;
         // cudaStreamDestroy(m_cudaStream);
         return 0;
     }

@@ -1,5 +1,6 @@
 #include "cuda-net-device.h"
 #include "cuda-packet-kernel.cuh"
+#include "ns3/cuda-helper.h"
 
 namespace ns3 {
 
@@ -26,8 +27,11 @@ namespace ns3 {
   CudaNetDevice::~CudaNetDevice() {
       // cudaStreamDestroy(m_stream);
       cudaFree(d_packetQueue);
+      checkCudaErr();
       cudaFree(d_queueFront);
+      checkCudaErr();
       cudaFree(d_queueRear);
+      checkCudaErr();
   }
 
   bool CudaNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) {
@@ -41,6 +45,7 @@ namespace ns3 {
 
       // Free temporary packet
       cudaFree(d_packet);
+      checkCudaErr();
 
       return true; // Indicate success
   }

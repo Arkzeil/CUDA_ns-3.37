@@ -23,8 +23,17 @@ public:
   }
 
   void operator delete(void *ptr) {
-    cudaDeviceSynchronize();
-    cudaFree(ptr);
+    if (ptr) {
+        cudaPointerAttributes attributes;
+        cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
+        if (err == cudaSuccess && attributes.type == cudaMemoryTypeManaged) {
+            printf("Freeing Unified Memory at %p\n", ptr);
+            cudaDeviceSynchronize();
+            cudaFree(ptr);
+        } else {
+            printf("Warning: Trying to free invalid/unmanaged pointer %p\n", ptr);
+        }
+    }
 
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) 
