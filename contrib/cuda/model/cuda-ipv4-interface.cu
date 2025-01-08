@@ -43,7 +43,7 @@ namespace ns3{
         m_address = address;
     }
 
-    CudaNetDevice* CudaIpv4Interface::GetDevice(void) const {
+    __host__ __device__ CudaNetDevice* CudaIpv4Interface::GetDevice(void) const {
         // Get the device
         return m_device;
     }
@@ -66,6 +66,11 @@ namespace ns3{
     void CudaIpv4Interface::SetMetric(uint16_t metric) {
         // Set the metric
         m_metric = metric;
+    }
+
+    __device__ void CudaIpv4Interface::test() {
+        // Test the interface
+        printf("CudaIpv4Interface test\n");
     }
 
     bool CudaIpv4Interface::IsUp(void) const {

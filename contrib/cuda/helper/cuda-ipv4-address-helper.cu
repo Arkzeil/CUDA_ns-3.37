@@ -80,7 +80,9 @@ namespace ns3{
                 interface = ipv4->AddInterface(GetPointer(DynamicCast<CudaNetDevice>(device)));
             }
             Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress(NewAddress(), m_mask);
-            ipv4->AddAddress(interface, ipv4Addr);
+            if(ipv4->AddAddress(interface, ipv4Addr) == false) {
+                NS_LOG_ERROR("Error adding address to interface");
+            }
             ipv4->SetMetric(interface, 1);
             ipv4->SetUp(interface);
             retval.Add(ipv4, interface);

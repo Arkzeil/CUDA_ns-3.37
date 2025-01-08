@@ -21,7 +21,7 @@ namespace ns3{
             virtual ~CudaIpv4Interface ();
 
             void SetDevice (CudaNetDevice* device);
-            CudaNetDevice* GetDevice (void) const;
+            __host__ __device__ CudaNetDevice* GetDevice (void) const;
 
             void SetNode (Ptr<Node> node);
             Ptr<Node> GetNode (void) const;
@@ -32,6 +32,8 @@ namespace ns3{
             void SetAddress (Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress (void) const;
             void SetMetric (uint16_t metric);
+
+            __device__ void test();
 
             bool IsUp (void) const;
             void SetUp (void);

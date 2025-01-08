@@ -20,7 +20,7 @@ namespace ns3{
             void SetNode(Ptr<Node> node);
             uint32_t AddInterface(CudaNetDevice* device);
             uint32_t AddIpv4Interface(CudaIpv4Interface* interface);
-            int32_t GetInterfaceForDevice(CudaNetDevice* device);
+            __host__ __device__ int32_t GetInterfaceForDevice(CudaNetDevice* device);
             CudaIpv4Interface* GetInterface(uint32_t interfaceIndex) const;
             bool AddAddress(uint32_t interfaceIndex, Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress(uint32_t interfaceIndex, uint32_t addressIndex) const;
@@ -39,7 +39,10 @@ namespace ns3{
 
         private:
             Ptr<Node> m_node;
-            std::vector<CudaIpv4Interface*> m_ipv4Interfaces;
+            // std::vector<CudaIpv4Interface*> m_ipv4Interfaces;
+            CudaIpv4Interface** m_ipv4Interface;
+            int m_interfaceCount;
+            static const uint32_t m_maxInterfaceCount = 10;
     };
 } // namespace ns3
 
