@@ -77,7 +77,7 @@ namespace ns3{
             int32_t interface = ipv4->GetInterfaceForDevice(GetPointer(DynamicCast<CudaNetDevice>(device)));
             if(interface == -1) {
                 NS_LOG_ERROR("No interface found for device");
-                ipv4->AddInterface(GetPointer(DynamicCast<CudaNetDevice>(device)));
+                interface = ipv4->AddInterface(GetPointer(DynamicCast<CudaNetDevice>(device)));
             }
             Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress(NewAddress(), m_mask);
             ipv4->AddAddress(interface, ipv4Addr);
