@@ -19,17 +19,17 @@ namespace ns3 {
         return tid;
     }
 
-    CudaUdpL4Protocol::CudaUdpL4Protocol(): m_endPoints(new Ipv4EndPointDemux()) {
+    CudaUdpL4Protocol::CudaUdpL4Protocol(): m_endPoints(new Ipv4EndPointDemux()), m_ipv4(nullptr) {
         // Constructor
         // cudaMallocManaged(&m_downTarget, sizeof(DownDeviceFunctionPtr));
         printf("CudaUdpL4Protocol initialized\n");
-        m_ipv4 = new CudaIpv4L3Protocol();
-        // cudaMallocManaged(&m_ipv4, sizeof(CudaIpv4L3Protocol));
-        checkCudaErr();
-        cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
-        // cudaMalloc(&d_m_ipv4, sizeof(CudaIpv4L3Protocol));
-        // cudaMemcpy(d_m_ipv4, m_ipv4, sizeof(CudaIpv4L3Protocol), cudaMemcpyHostToDevice);
-        checkCudaErr();
+        // m_ipv4 = new CudaIpv4L3Protocol();
+        // // cudaMallocManaged(&m_ipv4, sizeof(CudaIpv4L3Protocol));
+        // checkCudaErr();
+        // cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
+        // // cudaMalloc(&d_m_ipv4, sizeof(CudaIpv4L3Protocol));
+        // // cudaMemcpy(d_m_ipv4, m_ipv4, sizeof(CudaIpv4L3Protocol), cudaMemcpyHostToDevice);
+        // checkCudaErr();
         // m_downTarget = CudaIpv4L3Protocol::Send;
         // Ptr<CudaIpv4L3Protocol> ipv4 = this->GetObject<CudaIpv4L3Protocol>();
         // m_downTarget = ipv4->Send();
@@ -42,10 +42,10 @@ namespace ns3 {
     void CudaUdpL4Protocol::SetNode(Ptr<Node> node) {
         // Set the node
         m_node = node;
-        if(m_ipv4 == nullptr){
-            m_ipv4->SetNode(node);
-            cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol));
-        }
+        // if(m_ipv4 == nullptr){
+        //     m_ipv4->SetNode(node);
+        //     cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol));
+        // }
     }
 
     Ipv4EndPoint* CudaUdpL4Protocol::Allocate() {
@@ -114,6 +114,12 @@ namespace ns3 {
                 // socketFactory->SetUdp(this);
                 // node->AggregateObject(socketFactory);
             }
+        }
+        if(m_ipv4 == nullptr){
+            m_ipv4 = GetPointer(DynamicCast<CudaIpv4L3Protocol>(ipv4));
+            m_ipv4->SetNode(node);
+            cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
+            checkCudaErr();
         }
         // Ptr<Ipv6> ipv6 = node->GetObject<Ipv6>();
     }
