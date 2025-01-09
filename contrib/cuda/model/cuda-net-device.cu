@@ -140,6 +140,12 @@ namespace ns3 {
       m_node = node;
   }
 
+  void CudaNetDevice::test() {
+      printf("CudaNetDevice: Test function\n");
+      if(m_linkUp == false)
+        printf("Link is down\n");
+  }
+
   __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
       if(m_linkUp == false) {
         printf("Link is down, dropping packet\n");

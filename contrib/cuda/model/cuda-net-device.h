@@ -35,6 +35,7 @@ public:
     // GPU-specific methods
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
+    __device__ void test();
     __device__ void Send(const uint8_t* packet, uint32_t size);
     // Helper functions
     __device__ void EnqueuePacket(const uint8_t* packet, uint32_t size);

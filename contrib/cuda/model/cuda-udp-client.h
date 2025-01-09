@@ -14,6 +14,8 @@ namespace ns3 {
 
     class CudaSocket;
 
+    class CUDA_cb_data;
+
     class CudaUdpClient : public Application {
     public:
         __host__ static TypeId GetTypeId(void);
@@ -24,6 +26,7 @@ namespace ns3 {
         void SetRemote(Address addr);
         void SetPacketSize(uint32_t size);
         void SetSendInterval(Time interval);
+        void RecvTest();
 
     protected:
         __host__ virtual void Send(); // Override the Send method.
@@ -32,6 +35,7 @@ namespace ns3 {
         void StartApplication() override;
         void StopApplication() override;
         // __host__ void CudaUdpClient::OffloadToCuda(void);
+        static void CUDART_CB Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data);
         void GeneratePacketOnGpu();
         __host__ void OffloadToCuda(int numPackets, int packetSize);
         __host__ void OffloadPacketToCuda(Ptr<Packet> packet);
@@ -57,6 +61,14 @@ namespace ns3 {
     };
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);
+
+    class CUDA_cb_data {
+        public:
+            CudaUdpClient* client;
+            uint32_t packetSize;
+            // CudaSocket* socket;
+            // Ptr<Packet> packet;
+    };
 
 } // namespace ns3
 

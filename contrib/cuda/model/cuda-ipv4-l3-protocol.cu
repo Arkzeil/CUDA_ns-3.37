@@ -172,7 +172,6 @@ namespace ns3 {
             return;
         }
         else{
-            outInterface->test();
             CudaNetDevice *device = outInterface->GetDevice();
             int32_t interface = GetInterfaceForDevice(device);
             if(interface == -1){
@@ -182,6 +181,8 @@ namespace ns3 {
             else{
                 printf("device found\n");
             }
+
+            outInterface->test(device);
         }
         // uint32_t a, b;
         // for(uint32_t i = 0; i < 10000000; i++){

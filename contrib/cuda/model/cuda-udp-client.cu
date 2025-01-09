@@ -12,6 +12,9 @@ namespace ns3 {
 NS_LOG_COMPONENT_DEFINE("CudaUdpClient");
 NS_OBJECT_ENSURE_REGISTERED(CudaUdpClient);
 
+__managed__ bool receiveEventFlag = false;
+CUDA_cb_data d_data;
+
 __host__ TypeId CudaUdpClient::GetTypeId(void) {
     static TypeId tid = TypeId("ns3::CudaUdpClient")
         .SetParent<Application>()
@@ -98,6 +101,11 @@ CudaUdpClient::SetSendInterval(Time interval)
     m_interval = interval;
 }
 
+void CudaUdpClient::RecvTest(){
+    printf("Recv test\n");
+    receiveEventFlag = false;
+}
+
 void 
 CudaUdpClient::StartApplication(){
     // NS_LOG_FUNCTION(this);
@@ -170,6 +178,19 @@ __host__ void CudaUdpClient::CleanupCudaResources() {
     checkCudaErr(); 
 }
 
+void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data) {
+    CUDA_cb_data* cbData = static_cast<CUDA_cb_data*>(data);
+    printf("Receive callback: %d\n", cbData->packetSize);
+    CudaUdpClient* client = cbData->client;
+    
+    if(client)
+        Simulator::ScheduleNow(&CudaUdpClient::RecvTest, client);
+}
+
+__global__ void notifyHost(bool &flag) {
+    flag = true;
+}
+
 __host__ void CudaUdpClient::Send() {
     // Ptr<Packet> packet = Create<Packet>(m_size); // Create the packet.
     // OffloadPacketToCuda(packet);                 // Offload packet to GPU for processing.
@@ -219,6 +240,13 @@ cudaDeviceSynchronize();
   GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size);
   
   cudaStreamSynchronize(m_cudaStream);
+
+    
+    d_data.client = this;
+    d_data.packetSize = 123;
+    notifyHost<<<1,1>>>(receiveEventFlag);
+    cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);
+    cudaStreamAddCallback(m_cudaStream, CudaUdpClient::Cuda_ReceiveCallback, &d_data, 0);
 }
 
 // __host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {
