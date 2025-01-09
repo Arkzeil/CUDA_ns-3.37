@@ -41,6 +41,7 @@ namespace ns3 {
 
     void CudaUdpL4Protocol::SetNode(Ptr<Node> node) {
         // Set the node
+        NS_ASSERT(node);
         m_node = node;
         // if(m_ipv4 == nullptr){
         //     m_ipv4->SetNode(node);
@@ -106,13 +107,13 @@ namespace ns3 {
         if(m_node == nullptr){
             if(node && ipv4){
                 this->SetNode(node);
-                // Ptr<CudaUdpSocketFactoryImpl> socketFactory = CreateObject<CudaUdpSocketFactoryImpl>();
-                // if(socketFactory == nullptr){
-                //     printf("Failed to create socket factory\n");
-                //     return;
-                // }
-                // socketFactory->SetUdp(this);
-                // node->AggregateObject(socketFactory);
+                Ptr<CudaUdpSocketFactoryImpl> socketFactory = CreateObject<CudaUdpSocketFactoryImpl>();
+                if(socketFactory == nullptr){
+                    printf("Failed to create socket factory\n");
+                    return;
+                }
+                socketFactory->SetUdp(this);
+                node->AggregateObject(socketFactory);
             }
         }
         if(m_ipv4 == nullptr){

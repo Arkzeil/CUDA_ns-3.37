@@ -5,6 +5,7 @@
 #include "ns3/node.h"
 #include "ns3/udp-l4-protocol.h"
 #include "ns3/ipv4-end-point.h"
+#include "ns3/socket-factory.h"
 #include <cuda_runtime.h>
 #include <queue>
 #include "helper.h"

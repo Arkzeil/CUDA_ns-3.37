@@ -2,6 +2,7 @@
 #include "cuda-udp-l4-protocol.h"
 #include "cuda-net-device.h"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-udp-socket-factory-impl.h"
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
@@ -57,22 +58,27 @@ namespace ns3{
         // Create a new socket
         // This is not a good way to create a socket, but it is just for demonstration
         // should use cuda node and call its socket factory
-        if(m_udp == nullptr){
-            // cudaMallocManaged(&m_udp, sizeof(CudaUdpL4Protocol));
-            // new (m_udp) CudaUdpL4Protocol();  // Explicitly call constructor
-            checkCudaErr();
-            m_udp = new CudaUdpL4Protocol();
-            // cudaMallocManaged((void**)&m_udp, sizeof(CudaUdpL4Protocol));
-            // m_udp = new(m_udp) CudaUdpL4Protocol();
+        // if(m_udp == nullptr){
+        //     // cudaMallocManaged(&m_udp, sizeof(CudaUdpL4Protocol));
+        //     // new (m_udp) CudaUdpL4Protocol();  // Explicitly call constructor
+        //     checkCudaErr();
+        //     m_udp = new CudaUdpL4Protocol();
+        //     // cudaMallocManaged((void**)&m_udp, sizeof(CudaUdpL4Protocol));
+        //     // m_udp = new(m_udp) CudaUdpL4Protocol();
             
-            checkCudaErr();
-            m_udp->SetNode(node);
-            cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol*));  // Copy pointer to GPU
-            checkCudaErr();
-            // m_udp = new CudaUdpL4Protocol();
-            // m_udp->SetNode(node);
-        }
-        return m_udp->CreateSocket();
+        //     checkCudaErr();
+        //     m_udp->SetNode(node);
+        //     cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol*));  // Copy pointer to GPU
+        //     checkCudaErr();
+        //     // m_udp = new CudaUdpL4Protocol();
+        //     // m_udp->SetNode(node);
+        // }
+
+        Ptr<CudaUdpSocketFactoryImpl> cudaFactory = node->GetObject<CudaUdpSocketFactoryImpl>();
+        NS_ASSERT(cudaFactory);
+        return cudaFactory->CreateCudaSocket();
+
+        // return m_udp->CreateSocket();
     }
 
     int CudaSocket::FinishBind(){

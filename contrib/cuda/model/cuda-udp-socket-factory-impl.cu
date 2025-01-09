@@ -21,7 +21,8 @@ namespace ns3 {
     Ptr<Socket> CudaUdpSocketFactoryImpl::CreateSocket() {
         // Create a new socket
         // return CreateObject<UdpSocket>();
-        return m_udp->CreateSocket();
+        printf("This method should not be called\n");
+        // return m_udp->CreateSocket();
     }
 
     CudaSocket* CudaUdpSocketFactoryImpl::CreateCudaSocket() {
