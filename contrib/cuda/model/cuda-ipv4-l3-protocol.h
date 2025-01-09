@@ -21,7 +21,7 @@ namespace ns3{
             uint32_t AddInterface(CudaNetDevice* device);
             uint32_t AddIpv4Interface(CudaIpv4Interface* interface);
             __host__ __device__ int32_t GetInterfaceForDevice(CudaNetDevice* device);
-            CudaIpv4Interface* GetInterface(uint32_t interfaceIndex) const;
+            __host__ __device__ CudaIpv4Interface* GetInterface(uint32_t interfaceIndex) const;
             bool AddAddress(uint32_t interfaceIndex, Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress(uint32_t interfaceIndex, uint32_t addressIndex) const;
             void SetMetric(uint32_t i, uint16_t metric);

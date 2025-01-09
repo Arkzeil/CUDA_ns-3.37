@@ -17,6 +17,7 @@ namespace ns3{
 
     CudaIpv4Interface::CudaIpv4Interface() : m_isUp(false) {
         // Constructor
+        printf("CudaIpv4Interface initialized\n");
     }
 
     CudaIpv4Interface::~CudaIpv4Interface() {
@@ -73,7 +74,7 @@ namespace ns3{
         printf("CudaIpv4Interface test\n");
     }
 
-    bool CudaIpv4Interface::IsUp(void) const {
+    __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {
         // Check if the interface is up
         return m_isUp;
     }

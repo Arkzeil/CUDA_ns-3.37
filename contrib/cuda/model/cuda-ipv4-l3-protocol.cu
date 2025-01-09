@@ -2,6 +2,7 @@
 #include "ns3/node.h"
 #include "cuda-ipv4-interface.h"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-net-device.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaIpv4L3Protocol");
@@ -53,18 +54,17 @@ namespace ns3 {
         CudaIpv4Interface *interface = new CudaIpv4Interface();
         interface->SetDevice(device);
         interface->SetNode(m_node);
-        AddIpv4Interface(interface);
-        return 0;
+        return AddIpv4Interface(interface);
     }
 
     uint32_t CudaIpv4L3Protocol::AddIpv4Interface(CudaIpv4Interface* interface) {
         // Add an IPv4 interface
         // m_ipv4Interfaces.push_back(interface);
         m_ipv4Interface[m_interfaceCount++] = interface;
-        return 0;
+        return m_interfaceCount - 1;
     }
 
-    CudaIpv4Interface* CudaIpv4L3Protocol::GetInterface(uint32_t interfaceIndex) const {
+    __host__ __device__ CudaIpv4Interface* CudaIpv4L3Protocol::GetInterface(uint32_t interfaceIndex) const {
         // Get an interface
         // if(interfaceIndex < m_ipv4Interfaces.size()){
         //     return m_ipv4Interfaces[interfaceIndex];
@@ -83,6 +83,7 @@ namespace ns3 {
         //     }
         // }
         for(uint32_t i = 0; i < m_interfaceCount; i++){
+            printf("index: %d\n", i);
             if(m_ipv4Interface[i]->GetDevice() == device){
                 return i;
             }
@@ -151,26 +152,37 @@ namespace ns3 {
         printf("Ipv4L3: Test function\n");
 
         // assume output device is 0
-        int32_t interface = GetInterfaceForDevice(0);
-        if(interface == -1){
-            printf("No interface found for device\n");
+        // CudaNetDevice *device = GetPointer(DynamicCast<CudaNetDevice>(m_node->GetDevice(0)));
+        // int32_t interface = GetInterfaceForDevice(m_ipv4Interface[0]);
+        // if(interface == -1){
+        //     printf("No interface found for device\n");
+        //     return;
+        // }
+
+        // assuming only one interface
+        CudaIpv4Interface *outInterface = GetInterface(0);
+
+        if(outInterface == nullptr){
+            printf("No interface found\n");
             return;
         }
 
-        // CudaIpv4Interface *outInterface = GetInterface(interface);
-
-        // if(outInterface == nullptr){
-        //     printf("No interface found\n");
-        //     return;
-        // }
-
-        // if(outInterface->IsUp() == false){
-        //     printf("Interface is down\n");
-        //     return;
-        // }
-        // else{
-        //     outInterface->test();
-        // }
+        if(outInterface->IsUp() == false){
+            printf("Interface is down\n");
+            return;
+        }
+        else{
+            outInterface->test();
+            CudaNetDevice *device = outInterface->GetDevice();
+            int32_t interface = GetInterfaceForDevice(device);
+            if(interface == -1){
+                printf("No device found for interface\n");
+                return;
+            }
+            else{
+                printf("device found\n");
+            }
+        }
         // uint32_t a, b;
         // for(uint32_t i = 0; i < 10000000; i++){
         //     a = i;

@@ -14,6 +14,8 @@ public:
     }
     
     cudaDeviceSynchronize();
+
+    printf("Allocated Unified Memory at %p\n", ptr);  
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) 

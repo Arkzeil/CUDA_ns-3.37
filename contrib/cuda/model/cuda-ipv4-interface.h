@@ -35,7 +35,7 @@ namespace ns3{
 
             __device__ void test();
 
-            bool IsUp (void) const;
+            __host__ __device__ bool IsUp (void) const;
             void SetUp (void);
             void SetDown (void);
 
