@@ -108,6 +108,8 @@ void CudaUdpClient::RecvTest(){
 
 void 
 CudaUdpClient::StartApplication(){
+    printf("Initial thread: %ld\n", std::this_thread::get_id());
+    EventDispatcher::GetInstance().StartWorker();
     // NS_LOG_FUNCTION(this);
     // if (!m_socket) {
     //     m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
@@ -147,6 +149,7 @@ CudaUdpClient::StopApplication()
     // if(m_sendEvent.IsRunning()){
     //     Simulator::Cancel(m_sendEvent);
     // }
+    EventDispatcher::GetInstance().StopWorker();
     if (m_socket) {
         m_socket->Close();
         m_socket = nullptr;
@@ -180,11 +183,20 @@ __host__ void CudaUdpClient::CleanupCudaResources() {
 
 void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data) {
     CUDA_cb_data* cbData = static_cast<CUDA_cb_data*>(data);
-    printf("Receive callback: %d\n", cbData->packetSize);
+    printf("CUDA callback running in thread: %ld\n", std::this_thread::get_id());
+
     CudaUdpClient* client = cbData->client;
-    
-    if(client)
-        Simulator::ScheduleNow(&CudaUdpClient::RecvTest, client);
+
+    // Send event to background thread
+    // Simulator::ScheduleWithContext(client->GetNode()->GetId(), Seconds(1.0), &CudaUdpClient::RecvTest, client);
+    // EventDispatcher::GetInstance().Dispatch([client]() {
+    //     printf("RecvTest running in thread: %ld\n", std::this_thread::get_id());
+    //     client->RecvTest();
+    // });
+    // Enqueue event to be processed by the worker thread
+    EventDispatcher::GetInstance().Dispatch(client->GetNode()->GetId(), [client]() {
+        client->RecvTest();
+    });
 }
 
 __global__ void notifyHost(bool &flag) {
@@ -296,5 +308,34 @@ __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize) {
 
     // TODO: Add routing, queuing, and forwarding logic here.
 }
+
+// EventDispatcher& EventDispatcher::GetInstance() {
+//     static EventDispatcher instance;
+//     return instance;
+// }
+
+// void EventDispatcher::Dispatch(std::function<void()> func) {
+//     std::lock_guard<std::mutex> lock(m_mutex);
+//     m_eventQueue.push(func);
+//     Simulator::ScheduleNow(&EventDispatcher::ProcessEvents);
+// }
+
+// void EventDispatcher::ProcessEvents() {
+//     auto& dispatcher = GetInstance();
+//     std::queue<std::function<void()>> localQueue;
+
+//     {
+//         std::lock_guard<std::mutex> lock(dispatcher.m_mutex);
+//         std::swap(localQueue, dispatcher.m_eventQueue);
+//     }
+
+//     while (!localQueue.empty()) {
+//         std::function<void()> task = localQueue.front();
+//         localQueue.pop();
+        
+//         // Ensure task runs in ns-3’s main thread
+//         Simulator::ScheduleNow([task]() { task(); });
+//     }
+// }
 
 } // namespace ns3
