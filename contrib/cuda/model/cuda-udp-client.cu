@@ -149,12 +149,12 @@ CudaUdpClient::StopApplication()
     // if(m_sendEvent.IsRunning()){
     //     Simulator::Cancel(m_sendEvent);
     // }
-    EventDispatcher::GetInstance().StopWorker();
     if (m_socket) {
         m_socket->Close();
         m_socket = nullptr;
     }
     else if(m_cudaSocket){
+        EventDispatcher::GetInstance().StopWorker();
         cudaDeviceSynchronize();
         m_cudaSocket->Close();
         // checkCudaErr();
@@ -194,7 +194,8 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
     //     client->RecvTest();
     // });
     // Enqueue event to be processed by the worker thread
-    EventDispatcher::GetInstance().Dispatch(client->GetNode()->GetId(), [client]() {
+    Time delay = ns3::Seconds(0);
+    EventDispatcher::GetInstance().Dispatch(client->GetNode()->GetId(), delay, [client]() {
         client->RecvTest();
     });
 }
@@ -251,7 +252,7 @@ void CudaUdpClient::GeneratePacketOnGpu() {
 cudaDeviceSynchronize();
   GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size);
   
-  cudaStreamSynchronize(m_cudaStream);
+//   cudaStreamSynchronize(m_cudaStream);
 
     
     d_data.client = this;

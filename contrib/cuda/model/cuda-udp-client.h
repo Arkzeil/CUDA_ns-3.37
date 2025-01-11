@@ -16,7 +16,7 @@
 #include <condition_variable>
 #include <thread>
 
-namespace ns3 {
+namespace ns3{
 
     class CudaSocket;
 
@@ -25,52 +25,52 @@ namespace ns3 {
     class EventDispatcher;
 
     class CudaUdpClient : public Application {
-    public:
-        __host__ static TypeId GetTypeId(void);
+        public:
+            __host__ static TypeId GetTypeId(void);
 
-        CudaUdpClient();
-        virtual ~CudaUdpClient();
-        void SetRemote(Address ip, uint16_t port);
-        void SetRemote(Address addr);
-        void SetPacketSize(uint32_t size);
-        void SetSendInterval(Time interval);
-        void RecvTest();
+            CudaUdpClient();
+            virtual ~CudaUdpClient();
+            void SetRemote(Address ip, uint16_t port);
+            void SetRemote(Address addr);
+            void SetPacketSize(uint32_t size);
+            void SetSendInterval(Time interval);
+            void RecvTest();
 
-    protected:
-        __host__ virtual void Send(); // Override the Send method.
+        protected:
+            __host__ virtual void Send(); // Override the Send method.
 
-    private:
-        void StartApplication() override;
-        void StopApplication() override;
-        // __host__ void CudaUdpClient::OffloadToCuda(void);
-        static void CUDART_CB Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data);
-        void GeneratePacketOnGpu();
-        __host__ void OffloadToCuda(int numPackets, int packetSize);
-        __host__ void OffloadPacketToCuda(Ptr<Packet> packet);
-        __host__ void InitCudaResources();
-        __host__ void CleanupCudaResources();
+        private:
+            void StartApplication() override;
+            void StopApplication() override;
+            // __host__ void CudaUdpClient::OffloadToCuda(void);
+            static void CUDART_CB Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data);
+            void GeneratePacketOnGpu();
+            __host__ void OffloadToCuda(int numPackets, int packetSize);
+            __host__ void OffloadPacketToCuda(Ptr<Packet> packet);
+            __host__ void InitCudaResources();
+            __host__ void CleanupCudaResources();
 
-        uint32_t m_count; //!< Maximum number of packets the application will send
-        Time m_interval;  //!< Packet inter-send time
-        uint32_t m_size;  //!< Size of the sent packet (including the SeqTsHeader)
+            uint32_t m_count; //!< Maximum number of packets the application will send
+            Time m_interval;  //!< Packet inter-send time
+            uint32_t m_size;  //!< Size of the sent packet (including the SeqTsHeader)
 
-        uint32_t m_sent;       //!< Counter for sent packets
-        uint64_t m_totalTx;    //!< Total bytes sent
-        Ptr<Socket> m_socket;  //!< Socket
-        CudaSocket* m_cudaSocket; //!< CUDA socket
-        Address m_peerAddress; //!< Remote peer address
-        uint16_t m_peerPort;   //!< Remote peer port
-        EventId m_sendEvent;   //!< Event to send the next packet
-        bool m_running;        //!< Flag to indicate if the application is running
+            uint32_t m_sent;       //!< Counter for sent packets
+            uint64_t m_totalTx;    //!< Total bytes sent
+            Ptr<Socket> m_socket;  //!< Socket
+            CudaSocket* m_cudaSocket; //!< CUDA socket
+            Address m_peerAddress; //!< Remote peer address
+            uint16_t m_peerPort;   //!< Remote peer port
+            EventId m_sendEvent;   //!< Event to send the next packet
+            bool m_running;        //!< Flag to indicate if the application is running
 
-        // GPU resources
-        uint8_t* d_packetBuffer;      // Device memory for packet data
-        cudaStream_t m_cudaStream;   // CUDA stream for async processing
+            // GPU resources
+            uint8_t* d_packetBuffer;      // Device memory for packet data
+            cudaStream_t m_cudaStream;   // CUDA stream for async processing
     };
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);
 
-    class CUDA_cb_data {
+    class CUDA_cb_data{
         public:
             CudaUdpClient* client;
             uint32_t packetSize;
@@ -78,68 +78,74 @@ namespace ns3 {
             // Ptr<Packet> packet;
     };
 
-class EventDispatcher {
-public:
-    static EventDispatcher& GetInstance() {
-        static EventDispatcher instance;
-        return instance;
-    }
-
-    void Dispatch(uint32_t nodeId, std::function<void()> func) {
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_eventQueue.push({nodeId, func});
-        }
-        m_cv.notify_one();  // Wake up the worker thread
-    }
-
-    void StartWorker() {
-        m_workerThread = std::thread(&EventDispatcher::ProcessEvents, this);
-    }
-
-    void StopWorker() {
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_stop = true;
-        }
-        m_cv.notify_one();
-        m_workerThread.join();
-    }
-
-private:
-    struct Event {
-        uint32_t nodeId;
-        std::function<void()> func;
-    };
-
-    std::queue<Event> m_eventQueue;
-    std::mutex m_mutex;
-    std::condition_variable m_cv;
-    std::thread m_workerThread;
-    bool m_stop = false;
-
-    EventDispatcher() {}
-    ~EventDispatcher() { StopWorker(); }
-
-    void ProcessEvents() {
-        while (true) {
-            Event event;
-
-            {
-                std::unique_lock<std::mutex> lock(m_mutex);
-                m_cv.wait(lock, [this] { return !m_eventQueue.empty() || m_stop; });
-
-                if (m_stop) return;
-
-                event = m_eventQueue.front();
-                m_eventQueue.pop();
+    class EventDispatcher {
+        public:
+            static EventDispatcher& GetInstance(){
+                static EventDispatcher instance;
+                return instance;
             }
 
-            // Schedule event execution safely in the ns-3 main thread
-            Simulator::ScheduleWithContext(event.nodeId, Seconds(0.0), event.func);
-        }
-    }
-};
+            void Dispatch(uint32_t nodeId, Time scheduleTime, std::function<void()> func){
+                {
+                    std::lock_guard<std::mutex> lock(m_mutex);
+                    m_eventQueue.push({nodeId, scheduleTime, func});
+                }
+                m_cv.notify_one();  // Wake up the worker thread
+            }
+
+            void StartWorker(){
+                m_workerThread = std::thread(&EventDispatcher::ProcessEvents, this);
+            }
+
+            void StopWorker(){
+                {
+                    std::lock_guard<std::mutex> lock(m_mutex);
+                    m_stop = true;
+                }
+                m_cv.notify_one();
+                m_workerThread.join();
+            }
+
+        private:
+            struct Event{
+                uint32_t nodeId;                    // context
+                Time scheduleTime;
+                std::function<void()> func;
+            };
+
+            std::queue<Event> m_eventQueue;
+            std::mutex m_mutex;
+            std::condition_variable m_cv;
+            std::thread m_workerThread;
+            bool m_stop = false;
+
+            EventDispatcher(){}
+
+            ~EventDispatcher(){
+                if(m_stop == false)
+                    StopWorker(); 
+            }
+
+            void ProcessEvents(){
+                while (true){
+                    Event event;
+
+                    {
+                        std::unique_lock<std::mutex> lock(m_mutex);
+                        m_cv.wait(lock, [this] { return !m_eventQueue.empty() || m_stop; });
+
+                        if (m_stop) return;
+
+                        event = m_eventQueue.front();
+                        m_eventQueue.pop();
+                    }
+
+                    // Schedule event execution safely in the ns-3 main thread
+                    Simulator::ScheduleWithContext(event.nodeId, event.scheduleTime, event.func);
+                }
+            }
+    };
+
 } // namespace ns3
 
 #endif // GPU_UDP_CLIENT_H
