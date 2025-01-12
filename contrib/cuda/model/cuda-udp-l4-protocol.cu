@@ -69,15 +69,15 @@ namespace ns3 {
         return socket;
     }
 
-    __device__ void CudaUdpL4Protocol::test() {
+    __device__ void CudaUdpL4Protocol::test(const uint8_t *data) {
         // Test function
-        printf("UdpL4: Test function\n");
+        printf("UdpL4: Test function, packet0: %d\n", data[0]);
         // uint32_t a, b;
         // for(uint32_t i = 0; i < 1000000; i++){
         //     a = i / 2;
         //     b = a * i / 5;
         // }
-        d_m_ipv4->test();
+        d_m_ipv4->test(data);
     }
 
     __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){

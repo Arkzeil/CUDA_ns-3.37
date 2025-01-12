@@ -33,7 +33,7 @@ namespace ns3{
             Ipv4InterfaceAddress GetAddress (void) const;
             void SetMetric (uint16_t metric);
 
-            __device__ void test(CudaNetDevice* device);
+            __device__ void test(CudaNetDevice* device, const uint8_t *data);
 
             __host__ __device__ bool IsUp (void) const;
             void SetUp (void);

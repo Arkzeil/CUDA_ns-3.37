@@ -32,7 +32,7 @@ namespace ns3
             CudaUdpL4Protocol &operator=(const CudaUdpL4Protocol &) = delete;
 
             CudaSocket* CreateSocket();
-            __device__ void test();
+            __device__ void test(const uint8_t *data);
             __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport);
         protected:
             // void DoDispose() override;

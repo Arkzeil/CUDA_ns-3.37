@@ -147,9 +147,9 @@ namespace ns3 {
     //     // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
     //     printf("Packet contents: %s\n", packet);
     // }
-    __device__ void CudaIpv4L3Protocol::test() {
+    __device__ void CudaIpv4L3Protocol::test(const uint8_t *data) {
         // Test function
-        printf("Ipv4L3: Test function\n");
+        printf("Ipv4L3: Test function, packet0: %d\n", data[0]);
 
         // assume output device is 0
         // CudaNetDevice *device = GetPointer(DynamicCast<CudaNetDevice>(m_node->GetDevice(0)));
@@ -182,7 +182,7 @@ namespace ns3 {
                 printf("device found\n");
             }
 
-            outInterface->test(device);
+            outInterface->test(device, data);
         }
         // uint32_t a, b;
         // for(uint32_t i = 0; i < 10000000; i++){

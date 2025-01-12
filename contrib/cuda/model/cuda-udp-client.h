@@ -34,7 +34,7 @@ namespace ns3{
             void SetRemote(Address addr);
             void SetPacketSize(uint32_t size);
             void SetSendInterval(Time interval);
-            void RecvTest();
+            void RecvTest(Time sendTime);
 
         protected:
             __host__ virtual void Send(); // Override the Send method.
@@ -74,6 +74,7 @@ namespace ns3{
         public:
             CudaUdpClient* client;
             uint32_t packetSize;
+            Time sendTime;
             // CudaSocket* socket;
             // Ptr<Packet> packet;
     };

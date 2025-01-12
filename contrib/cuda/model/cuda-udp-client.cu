@@ -101,8 +101,10 @@ CudaUdpClient::SetSendInterval(Time interval)
     m_interval = interval;
 }
 
-void CudaUdpClient::RecvTest(){
-    printf("Recv test\n");
+void CudaUdpClient::RecvTest(Time sendTime) {
+    double simTime = Simulator::Now().GetSeconds();
+    std::cout << "RecvTest executed at simulation time: " << simTime << "s" << " sendTime: " << sendTime.GetSeconds() << "s\n";
+    // printf("Recv test\n");
     receiveEventFlag = false;
 }
 
@@ -195,8 +197,9 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
     // });
     // Enqueue event to be processed by the worker thread
     Time delay = ns3::Seconds(0);
-    EventDispatcher::GetInstance().Dispatch(client->GetNode()->GetId(), delay, [client]() {
-        client->RecvTest();
+    Time dataTime = cbData->sendTime;
+    EventDispatcher::GetInstance().Dispatch(client->GetNode()->GetId(), delay, [client, dataTime]() {
+        client->RecvTest(dataTime);
     });
 }
 
@@ -209,6 +212,8 @@ __host__ void CudaUdpClient::Send() {
     // OffloadPacketToCuda(packet);                 // Offload packet to GPU for processing.
 
     // OffloadToCuda(1, m_size); // Offload packet generation to GPU.
+    double simTime = Simulator::Now().GetSeconds();
+    std::cout << "Send executed at simulation time: " << simTime << "s\n";
 
     GeneratePacketOnGpu(); // Generate packet on GPU.
     // uint8_t* h_packetData = new uint8_t[m_size];
@@ -230,9 +235,10 @@ __global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, 
     }
     // printf("Generated packet on GPU, idx: %d\n", idx);
     __syncthreads();
+    packet[0] = idx % 256; // Example payload logic
     // Call the socket's Send logic directly
     if (threadIdx.x == 0) { // Single thread handles the send
-        printf("Sending packet from CUDA UDP client\n");
+        printf("Sending packet from CUDA UDP client, packet 0: %d\n", packet[0]);
         socket->Send(packet, packetSize);
     }
 }
@@ -254,9 +260,9 @@ cudaDeviceSynchronize();
   
 //   cudaStreamSynchronize(m_cudaStream);
 
-    
     d_data.client = this;
     d_data.packetSize = 123;
+    d_data.sendTime = Simulator::Now();
     notifyHost<<<1,1>>>(receiveEventFlag);
     cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);
     cudaStreamAddCallback(m_cudaStream, CudaUdpClient::Cuda_ReceiveCallback, &d_data, 0);
