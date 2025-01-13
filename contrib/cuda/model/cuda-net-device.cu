@@ -14,7 +14,7 @@ namespace ns3 {
       return tid;
   }
 
-  CudaNetDevice::CudaNetDevice(): m_queueSize(1024), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr), m_linkUp(false) {
+  CudaNetDevice::CudaNetDevice(): m_queueSize(1024), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr) {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
@@ -130,6 +130,7 @@ namespace ns3 {
 
   void CudaNetDevice::SetDataRate(DataRate bps) {
       m_bps = bps;
+      d_bps = bps.GetBitRate();
   }
 
   Ptr<Node> CudaNetDevice::GetNode() const {
@@ -140,10 +141,18 @@ namespace ns3 {
       m_node = node;
   }
 
-  void CudaNetDevice::test(const uint8_t *data) {
+  __device__ void CudaNetDevice::test(const uint8_t *data) {
       printf("CudaNetDevice: Test function, packet0: %d\n", data[0]);
       if(m_linkUp == false)
         printf("Link is down\n");
+
+      if(m_txMachineState != READY)
+        printf("Transmitter is not ready\n");
+      else
+        printf("Transmitter is ready\n");
+
+      TransmitStart(data, 1500);
+      
   }
 
   __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
@@ -155,6 +164,25 @@ namespace ns3 {
 
       EnqueuePacket(packet, size);
 
+  }
+
+  __device__ bool CudaNetDevice::TransmitStart(const uint8_t* packet, uint32_t size) {
+    // Start transmission
+    // assuming size is in bytes
+    if(m_txMachineState == BUSY) {
+      printf("Transmitter busy, dropping packet\n");
+      return false;
+    }
+    m_txMachineState = BUSY;
+    // assuming m_InterframeGap is 0
+    float TxTime = (float)(size * 8) / d_bps; // in seconds
+
+    bool result = m_channel->test(packet, TxTime);
+    if(result == false) {
+      printf("Channel test failed\n");
+    }
+
+    return result;
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ void CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {

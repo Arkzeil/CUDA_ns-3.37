@@ -23,6 +23,7 @@ namespace ns3
             void SetDelay(Time delay);
 
             // GPU-specific methods
+            __device__ bool test(const uint8_t *data, float txTime);
             __device__ void TransmitPacket(CudaNetDevice* src, const uint8_t* packet, uint32_t size);
             __device__ void ReceivePacket(const uint8_t* packet, uint32_t size);
         private:

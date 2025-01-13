@@ -48,6 +48,17 @@ namespace ns3 {
         m_delay = delay;
     }
 
+    __device__ bool CudaP2PChannel::test(const uint8_t *data, float txTime) {
+        // Test function for the channel
+        printf("Test function in channel, packet 0: %d\n", data[0]);
+        printf("Transmission time: %f\n", txTime);
+        if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
+            printf("Channel not initialized\n");
+            return false;
+        }
+        return true;
+    }
+
     __device__ void CudaP2PChannel::TransmitPacket(CudaNetDevice* src, const uint8_t* packet, uint32_t size) {
         // Transmit packet from one device to another
         // For simplicity, we will just copy the packet to the destination device

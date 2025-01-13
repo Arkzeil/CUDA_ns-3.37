@@ -37,6 +37,7 @@ public:
     void OffloadPacketProcessing();
     __device__ void test(const uint8_t *data);
     __device__ void Send(const uint8_t* packet, uint32_t size);
+    __device__ bool TransmitStart(const uint8_t* packet, uint32_t size);
     // Helper functions
     __device__ void EnqueuePacket(const uint8_t* packet, uint32_t size);
     void TransmitPackets();
@@ -54,6 +55,8 @@ private:
 
     bool m_linkUp;
     DataRate m_bps;
+    uint64_t d_bps;
+    Time m_tInterframeGap;
     Ptr<Node> m_node;
 
     // CUDA-related members
