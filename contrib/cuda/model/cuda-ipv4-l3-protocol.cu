@@ -147,7 +147,7 @@ namespace ns3 {
     //     // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
     //     printf("Packet contents: %s\n", packet);
     // }
-    __device__ void CudaIpv4L3Protocol::test(const uint8_t *data) {
+    __device__ void CudaIpv4L3Protocol::test(const uint8_t *data, CUDA_cb_data* cb_data) {
         // Test function
         printf("Ipv4L3: Test function, packet0: %d\n", data[0]);
 
@@ -182,7 +182,7 @@ namespace ns3 {
                 printf("device found\n");
             }
 
-            outInterface->test(device, data);
+            outInterface->test(device, data, cb_data);
         }
         // uint32_t a, b;
         // for(uint32_t i = 0; i < 10000000; i++){

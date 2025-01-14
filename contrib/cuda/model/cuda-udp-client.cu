@@ -2,6 +2,7 @@
 #include "cuda-socket.h"
 #include "cuda-udp-socket-factory-impl.h"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-net-device.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>
@@ -13,7 +14,7 @@ NS_LOG_COMPONENT_DEFINE("CudaUdpClient");
 NS_OBJECT_ENSURE_REGISTERED(CudaUdpClient);
 
 __managed__ bool receiveEventFlag = false;
-CUDA_cb_data d_data;
+CUDA_cb_data* d_data = new CUDA_cb_data();
 
 __host__ TypeId CudaUdpClient::GetTypeId(void) {
     static TypeId tid = TypeId("ns3::CudaUdpClient")
@@ -185,9 +186,11 @@ __host__ void CudaUdpClient::CleanupCudaResources() {
 
 void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data) {
     CUDA_cb_data* cbData = static_cast<CUDA_cb_data*>(data);
-    printf("CUDA callback running in thread: %ld\n", std::this_thread::get_id());
+    // printf("CUDA callback running in thread: %ld\n", std::this_thread::get_id());
+    printf("Cuda receive callback, pkt size: %d\n", cbData->packetSize);
 
-    CudaUdpClient* client = cbData->client;
+    CudaUdpClient* client = (CudaUdpClient*)cbData->client;
+    CudaNetDevice* device = (CudaNetDevice*)cbData->client;
 
     // Send event to background thread
     // Simulator::ScheduleWithContext(client->GetNode()->GetId(), Seconds(1.0), &CudaUdpClient::RecvTest, client);
@@ -196,10 +199,14 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
     //     client->RecvTest();
     // });
     // Enqueue event to be processed by the worker thread
-    Time delay = ns3::Seconds(0);
+    // Time delay = ns3::Seconds(0);
+    Time delay = Seconds(cbData->delay);
     Time dataTime = cbData->sendTime;
-    EventDispatcher::GetInstance().Dispatch(client->GetNode()->GetId(), delay, [client, dataTime]() {
-        client->RecvTest(dataTime);
+    printf("device: %p\n", device);
+    printf("device node: %d\n", device->GetNode()->GetId());
+    EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, dataTime, cbData]() {
+        // client->RecvTest(dataTime);
+        device->Receive();
     });
 }
 
@@ -225,7 +232,7 @@ __host__ void CudaUdpClient::Send() {
     m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
 }   
 
-__global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, int packetSize) {
+__global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, int packetSize, CUDA_cb_data* d_data) {
     // Allocate packet data in shared memory or local GPU memory
     // printf("Generating packet on GPU\n");
     __shared__ uint8_t packet[1500]; // Example size of a packet
@@ -239,7 +246,7 @@ __global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, 
     // Call the socket's Send logic directly
     if (threadIdx.x == 0) { // Single thread handles the send
         printf("Sending packet from CUDA UDP client, packet 0: %d\n", packet[0]);
-        socket->Send(packet, packetSize);
+        socket->Send(packet, packetSize, d_data);
     }
 }
 
@@ -255,17 +262,17 @@ void CudaUdpClient::GeneratePacketOnGpu() {
       printf("Cuda socket is null\n");
   }
 
+    d_data->client = (void*)this;
+    // d_data->packetSize = 123;
+    d_data->sendTime = Simulator::Now();
 cudaDeviceSynchronize();
-  GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size);
+  GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size, d_data);
   
 //   cudaStreamSynchronize(m_cudaStream);
 
-    d_data.client = this;
-    d_data.packetSize = 123;
-    d_data.sendTime = Simulator::Now();
     notifyHost<<<1,1>>>(receiveEventFlag);
     cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);
-    cudaStreamAddCallback(m_cudaStream, CudaUdpClient::Cuda_ReceiveCallback, &d_data, 0);
+    cudaStreamAddCallback(m_cudaStream, CudaUdpClient::Cuda_ReceiveCallback, d_data, 0);
 }
 
 // __host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {

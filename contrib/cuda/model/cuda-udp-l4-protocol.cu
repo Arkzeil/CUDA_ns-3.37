@@ -69,7 +69,7 @@ namespace ns3 {
         return socket;
     }
 
-    __device__ void CudaUdpL4Protocol::test(const uint8_t *data) {
+    __device__ void CudaUdpL4Protocol::test(const uint8_t *data, CUDA_cb_data* cb_data) {
         // Test function
         printf("UdpL4: Test function, packet0: %d\n", data[0]);
         // uint32_t a, b;
@@ -77,7 +77,7 @@ namespace ns3 {
         //     a = i / 2;
         //     b = a * i / 5;
         // }
-        d_m_ipv4->test(data);
+        d_m_ipv4->test(data, cb_data);
     }
 
     __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){

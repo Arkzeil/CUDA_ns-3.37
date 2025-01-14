@@ -13,6 +13,7 @@
 
 namespace ns3{
     class CudaNetDevice;
+    class CUDA_cb_data;
 
     class CudaIpv4Interface : public Ipv4Interface, public Managed{
         public:
@@ -33,7 +34,7 @@ namespace ns3{
             Ipv4InterfaceAddress GetAddress (void) const;
             void SetMetric (uint16_t metric);
 
-            __device__ void test(CudaNetDevice* device, const uint8_t *data);
+            __device__ void test(CudaNetDevice* device, const uint8_t *data, CUDA_cb_data* cb_data);
 
             __host__ __device__ bool IsUp (void) const;
             void SetUp (void);

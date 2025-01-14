@@ -141,7 +141,13 @@ namespace ns3 {
       m_node = node;
   }
 
-  __device__ void CudaNetDevice::test(const uint8_t *data) {
+  void CudaNetDevice::Receive() {
+      // Process received packet
+      printf("Received packet on GPU, data 0: \n");
+      // ProcessPacketOnCuda(packet);
+  } 
+
+  __device__ void CudaNetDevice::test(const uint8_t *data, CUDA_cb_data* cb_data) {
       printf("CudaNetDevice: Test function, packet0: %d\n", data[0]);
       if(m_linkUp == false)
         printf("Link is down\n");
@@ -151,7 +157,7 @@ namespace ns3 {
       else
         printf("Transmitter is ready\n");
 
-      TransmitStart(data, 1500);
+      TransmitStart(data, 1500, cb_data);
       
   }
 
@@ -166,7 +172,7 @@ namespace ns3 {
 
   }
 
-  __device__ bool CudaNetDevice::TransmitStart(const uint8_t* packet, uint32_t size) {
+  __device__ bool CudaNetDevice::TransmitStart(const uint8_t* packet, uint32_t size, CUDA_cb_data* cb_data) {
     // Start transmission
     // assuming size is in bytes
     if(m_txMachineState == BUSY) {
@@ -177,7 +183,7 @@ namespace ns3 {
     // assuming m_InterframeGap is 0
     float TxTime = (float)(size * 8) / d_bps; // in seconds
 
-    bool result = m_channel->test(packet, TxTime);
+    bool result = m_channel->test(packet, this, TxTime, cb_data);
     if(result == false) {
       printf("Channel test failed\n");
     }

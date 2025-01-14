@@ -69,10 +69,10 @@ namespace ns3{
         m_metric = metric;
     }
 
-    __device__ void CudaIpv4Interface::test(CudaNetDevice* device, const uint8_t *data) {
+    __device__ void CudaIpv4Interface::test(CudaNetDevice* device, const uint8_t *data, CUDA_cb_data* cb_data) {
         // Test the interface
         printf("CudaIpv4Interface test, packet0: %d\n", data[0]);
-        device->test(data);
+        device->test(data, cb_data);
     }
 
     __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {

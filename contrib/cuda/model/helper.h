@@ -2,6 +2,7 @@
 #define HELPER_H
 
 #include <cuda_runtime.h>
+#include <cstdio>
 
 class Managed {
 public:

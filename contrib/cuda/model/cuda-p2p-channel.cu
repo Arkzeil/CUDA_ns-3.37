@@ -1,5 +1,6 @@
 #include "cuda-p2p-channel.h"
 #include "cuda-net-device.h"
+#include "ns3/cuda-helper.h"
 
 namespace ns3 {
 
@@ -46,9 +47,10 @@ namespace ns3 {
 
     void CudaP2PChannel::SetDelay(Time delay) {
         m_delay = delay;
+        d_delay = delay.GetSeconds();
     }
 
-    __device__ bool CudaP2PChannel::test(const uint8_t *data, float txTime) {
+    __device__ bool CudaP2PChannel::test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Test function for the channel
         printf("Test function in channel, packet 0: %d\n", data[0]);
         printf("Transmission time: %f\n", txTime);
@@ -56,6 +58,13 @@ namespace ns3 {
             printf("Channel not initialized\n");
             return false;
         }
+        uint32_t wire = src == m_link[0].m_src ? 0 : 1;
+
+        // cb_data->context = m_link[wire].m_dst->GetNode()->GetId();
+        cb_data->delay = txTime + d_delay;
+        cb_data->client = m_link[1].m_dst;
+        cb_data->packetBuffer = const_cast<uint8_t*>(data);
+        cb_data->packetSize = 1500;
         return true;
     }
 

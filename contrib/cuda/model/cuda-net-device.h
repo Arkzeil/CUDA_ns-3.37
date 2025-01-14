@@ -16,6 +16,8 @@
 
 namespace ns3 {
 
+class CUDA_cb_data;
+
 class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
     static TypeId GetTypeId(void);
@@ -31,13 +33,14 @@ public:
     void SetDataRate(DataRate bps);
     Ptr<Node> GetNode() const;
     void SetNode(Ptr<Node> node);
+    void Receive();
 
     // GPU-specific methods
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
-    __device__ void test(const uint8_t *data);
+    __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(const uint8_t* packet, uint32_t size);
-    __device__ bool TransmitStart(const uint8_t* packet, uint32_t size);
+    __device__ bool TransmitStart(const uint8_t* packet, uint32_t size, CUDA_cb_data* cb_data);
     // Helper functions
     __device__ void EnqueuePacket(const uint8_t* packet, uint32_t size);
     void TransmitPackets();

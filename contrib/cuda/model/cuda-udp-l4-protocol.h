@@ -12,6 +12,7 @@ namespace ns3
     class Ipv4EndPoint;
     class CudaSocket;
     class CudaIpv4L3Protocol;
+    class CUDA_cb_data;
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
     class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
@@ -32,7 +33,7 @@ namespace ns3
             CudaUdpL4Protocol &operator=(const CudaUdpL4Protocol &) = delete;
 
             CudaSocket* CreateSocket();
-            __device__ void test(const uint8_t *data);
+            __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
             __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport);
         protected:
             // void DoDispose() override;

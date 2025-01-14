@@ -357,10 +357,6 @@ add_compile_options(-Wno-pedantic -g)
 build_cuda_lib(
     LIBNAME "cuda"                 # Module name
     SOURCE_FILES                          # Source files
-        # model/cuda_wrapper.cc
-        # model/cuda_module.cu
-        # model/cuda_udp_wrapper.cu
-        # model/udp_send_kernel.cu
         model/cuda-udp-client.cu
         # model/cuda-packet-kernel.cu
         # model/cuda-ipv4-routing.cu
@@ -378,10 +374,6 @@ build_cuda_lib(
         helper/cuda-ipv4-address-helper.cu
         helper/cuda-internet-stack-helper.cc
     HEADER_FILES                          # Header files
-        # model/cuda_wrapper.h
-        # model/cuda_module.h
-        # model/cuda_udp_wrapper.h
-        # model/udp_send_kernel.h
         model/cuda-udp-client.h
         # model/cuda-packet-kernel.cuh
         # model/cuda-ipv4-routing.h

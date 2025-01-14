@@ -9,6 +9,7 @@
 // #include "cuda-socket.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include "helper.h"
 
 #include <queue>
 #include <mutex>
@@ -70,14 +71,6 @@ namespace ns3{
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);
 
-    class CUDA_cb_data{
-        public:
-            CudaUdpClient* client;
-            uint32_t packetSize;
-            Time sendTime;
-            // CudaSocket* socket;
-            // Ptr<Packet> packet;
-    };
 
     class EventDispatcher {
         public:
