@@ -141,9 +141,9 @@ namespace ns3 {
       m_node = node;
   }
 
-  void CudaNetDevice::Receive() {
+  void CudaNetDevice::Receive(int packet) {
       // Process received packet
-      printf("Received packet on GPU, data 0: \n");
+      printf("Received packet on GPU, data 0: %d\n", packet);
       // ProcessPacketOnCuda(packet);
   } 
 

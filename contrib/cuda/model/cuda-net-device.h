@@ -31,9 +31,9 @@ public:
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
     bool Attach(CudaP2PChannel *channel);
     void SetDataRate(DataRate bps);
-    Ptr<Node> GetNode() const;
+    Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
-    void Receive();
+    void Receive(int packet);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
