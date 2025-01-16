@@ -157,8 +157,15 @@ namespace ns3 {
       else
         printf("Transmitter is ready\n");
 
-      TransmitStart(data, 1500, cb_data);
-      
+      if(EnqueuePacket(data, 256) == false)
+        printf("Enqueue failed\n");
+      else{
+        if(m_txMachineState == READY){
+          // cudaFree((void*)data);
+          uint8_t* packet = DequeuePacket();
+          TransmitStart(packet, 256, cb_data);
+        }
+      }
   }
 
   __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
@@ -191,16 +198,15 @@ namespace ns3 {
     return result;
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
-  __device__ void CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {
+  __device__ bool CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {
     // EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
     // cudaDeviceSynchronize(); // Ensure enqueue completes
-    if(m_txMachineState == BUSY) {
-      printf("Transmitter busy, dropping packet\n");
-      // cudaFree((void*)packet);
-      return;
+    
+    // queue is full
+    if ((*d_queueRear + 1) % m_queueSize == *d_queueFront) {
+      printf("Queue is full, dropping packet\n");
+      return false;
     }
-
-    m_txMachineState = BUSY;
 
     int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
     uint8_t* entry = d_packetQueue + pos * 1500;         // Get position in the queue
@@ -210,14 +216,22 @@ namespace ns3 {
     }
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
-    __syncthreads();
+    // __syncthreads();
 
-    if(m_channel == nullptr) {
-      printf("Channel not attached\n");
-      cudaMalloc(&m_channel, sizeof(CudaP2PChannel));
+    return true;
+  }
+
+  __device__ uint8_t* CudaNetDevice::DequeuePacket() {
+    // Dequeue packet from GPU
+    if (*d_queueFront == *d_queueRear) {
+      return nullptr; // Queue is empty
     }
 
-    m_channel->TransmitPacket(this, entry, size); // Start transmission
+    int pos = atomicAdd(d_queueFront, 1) % m_queueSize; // Use atomic operation for thread safety
+    uint8_t* entry = d_packetQueue + pos * 1500;         // Get position in the queue
+
+    printf("Dequeued packet on GPU, pos: %d\n", pos);
+    return entry;
   }
 
   void CudaNetDevice::InitializeCudaBuffers() {
