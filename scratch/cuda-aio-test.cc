@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
   printf("address: %s\n", ipAddr);
 
   app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
-  app->SetPacketSize(512);
+  app->SetPacketSize(256);
   app->SetSendInterval(Seconds(1.0));
   node0->AddApplication(app);
   app->SetStartTime(Seconds(1.0));

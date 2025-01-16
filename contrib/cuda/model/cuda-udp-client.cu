@@ -141,6 +141,7 @@ CudaUdpClient::StartApplication(){
         }
         m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     }
+    cudaMallocManaged((void**)&(d_data->packetBuffer), m_size);
     // m_socket->SetRecvCallback(MakeCallback(&CudaUdpClient::Receive, this));
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
 }
@@ -209,10 +210,10 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
     printf("device node: %d\n", device->GetNode()->GetId());
     printf("Packet address: %p\n", cbData->packetBuffer);
 
-    uint8_t* h_packetData = new uint8_t[cbData->packetSize];
-    cudaMemcpy(h_packetData, cbData->packetBuffer, cbData->packetSize, cudaMemcpyDeviceToHost);
-    int packet_0 = h_packetData[0];
-    printf("Packet 0: %d\n", packet_0);
+    // uint8_t* h_packetData = new uint8_t[cbData->packetSize];
+    // cudaMemcpy(h_packetData, cbData->packetBuffer, cbData->packetSize, cudaMemcpyDeviceToHost);
+    int packet_0 = cbData->packetBuffer[0];
+    printf("Packet 0: %d\n", cbData->packetBuffer[0]);
     
     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, dataTime, packet_0]() {
         // client->RecvTest(dataTime);
