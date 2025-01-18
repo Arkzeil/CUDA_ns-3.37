@@ -41,6 +41,7 @@ public:
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(const uint8_t* packet, uint32_t size);
     __device__ bool TransmitStart(const uint8_t* packet, uint32_t size, CUDA_cb_data* cb_data);
+    void TransmitComplete();
     // Helper functions
     __device__ bool EnqueuePacket(const uint8_t* packet, uint32_t size);
     __device__ uint8_t* DequeuePacket();

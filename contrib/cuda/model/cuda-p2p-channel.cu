@@ -60,10 +60,11 @@ namespace ns3 {
         }
         uint32_t wire = src == m_link[0].m_src ? 0 : 1;
 
+        cb_data->empty = false;
         // cb_data->context = m_link[wire].m_dst->GetNode()->GetId();
         cb_data->packetSize = 256;
         cb_data->delay = txTime + d_delay;
-        cb_data->client = m_link[1].m_dst;
+        cb_data->dst = m_link[1].m_dst;
         // printf("Client: %p\n", m_link[1].m_dst);
         // cudaMalloc((void**)&cb_data->packetBuffer, cb_data->packetSize);
         cb_data->packetBuffer[0] = data[0];

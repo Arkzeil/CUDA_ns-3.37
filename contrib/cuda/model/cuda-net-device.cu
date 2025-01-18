@@ -195,7 +195,38 @@ namespace ns3 {
       printf("Channel test failed\n");
     }
 
+    cb_data->empty = false;
+    cudaMalloc((void**)&cb_data->next, sizeof(CUDA_cb_data));
+
+    cb_data->next->empty = false;
+    cb_data->next->dst = this;
+    cb_data->next->delay = TxTime;
+    cb_data->next->next = nullptr;
+    cb_data->next->packetSize = 666;
+
     return result;
+  }
+
+  
+
+  __global__ void d_TransmitComplete(CudaNetDevice* device) {
+    uint8_t* packet = device->DequeuePacket();
+    if(packet == nullptr){
+      printf("Packet is null\n");
+      return;
+    }
+    device->TransmitStart(packet, 256, nullptr);
+  }
+
+  void CudaNetDevice::TransmitComplete() {
+    if(m_txMachineState != BUSY){
+      printf("Device state must be busy\n");
+      return;
+    }
+    m_txMachineState = READY;
+
+    // 
+    d_TransmitComplete<<<1, 1>>>(this);
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ bool CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {

@@ -63,4 +63,26 @@ namespace ns3
         if (err != cudaSuccess) 
             printf("Error: %s\n", cudaGetErrorString(err));
     }
+
+    CUDA_cb_data::CUDA_cb_data(): empty(true), next(nullptr) {
+        cudaMallocManaged((void**)&packetBuffer, 256);
+    }
+
+    CUDA_cb_data::CUDA_cb_data(uint32_t packet_size): empty(true), next(nullptr) {
+        cudaMallocManaged((void**)&packetBuffer, packet_size);
+        this->packetSize = packet_size;
+    }
+
+    CUDA_cb_data::CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay): empty(true), next(nullptr) {
+        this->context = context;
+        this->dst = dst;
+        this->packetBuffer = packetBuffer;
+        this->packetSize = packetSize;
+        this->sendTime = sendTime;
+        this->delay = delay;
+    }
+
+    CUDA_cb_data::~CUDA_cb_data() {
+        cudaFree(packetBuffer);
+    }
 }

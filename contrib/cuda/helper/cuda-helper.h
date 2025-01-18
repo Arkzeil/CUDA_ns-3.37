@@ -17,12 +17,19 @@ namespace ns3
 
     class CUDA_cb_data: public Managed{
         public:
+            CUDA_cb_data();
+            CUDA_cb_data(uint32_t packet_size);
+            CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay);
+            ~CUDA_cb_data();
+
+            bool empty;
             uint32_t context;
-            void* client;
+            void* dst;
             uint8_t* packetBuffer;
             uint32_t packetSize;
             Time sendTime;
             float delay;
+            CUDA_cb_data* next;
             // CudaSocket* socket;
             // Ptr<Packet> packet;
     };

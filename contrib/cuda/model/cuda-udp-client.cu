@@ -14,7 +14,7 @@ NS_LOG_COMPONENT_DEFINE("CudaUdpClient");
 NS_OBJECT_ENSURE_REGISTERED(CudaUdpClient);
 
 __managed__ bool receiveEventFlag = false;
-CUDA_cb_data* d_data = new CUDA_cb_data();
+std::vector<CUDA_cb_data*> cb_data_list;
 
 __host__ TypeId CudaUdpClient::GetTypeId(void) {
     static TypeId tid = TypeId("ns3::CudaUdpClient")
@@ -141,7 +141,7 @@ CudaUdpClient::StartApplication(){
         }
         m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
     }
-    cudaMallocManaged((void**)&(d_data->packetBuffer), m_size);
+    // cudaMallocManaged((void**)&(d_data->packetBuffer), m_size);
     // m_socket->SetRecvCallback(MakeCallback(&CudaUdpClient::Receive, this));
     m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
 }
@@ -189,10 +189,18 @@ __host__ void CudaUdpClient::CleanupCudaResources() {
 void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data) {
     CUDA_cb_data* cbData = static_cast<CUDA_cb_data*>(data);
     // printf("CUDA callback running in thread: %ld\n", std::this_thread::get_id());
+    if(cbData == nullptr){
+        printf("Callback data is null\n");
+        return;
+    }
+    if(cbData->empty){
+        printf("Callback data is empty\n");
+        return;
+    }
     printf("Cuda receive callback, pkt size: %d\n", cbData->packetSize);
 
     // CudaUdpClient* client = (CudaUdpClient*)cbData->client;
-    CudaNetDevice* device = (CudaNetDevice*)cbData->client;
+    CudaNetDevice* device = (CudaNetDevice*)cbData->dst;
 
     // Send event to background thread
     // Simulator::ScheduleWithContext(client->GetNode()->GetId(), Seconds(1.0), &CudaUdpClient::RecvTest, client);
@@ -206,6 +214,7 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
     Time dataTime = cbData->sendTime;
     // printf("device: %p\n", device);
     // printf("device node: %p\n", device->GetNode());
+    printf("data addr: %p\n", cbData);
     printf("delay: %f\n", delay.GetSeconds());
     printf("device node: %d\n", device->GetNode()->GetId());
     printf("Packet address: %p\n", cbData->packetBuffer);
@@ -219,6 +228,16 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
         // client->RecvTest(dataTime);
         device->Receive(packet_0);
     });
+
+    CUDA_cb_data* next = cbData->next;
+    CUDA_cb_data* next_cb = (CUDA_cb_data*)malloc(sizeof(CUDA_cb_data));
+
+    while(next != nullptr){
+        cudaMemcpy(next_cb, cbData->next, sizeof(CUDA_cb_data), cudaMemcpyDeviceToHost);
+        
+        printf("Next cb_data: %d\n", next_cb->packetSize);
+        next = next_cb->next;
+    }
 }
 
 __global__ void notifyHost(bool &flag) {
@@ -264,24 +283,28 @@ __global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, 
 
 void CudaUdpClient::GeneratePacketOnGpu() {
 //   static uint32_t seqNumber = 0; // the sequence number of the packet, but it will not auto increment at kernel
-  int blockSize = 256;
-  int gridSize = (m_size + blockSize - 1) / blockSize;
+    int blockSize = 256;
+    int gridSize = (m_size + blockSize - 1) / blockSize;
 
-  if(d_packetBuffer == nullptr){
-      printf("Packet buffer is null\n");
-  }
-  if(m_cudaSocket == nullptr){
-      printf("Cuda socket is null\n");
-  }
-
+    if(d_packetBuffer == nullptr){
+        printf("Packet buffer is null\n");
+    }
+    if(m_cudaSocket == nullptr){
+        printf("Cuda socket is null\n");
+    }
+    
+    // CUDA_cb_data* d_data = new CUDA_cb_data(256);
+    cb_data_list.push_back(new CUDA_cb_data(256));
+    CUDA_cb_data* d_data = cb_data_list.back();
     // d_data->client = (void*)this;
     // d_data->packetSize = 123;
     d_data->sendTime = Simulator::Now();
-cudaDeviceSynchronize();
-printf("d_packetBuffer: %p\n", d_packetBuffer);
-  GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size, d_data);
-  
-  cudaStreamSynchronize(m_cudaStream);
+    cudaDeviceSynchronize();
+    printf("cb_data: %p\n", d_data);
+
+    GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size, d_data);
+    
+    cudaStreamSynchronize(m_cudaStream);
 
     notifyHost<<<1,1>>>(receiveEventFlag);
     cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);
