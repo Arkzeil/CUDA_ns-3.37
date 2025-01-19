@@ -22,6 +22,9 @@ namespace ns3
             CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay);
             ~CUDA_cb_data();
 
+            __host__ __device__ void init();
+            void addNext();
+
             bool empty;
             uint32_t context;
             void* dst;

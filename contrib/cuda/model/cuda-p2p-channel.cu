@@ -70,6 +70,13 @@ namespace ns3 {
         cb_data->packetBuffer[0] = data[0];
         // cb_data->packetBuffer = const_cast<uint8_t*>(data);
         printf("Packet buffer: %d\n", cb_data->packetBuffer[0]);
+        printf("Packet size: %d\n", cb_data->packetSize);
+
+        if(cb_data->next != nullptr) {
+            printf("P2pChannel: Next packet size: %d\n", cb_data->next->packetSize);
+            // printf("Next packet size: %d\n", cb_data->next->packetSize);
+            printf("Next address: %p\n", cb_data->next);
+        }
         
         return true;
     }

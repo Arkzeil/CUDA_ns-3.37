@@ -85,4 +85,16 @@ namespace ns3
     CUDA_cb_data::~CUDA_cb_data() {
         cudaFree(packetBuffer);
     }
+
+    __host__ __device__ void CUDA_cb_data::init() {
+        empty = true;
+        next = nullptr;
+        dst = nullptr;
+        packetSize = 0;
+        delay = 0;
+    }
+
+    void CUDA_cb_data::addNext() {
+        next = new CUDA_cb_data();
+    }
 }

@@ -15,6 +15,7 @@ NS_OBJECT_ENSURE_REGISTERED(CudaUdpClient);
 
 __managed__ bool receiveEventFlag = false;
 std::vector<CUDA_cb_data*> cb_data_list;
+cudaEvent_t startEvent, stopEvent;
 
 __host__ TypeId CudaUdpClient::GetTypeId(void) {
     static TypeId tid = TypeId("ns3::CudaUdpClient")
@@ -187,6 +188,9 @@ __host__ void CudaUdpClient::CleanupCudaResources() {
 }
 
 void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data) {
+    // cudaEventSynchronize(stopEvent); // Wait for kernel completion
+    // checkCudaErr();
+
     CUDA_cb_data* cbData = static_cast<CUDA_cb_data*>(data);
     // printf("CUDA callback running in thread: %ld\n", std::this_thread::get_id());
     if(cbData == nullptr){
@@ -229,15 +233,21 @@ void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaErro
         device->Receive(packet_0);
     });
 
-    CUDA_cb_data* next = cbData->next;
-    CUDA_cb_data* next_cb = (CUDA_cb_data*)malloc(sizeof(CUDA_cb_data));
-
-    while(next != nullptr){
-        cudaMemcpy(next_cb, cbData->next, sizeof(CUDA_cb_data), cudaMemcpyDeviceToHost);
-        
-        printf("Next cb_data: %d\n", next_cb->packetSize);
-        next = next_cb->next;
+    if(cbData->next != nullptr){
+        CUDA_cb_data* next = cbData->next;
+        // CUDA_cb_data* next_cb = (CUDA_cb_data*)malloc(sizeof(CUDA_cb_data));
+     
+        while(next != nullptr){
+            printf("Next cb_data: %p\n", next);
+            // We can't use any CUDA API inside callback function
+            // cudaMemcpy(next_cb, next, sizeof(CUDA_cb_data), cudaMemcpyDeviceToHost);
+            // checkCudaErr();
+            
+            printf("Next packetsize: %d\n", next->packetSize);
+            next = next->next;
+        }
     }
+    // delete next_cb;
 }
 
 __global__ void notifyHost(bool &flag) {
@@ -296,15 +306,25 @@ void CudaUdpClient::GeneratePacketOnGpu() {
     // CUDA_cb_data* d_data = new CUDA_cb_data(256);
     cb_data_list.push_back(new CUDA_cb_data(256));
     CUDA_cb_data* d_data = cb_data_list.back();
+    d_data->addNext();
     // d_data->client = (void*)this;
     // d_data->packetSize = 123;
     d_data->sendTime = Simulator::Now();
     cudaDeviceSynchronize();
-    printf("cb_data: %p\n", d_data);
+    // printf("cb_data: %p\n", d_data);
+    
+    // cudaEventCreate(&startEvent);
 
     GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size, d_data);
+    // cudaEventCreate(&stopEvent);
     
     cudaStreamSynchronize(m_cudaStream);
+    // CUDA_cb_data* next = d_data->next;
+    // CUDA_cb_data* next_cb = (CUDA_cb_data*)malloc(sizeof(CUDA_cb_data));
+    // if(next != nullptr){
+    //     cudaMemcpy(next_cb, next, sizeof(CUDA_cb_data), cudaMemcpyDeviceToHost);
+    //     printf("Next packetsize: %d\n", next_cb->packetSize);
+    // }
 
     notifyHost<<<1,1>>>(receiveEventFlag);
     cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);

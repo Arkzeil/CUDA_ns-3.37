@@ -190,19 +190,27 @@ namespace ns3 {
     // assuming m_InterframeGap is 0
     float TxTime = (float)(size * 8) / d_bps; // in seconds
 
+    cb_data->empty = false;
+    // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
+    // cb_data->next->init();
+    if(cb_data->next == nullptr) {
+      printf("Next is null\n");
+    }
+    else{
+      cb_data->next->empty = false;
+      cb_data->next->dst = this;
+      cb_data->next->delay = TxTime;
+      cb_data->next->next = nullptr;
+      cb_data->next->packetSize = 666;
+      printf("next packet delay: %f\n", cb_data->next->delay);
+      printf("next packet size: %d\n", cb_data->next->packetSize);
+      printf("next address: %p\n", cb_data->next);
+    }
+
     bool result = m_channel->test(packet, this, TxTime, cb_data);
     if(result == false) {
       printf("Channel test failed\n");
     }
-
-    cb_data->empty = false;
-    cudaMalloc((void**)&cb_data->next, sizeof(CUDA_cb_data));
-
-    cb_data->next->empty = false;
-    cb_data->next->dst = this;
-    cb_data->next->delay = TxTime;
-    cb_data->next->next = nullptr;
-    cb_data->next->packetSize = 666;
 
     return result;
   }
