@@ -53,7 +53,7 @@ namespace ns3 {
     __device__ bool CudaP2PChannel::test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Test function for the channel
         printf("Test function in channel, packet 0: %d\n", data[0]);
-        printf("Transmission time: %f\n", txTime);
+        // printf("Transmission time: %f\n", txTime);
         if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
             printf("Channel not initialized\n");
             return false;
@@ -65,18 +65,19 @@ namespace ns3 {
         cb_data->packetSize = 256;
         cb_data->delay = txTime + d_delay;
         cb_data->dst = m_link[1].m_dst;
+        cb_data->func_id = 0;
         // printf("Client: %p\n", m_link[1].m_dst);
         // cudaMalloc((void**)&cb_data->packetBuffer, cb_data->packetSize);
         cb_data->packetBuffer[0] = data[0];
         // cb_data->packetBuffer = const_cast<uint8_t*>(data);
-        printf("Packet buffer: %d\n", cb_data->packetBuffer[0]);
-        printf("Packet size: %d\n", cb_data->packetSize);
+        // printf("Packet buffer: %d\n", cb_data->packetBuffer[0]);
+        // printf("Packet size: %d\n", cb_data->packetSize);
 
-        if(cb_data->next != nullptr) {
-            printf("P2pChannel: Next packet size: %d\n", cb_data->next->packetSize);
-            // printf("Next packet size: %d\n", cb_data->next->packetSize);
-            printf("Next address: %p\n", cb_data->next);
-        }
+        // if(cb_data->next != nullptr) {
+        //     printf("P2pChannel: Next packet size: %d\n", cb_data->next->packetSize);
+        //     // printf("Next packet size: %d\n", cb_data->next->packetSize);
+        //     printf("Next address: %p\n", cb_data->next);
+        // }
         
         return true;
     }

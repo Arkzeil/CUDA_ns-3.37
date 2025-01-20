@@ -1,5 +1,7 @@
 #include "cuda-helper.h"
 #include <stdio.h>
+#include "ns3/cuda-net-device.h"
+#include "ns3/simulator.h"
 
 namespace ns3
 {
@@ -64,7 +66,7 @@ namespace ns3
             printf("Error: %s\n", cudaGetErrorString(err));
     }
 
-    CUDA_cb_data::CUDA_cb_data(): empty(true), next(nullptr) {
+    CUDA_cb_data::CUDA_cb_data(): empty(true), next(nullptr), packetBuffer(nullptr) {
         cudaMallocManaged((void**)&packetBuffer, 256);
     }
 
@@ -90,11 +92,52 @@ namespace ns3
         empty = true;
         next = nullptr;
         dst = nullptr;
+        func_id = -1;
         packetSize = 0;
         delay = 0;
     }
 
-    void CUDA_cb_data::addNext() {
-        next = new CUDA_cb_data();
+    void CUDA_cb_data::addNext(uint8_t length) {
+        CUDA_cb_data* cur = this;
+        for(int i = 0; i < length; i++){
+            if(cur->next == nullptr)
+                cur->next = new CUDA_cb_data();
+            cur = cur->next;
+        }
+        // next = new CUDA_cb_data();
+    }
+
+    void CUDART_CB Cuda_ScheduleCallBack(cudaStream_t stream, cudaError_t status, void* data){
+        CUDA_cb_data* cbData = static_cast<CUDA_cb_data*>(data);
+        // printf("CUDA callback running in thread: %ld\n", std::this_thread::get_id());
+        if(cbData == nullptr){
+            printf("Callback data is null\n");
+            return;
+        }
+        if(cbData->empty){
+            printf("Callback data is empty\n");
+            return;
+        }
+
+        CudaNetDevice* device = (CudaNetDevice*)cbData->dst;
+        Time delay = Seconds(cbData->delay);
+
+        switch(cbData->func_id){
+            case 0:
+                // printf("Callback function 0\n");
+                Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, cbData](){
+                    device->Receive(cbData->packetBuffer[0]);
+                });
+                break;
+            case 1:
+                // printf("Callback function 1\n");
+                Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, stream](){
+                    device->TransmitComplete(stream);
+                });
+                break;
+            default:
+                printf("Unknown function id\n");
+                break;
+        }
     }
 }

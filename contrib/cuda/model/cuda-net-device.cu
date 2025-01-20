@@ -1,6 +1,7 @@
 #include "cuda-net-device.h"
 #include "cuda-packet-kernel.cuh"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-udp-client.h"
 
 namespace ns3 {
 
@@ -200,11 +201,12 @@ namespace ns3 {
       cb_data->next->empty = false;
       cb_data->next->dst = this;
       cb_data->next->delay = TxTime;
+      cb_data->next->func_id = 1;
       cb_data->next->next = nullptr;
       cb_data->next->packetSize = 666;
-      printf("next packet delay: %f\n", cb_data->next->delay);
-      printf("next packet size: %d\n", cb_data->next->packetSize);
-      printf("next address: %p\n", cb_data->next);
+      // printf("next packet delay: %f\n", cb_data->next->delay);
+      // printf("next packet size: %d\n", cb_data->next->packetSize);
+      // printf("next address: %p\n", cb_data->next);
     }
 
     bool result = m_channel->test(packet, this, TxTime, cb_data);
@@ -217,16 +219,21 @@ namespace ns3 {
 
   
 
-  __global__ void d_TransmitComplete(CudaNetDevice* device) {
+  __global__ void d_TransmitComplete(CudaNetDevice* device, cudaStream_t stream) {
     uint8_t* packet = device->DequeuePacket();
     if(packet == nullptr){
       printf("Packet is null\n");
       return;
     }
-    device->TransmitStart(packet, 256, nullptr);
+    printf("Reset device status on GPU\n");
+    // CUDA_cb_data* d_data = new CUDA_cb_data();
+    
+    // device->TransmitStart(packet, 256, d_data);
+    // cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, stream);
+    // cudaStreamAddCallback(stream, CudaUdpClient::Cuda_ReceiveCallback, d_data, 0);
   }
 
-  void CudaNetDevice::TransmitComplete() {
+  void CudaNetDevice::TransmitComplete(cudaStream_t stream) {
     if(m_txMachineState != BUSY){
       printf("Device state must be busy\n");
       return;
@@ -234,7 +241,7 @@ namespace ns3 {
     m_txMachineState = READY;
 
     // 
-    d_TransmitComplete<<<1, 1>>>(this);
+    d_TransmitComplete<<<1, 1, 0, stream>>>(this, stream);
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ bool CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {

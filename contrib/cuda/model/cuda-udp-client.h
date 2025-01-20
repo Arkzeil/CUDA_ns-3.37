@@ -11,19 +11,11 @@
 #include <cuda_runtime.h>
 #include "helper.h"
 
-#include <queue>
-#include <mutex>
-#include <functional>
-#include <condition_variable>
-#include <thread>
-
 namespace ns3{
 
     class CudaSocket;
 
     class CUDA_cb_data;
-
-    class EventDispatcher;
 
     class CudaUdpClient : public Application {
         public:
@@ -70,75 +62,6 @@ namespace ns3{
     };
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);
-
-
-    class EventDispatcher {
-        public:
-            static EventDispatcher& GetInstance(){
-                static EventDispatcher instance;
-                return instance;
-            }
-
-            void Dispatch(uint32_t nodeId, Time scheduleTime, std::function<void()> func){
-                {
-                    std::lock_guard<std::mutex> lock(m_mutex);
-                    m_eventQueue.push({nodeId, scheduleTime, func});
-                }
-                m_cv.notify_one();  // Wake up the worker thread
-            }
-
-            void StartWorker(){
-                m_workerThread = std::thread(&EventDispatcher::ProcessEvents, this);
-            }
-
-            void StopWorker(){
-                {
-                    std::lock_guard<std::mutex> lock(m_mutex);
-                    m_stop = true;
-                }
-                m_cv.notify_one();
-                m_workerThread.join();
-            }
-
-        private:
-            struct Event{
-                uint32_t nodeId;                    // context
-                Time scheduleTime;
-                std::function<void()> func;
-            };
-
-            std::queue<Event> m_eventQueue;
-            std::mutex m_mutex;
-            std::condition_variable m_cv;
-            std::thread m_workerThread;
-            bool m_stop = false;
-
-            EventDispatcher(){}
-
-            ~EventDispatcher(){
-                if(m_stop == false)
-                    StopWorker(); 
-            }
-
-            void ProcessEvents(){
-                while (true){
-                    Event event;
-
-                    {
-                        std::unique_lock<std::mutex> lock(m_mutex);
-                        m_cv.wait(lock, [this] { return !m_eventQueue.empty() || m_stop; });
-
-                        if (m_stop) return;
-
-                        event = m_eventQueue.front();
-                        m_eventQueue.pop();
-                    }
-
-                    // Schedule event execution safely in the ns-3 main thread
-                    Simulator::ScheduleWithContext(event.nodeId, event.scheduleTime, event.func);
-                }
-            }
-    };
 
 } // namespace ns3
 
