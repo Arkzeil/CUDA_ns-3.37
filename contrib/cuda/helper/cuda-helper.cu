@@ -66,16 +66,16 @@ namespace ns3
             printf("Error: %s\n", cudaGetErrorString(err));
     }
 
-    CUDA_cb_data::CUDA_cb_data(): empty(true), next(nullptr), packetBuffer(nullptr) {
+    CUDA_cb_data::CUDA_cb_data(): empty(true), next(nullptr), packetBuffer(nullptr), func_id(-1) {
         cudaMallocManaged((void**)&packetBuffer, 256);
     }
 
-    CUDA_cb_data::CUDA_cb_data(uint32_t packet_size): empty(true), next(nullptr) {
+    CUDA_cb_data::CUDA_cb_data(uint32_t packet_size): empty(true), next(nullptr), func_id(-1) {
         cudaMallocManaged((void**)&packetBuffer, packet_size);
         this->packetSize = packet_size;
     }
 
-    CUDA_cb_data::CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay): empty(true), next(nullptr) {
+    CUDA_cb_data::CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay): empty(true), next(nullptr), func_id(-1) {
         this->context = context;
         this->dst = dst;
         this->packetBuffer = packetBuffer;
@@ -118,26 +118,32 @@ namespace ns3
             printf("Callback data is empty\n");
             return;
         }
+        while(cbData != nullptr){
+            CudaNetDevice* device = (CudaNetDevice*)cbData->dst;
+            Time delay = Seconds(cbData->delay);
 
-        CudaNetDevice* device = (CudaNetDevice*)cbData->dst;
-        Time delay = Seconds(cbData->delay);
+            switch(cbData->func_id){
+                case -1:
+                    printf("Function: None\n");
+                    break;
+                case 0:
+                    // printf("Callback function 0\n");
+                    Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, cbData](){
+                        device->Receive(cbData->packetBuffer[0]);
+                    });
+                    break;
+                case 1:
+                    // printf("Callback function 1\n");
+                    Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, stream](){
+                        device->TransmitComplete(stream);
+                    });
+                    break;
+                default:
+                    printf("Unknown function id\n");
+                    break;
+            }
 
-        switch(cbData->func_id){
-            case 0:
-                // printf("Callback function 0\n");
-                Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, cbData](){
-                    device->Receive(cbData->packetBuffer[0]);
-                });
-                break;
-            case 1:
-                // printf("Callback function 1\n");
-                Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, stream](){
-                    device->TransmitComplete(stream);
-                });
-                break;
-            default:
-                printf("Unknown function id\n");
-                break;
+            cbData = cbData->next;
         }
     }
 }

@@ -60,15 +60,27 @@ namespace ns3 {
         }
         uint32_t wire = src == m_link[0].m_src ? 0 : 1;
 
-        cb_data->empty = false;
-        // cb_data->context = m_link[wire].m_dst->GetNode()->GetId();
-        cb_data->packetSize = 256;
-        cb_data->delay = txTime + d_delay;
-        cb_data->dst = m_link[1].m_dst;
-        cb_data->func_id = 0;
-        // printf("Client: %p\n", m_link[1].m_dst);
-        // cudaMalloc((void**)&cb_data->packetBuffer, cb_data->packetSize);
-        cb_data->packetBuffer[0] = data[0];
+        if(cb_data->next == nullptr) {
+            printf("Next is null\n");
+        }
+        else{
+            cb_data->next->empty = false;
+            cb_data->packetSize = 256;
+            cb_data->next->dst = m_link[wire].m_dst;
+            cb_data->next->delay = txTime + d_delay;
+            cb_data->next->func_id = 0;
+            cb_data->next->packetBuffer[0] = data[0];
+        }
+
+        // cb_data->empty = false;
+        // // cb_data->context = m_link[wire].m_dst->GetNode()->GetId();
+        // cb_data->packetSize = 256;
+        // cb_data->delay = txTime + d_delay;
+        // cb_data->dst = m_link[wire].m_dst;
+        // cb_data->func_id = 0;
+        // // printf("Client: %p\n", m_link[1].m_dst);
+        // // cudaMalloc((void**)&cb_data->packetBuffer, cb_data->packetSize);
+        // cb_data->packetBuffer[0] = data[0];
         // cb_data->packetBuffer = const_cast<uint8_t*>(data);
         // printf("Packet buffer: %d\n", cb_data->packetBuffer[0]);
         // printf("Packet size: %d\n", cb_data->packetSize);

@@ -217,13 +217,13 @@ namespace ns3 {
                     printf("Function: None\n");
                     break;
                 case 0:
-                    printf("Function: Receive\n");
-                    EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, dataTime, cbData]() {
+                    printf("Function: Receive, delay: %f\n", cbData->delay);
+                    EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, cbData]() {
                         device->Receive(cbData->packetBuffer[0]);
                     });
                     break;
                 case 1:
-                    printf("Function: TransmitComplete\n");
+                    printf("Function: TransmitComplete, delay: %f\n", cbData->delay);
                     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, stream]() {
                         device->TransmitComplete(stream);
                     });

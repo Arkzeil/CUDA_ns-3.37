@@ -136,7 +136,7 @@ namespace ns3
             // Ptr<Packet> packet;
     };
 
-    static void CUDART_CB Cuda_ScheduleCallBack(cudaStream_t stream, cudaError_t status, void* data);
+    void CUDART_CB Cuda_ScheduleCallBack(cudaStream_t stream, cudaError_t status, void* data);
 }
 
 #endif /* CUDA_HELPER_H */
