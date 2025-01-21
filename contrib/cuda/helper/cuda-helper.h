@@ -22,6 +22,8 @@ namespace ns3
     bool InitCUDA(cudaDeviceProp &prop);
     void checkCudaErr();
 
+    class CudaPacket;
+
     class DeviceCallback {
         public:
             using MemberFunction = void (*) (void*); // A generic function pointer type

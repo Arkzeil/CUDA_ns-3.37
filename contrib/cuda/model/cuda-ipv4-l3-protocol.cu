@@ -3,6 +3,7 @@
 #include "cuda-ipv4-interface.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-net-device.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaIpv4L3Protocol");
@@ -190,11 +191,37 @@ namespace ns3 {
         //     b = a + 1;
         // }
     }
-    __device__ void CudaIpv4L3Protocol::Send(const uint8_t *packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route) {
+    __device__ void CudaIpv4L3Protocol::Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data){
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
-        printf("CudaIpv4L3Protocol: Packet sending\n");
+        printf("Ipv4L3: Send function, packet0: %d\n", d_packet->m_data[0]);
+
+        // assuming only one interface
+        CudaIpv4Interface *outInterface = GetInterface(0);
+
+        if(outInterface == nullptr){
+            printf("No interface found\n");
+            return;
+        }
+
+        if(outInterface->IsUp() == false){
+            printf("Interface is down\n");
+            return;
+        }
+        else{
+            CudaNetDevice *device = outInterface->GetDevice();
+            int32_t interface = GetInterfaceForDevice(device);
+            if(interface == -1){
+                printf("No device found for interface\n");
+                return;
+            }
+            else{
+                printf("device found\n");
+            }
+
+            outInterface->Send(device, d_packet, 0, cb_data);
+        }
     }
 
     void CudaIpv4L3Protocol::SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader) {

@@ -9,6 +9,7 @@ namespace ns3{
     class CudaNetDevice;
     class CudaIpv4Interface;
     class CUDA_cb_data;
+    class CudaPacket;
 
     class CudaIpv4L3Protocol : public Ipv4L3Protocol, public Managed{
         public:
@@ -31,7 +32,7 @@ namespace ns3{
             void SetForwarding(uint32_t interfaceIndex, bool enable);
             // void Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route);
             __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
-            __device__ void Send(const uint8_t *packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route);
+            __device__ void Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);
         
         protected:

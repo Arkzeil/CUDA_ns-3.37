@@ -14,6 +14,7 @@ namespace ns3{
     class CudaUdpL4Protocol;
     class CudaNetDevice;
     class CUDA_cb_data;
+    class CudaPacket;
 
     class CudaSocket : public Socket, public Managed{
         public:
@@ -33,8 +34,8 @@ namespace ns3{
             int ShutdownRecv() override;
             int ShutdownSend() override;
             int Send(Ptr<Packet> p, uint32_t flags) override;
-            __device__ void Send(const uint8_t* d_buffer, uint32_t size, CUDA_cb_data* cb_data);
-            __device__ void DoSendTo(const uint8_t* d_buffer, uint32_t dest, uint16_t port, uint8_t tos, uint32_t size, CUDA_cb_data* cb_data);
+            __device__ void Send(CudaPacket* d_packet, CUDA_cb_data* cb_data);
+            __device__ void DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data);
             // We can't use host-only class in device code
             // __device__ void DoSendTo(const uint8_t* d_buffer, Ipv4Address dest, uint16_t port, uint8_t tos, uint32_t size);
             Ptr<Packet> Recv(uint32_t maxSize, uint32_t flags) override;

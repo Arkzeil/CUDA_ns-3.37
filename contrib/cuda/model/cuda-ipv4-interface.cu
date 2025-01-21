@@ -1,6 +1,7 @@
 #include "cuda-ipv4-interface.h"
 #include "ns3/log.h"
 #include "cuda-net-device.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3{
     NS_LOG_COMPONENT_DEFINE("CudaIpv4Interface");
@@ -73,6 +74,12 @@ namespace ns3{
         // Test the interface
         printf("CudaIpv4Interface test, packet0: %d\n", data[0]);
         device->test(data, cb_data);
+    }
+
+    __device__ void CudaIpv4Interface::Send(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data) {
+        // Send a packet
+        printf("CudaIpv4Interface Send, packet0: %d\n", d_packet->m_data[0]);
+        device->Send(d_packet, destination, 0, cb_data);
     }
 
     __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {

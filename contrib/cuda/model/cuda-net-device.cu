@@ -2,6 +2,7 @@
 #include "cuda-packet-kernel.cuh"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-udp-client.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3 {
 
@@ -19,9 +20,13 @@ namespace ns3 {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
-      cudaMalloc(&d_packetQueue, m_queueSize * 1500); // Example size
+      cudaMalloc(&d_packetQueue, m_queueSize * sizeof(CudaPacket)); // Example size
       cudaMallocManaged(&d_queueFront, sizeof(int));
       cudaMallocManaged(&d_queueRear, sizeof(int));
+      // initliaze queue front and rear
+      uint32_t zero = 0;
+      cudaMemcpy(d_queueFront, &zero, sizeof(uint32_t), cudaMemcpyHostToDevice);
+      cudaMemcpy(d_queueRear, &zero, sizeof(uint32_t), cudaMemcpyHostToDevice);
       // *d_queueFront = *d_queueRear = 0;
   }
 
@@ -89,7 +94,7 @@ namespace ns3 {
       int blockSize = 256;
       int gridSize = (packetSize + blockSize - 1) / blockSize;
 
-      PacketProcessingKernel<<<gridSize, blockSize, 0, m_stream>>>(d_packetQueue, packetSize);
+      // PacketProcessingKernel<<<gridSize, blockSize, 0, m_stream>>>(d_packetQueue, packetSize);
 
       // Wait for GPU to finish processing
       cudaStreamSynchronize(m_stream);
@@ -106,7 +111,7 @@ namespace ns3 {
   }
 
   void CudaNetDevice::TransmitPackets() {
-      TransmitKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, 100.0, 1.0); // 100 Mbps, 1 ms delay
+      // TransmitKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, 100.0, 1.0); // 100 Mbps, 1 ms delay
       cudaStreamSynchronize(m_stream); // Ensure transmission completes
   }
 
@@ -158,29 +163,39 @@ namespace ns3 {
       else
         printf("Transmitter is ready\n");
 
-      if(EnqueuePacket(data, 256) == false)
+      // if(EnqueuePacket(data, 256) == false)
+      //   printf("Enqueue failed\n");
+      // else{
+      //   if(m_txMachineState == READY){
+      //     // cudaFree((void*)data);
+      //     uint8_t* packet = DequeuePacket();
+      //     TransmitStart(packet, 256, cb_data);
+      //   }
+      // }
+  }
+
+  __device__ void CudaNetDevice::Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
+      printf("CudaNetDevice: Send function, packet0: %d\n", d_packet->m_data[0]);
+      if(m_linkUp == false)
+        printf("Link is down\n");
+
+      if(m_txMachineState != READY)
+        printf("Transmitter is not ready\n");
+      else
+        printf("Transmitter is ready\n");
+
+      if(EnqueuePacket(d_packet) == false)
         printf("Enqueue failed\n");
       else{
         if(m_txMachineState == READY){
           // cudaFree((void*)data);
-          uint8_t* packet = DequeuePacket();
-          TransmitStart(packet, 256, cb_data);
+          CudaPacket* packet = DequeuePacket();
+          TransmitStart(packet, cb_data);
         }
       }
   }
 
-  __device__ void CudaNetDevice::Send(const uint8_t* packet, uint32_t size) {
-      if(m_linkUp == false) {
-        printf("Link is down, dropping packet\n");
-        cudaFree((void*)packet);
-        return;
-      }
-
-      EnqueuePacket(packet, size);
-
-  }
-
-  __device__ bool CudaNetDevice::TransmitStart(const uint8_t* packet, uint32_t size, CUDA_cb_data* cb_data) {
+  __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data) {
     // Start transmission
     // assuming size is in bytes
     if(m_txMachineState == BUSY) {
@@ -189,7 +204,7 @@ namespace ns3 {
     }
     m_txMachineState = BUSY;
     // assuming m_InterframeGap is 0
-    float TxTime = (float)(size * 8) / d_bps; // in seconds
+    float TxTime = (float)(packet->GetSize() * 8) / d_bps; // in seconds
 
     cb_data->empty = false;
     // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
@@ -199,7 +214,7 @@ namespace ns3 {
     cb_data->delay = TxTime;
     cb_data->func_id = 1;
 
-    bool result = m_channel->test(packet, this, TxTime, cb_data);
+    bool result = m_channel->TransmitStart(packet, this, TxTime, cb_data);
     if(result == false) {
       printf("Channel test failed\n");
     }
@@ -210,13 +225,13 @@ namespace ns3 {
   
 
   __global__ void d_TransmitComplete(CudaNetDevice* device, cudaStream_t stream, CUDA_cb_data* cb_data) {
-    uint8_t* packet = device->DequeuePacket();
+    CudaPacket* packet = device->DequeuePacket();
     if(packet == nullptr){
       printf("packet queue is empty\n");
       return;
     }
     
-    device->TransmitStart(packet, 256, cb_data);
+    device->TransmitStart(packet, cb_data);
   }
 
   void CudaNetDevice::TransmitComplete(cudaStream_t stream) {
@@ -235,7 +250,7 @@ namespace ns3 {
     cudaStreamAddCallback(stream, Cuda_ScheduleCallBack, d_data, 0);
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
-  __device__ bool CudaNetDevice::EnqueuePacket(const uint8_t* packet, uint32_t size) {
+  __device__ bool CudaNetDevice::EnqueuePacket(CudaPacket* packet) {
     // EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
     // cudaDeviceSynchronize(); // Ensure enqueue completes
     
@@ -246,11 +261,8 @@ namespace ns3 {
     }
 
     int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
-    uint8_t* entry = d_packetQueue + pos * 1500;         // Get position in the queue
-
-    for (int i = threadIdx.x; i < size; i += blockDim.x) {
-      entry[i] = packet[i];
-    }
+    CudaPacket* entry = d_packetQueue + pos;         // Get position in the queue
+    *entry = *packet; // Assign packet (uses device-side assignment operator)
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
     // __syncthreads();
@@ -258,14 +270,14 @@ namespace ns3 {
     return true;
   }
 
-  __device__ uint8_t* CudaNetDevice::DequeuePacket() {
+  __device__ CudaPacket* CudaNetDevice::DequeuePacket() {
     // Dequeue packet from GPU
     if (*d_queueFront == *d_queueRear) {
       return nullptr; // Queue is empty
     }
 
     int pos = atomicAdd(d_queueFront, 1) % m_queueSize; // Use atomic operation for thread safety
-    uint8_t* entry = d_packetQueue + pos * 1500;         // Get position in the queue
+    CudaPacket* entry = d_packetQueue + pos;         // Get position in the queue
 
     printf("Dequeued packet on GPU, pos: %d\n", pos);
     return entry;

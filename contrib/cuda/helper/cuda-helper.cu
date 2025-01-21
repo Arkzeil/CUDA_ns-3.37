@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "ns3/cuda-net-device.h"
 #include "ns3/simulator.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3
 {

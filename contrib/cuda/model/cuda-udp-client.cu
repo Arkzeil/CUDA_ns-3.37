@@ -3,6 +3,7 @@
 #include "cuda-udp-socket-factory-impl.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-net-device.h"
+#include "ns3/cuda-packet.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>
@@ -154,6 +155,7 @@ namespace ns3 {
         // if(m_sendEvent.IsRunning()){
         //     Simulator::Cancel(m_sendEvent);
         // }
+        // cudaStreamSynchronize(m_cudaStream);
         if (m_socket) {
             m_socket->Close();
             m_socket = nullptr;
@@ -168,6 +170,7 @@ namespace ns3 {
             // checkCudaErr();
             m_cudaSocket = nullptr;
         }
+        
         Simulator::Cancel(m_sendEvent);
     }
 
@@ -259,23 +262,32 @@ namespace ns3 {
         m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
     }   
 
-    __global__ void GeneratePacketKernel(CudaSocket* socket, uint8_t* packetBuffer, int packetSize, CUDA_cb_data* d_data) {
+    __global__ void GeneratePacketKernel(CudaSocket* socket, int packetSize, CUDA_cb_data* d_data) {
         // Allocate packet data in shared memory or local GPU memory
         // printf("Generating packet on GPU\n");
         __shared__ uint8_t packet[1500]; // Example size of a packet
+        // uint8_t* d_packet;
+        // cudaMalloc(&d_packet, packetSize);
         int idx = threadIdx.x + blockIdx.x * blockDim.x;
-        if (idx < packetSize) {
-            packetBuffer[idx] = (char)((idx) % 256); // Example payload logic
-        }
+        // if (idx < packetSize) {
+        //     d_packet[idx] = (char)((idx) % 256); // Example payload logic
+        // }
         // printf("Generated packet on GPU, idx: %d\n", idx);
         __syncthreads();
         packet[0] = idx % 256; // Example payload logic
         // Call the socket's Send logic directly
         if (threadIdx.x == 0) { // Single thread handles the send
-            packetBuffer[0] = packet[0];
-            printf("Sending packet from CUDA UDP client, packet 0: %d\n", packetBuffer[0]);
-            socket->Send(packetBuffer, packetSize, d_data);
+            CudaPacket* cuda_packet;
+            cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+            new(cuda_packet) CudaPacket();
+            cuda_packet->Allocate(packetSize);
+            cuda_packet->m_data[0] = packet[0];
+            printf("packet uid: %d, packet size: %d\n", cuda_packet->GetUid(), cuda_packet->GetSize());
+
+            printf("Sending packet from CUDA UDP client, packet 0: %d\n", cuda_packet->m_data[0]);
+            socket->Send(cuda_packet, d_data);
         }
+        // cudaFree(d_packet);
     }
 
     void CudaUdpClient::GeneratePacketOnGpu() {
@@ -302,7 +314,7 @@ namespace ns3 {
         
         // cudaEventCreate(&startEvent);
 
-        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, d_packetBuffer, m_size, d_data);
+        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, m_size, d_data);
         // cudaEventCreate(&stopEvent);
         
         cudaStreamSynchronize(m_cudaStream);

@@ -3,6 +3,7 @@
 #include "cuda-net-device.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-udp-socket-factory-impl.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
@@ -190,29 +191,30 @@ namespace ns3{
         return 0;
     }
 
-    __device__ void CudaSocket::Send(const uint8_t* d_buffer, uint32_t size, CUDA_cb_data* cb_data){
+    __device__ void CudaSocket::Send(CudaPacket* d_packet, CUDA_cb_data* cb_data){
         // Send data to the socket
         // cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
         // Send data to the network device
         // SendToNetDevice(d_sendBuffer, size);
-        printf("Sending packet from CUDA Socket, packet0: %d\n", d_buffer[0]);
+        printf("Sending packet from CUDA Socket, packet0: %d\n", d_packet->m_data[0]);
         // if(m_netDevice == nullptr){
         //     // m_netDevice = new CudaNetDevice();
         //     printf("NetDevice is null\n");
         // }
         // printf("%p\n", d_m_udp);
-        DoSendTo(d_buffer, 0, *m_defaultPort, 0, size, cb_data);
+        DoSendTo(d_packet, 0, *m_defaultPort, 0, cb_data);
         // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
         // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
         // m_netDevice->EnqueuePacket(d_buffer, size);
     }
 
-    __device__ void CudaSocket::DoSendTo(const uint8_t* d_buffer, uint32_t dest, uint16_t port, uint8_t tos, uint32_t size, CUDA_cb_data* cb_data){
+    __device__ void CudaSocket::DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data){
         // Send data to the specified address
         // Send data to the network device
         // SendToNetDevice(d_buffer, size);
-        printf("DoSendTo: Sending packet from CUDA Socket, packet0: %d\n", d_buffer[0]);
-        d_m_udp->test(d_buffer, cb_data);  
+        printf("DoSendTo: Sending packet from CUDA Socket, packet0: %d\n", d_packet->m_data[0]);
+        // d_m_udp->test(d_packet->m_data, cb_data);  
+        d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }
 

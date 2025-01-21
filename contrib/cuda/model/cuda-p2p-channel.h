@@ -11,6 +11,7 @@ namespace ns3
 {
     class CudaNetDevice;
     class CUDA_cb_data;
+    class CudaPacket;
     
     class CudaP2PChannel: public PointToPointChannel, public Managed{
         public:
@@ -25,7 +26,7 @@ namespace ns3
 
             // GPU-specific methods
             __device__ bool test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data);
-            __device__ void TransmitPacket(CudaNetDevice* src, const uint8_t* packet, uint32_t size);
+            __device__ bool TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data);
             __device__ void ReceivePacket(const uint8_t* packet, uint32_t size);
         private:
             static const uint32_t N_DEVICES = 2;    // Number of devices in the channel

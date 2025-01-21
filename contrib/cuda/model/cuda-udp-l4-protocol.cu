@@ -5,6 +5,7 @@
 #include "cuda-ipv4-l3-protocol.h"
 #include "cuda-udp-socket-factory-impl.h"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
@@ -80,14 +81,15 @@ namespace ns3 {
         d_m_ipv4->test(data, cb_data);
     }
 
-    __device__ void Send(const uint8_t* packet, Ipv4Address saddr, Ipv4Address daddr, uint16_t sport, uint16_t dport){
+    __device__ void CudaUdpL4Protocol::Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data){
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", saddr.GetLocal(), daddr.GetLocal());
         // printf("Packet contents: %s\n", packet);
         // call the send function of callback
-        printf("UdpL4: Sending packet\n");
-        // d_m_ipv4->Send(packet, saddr, daddr, sport, dport);
+        printf("UdpL4: Send function, packet0: %d\n", d_packet->m_data[0]);
+        // d_m_ipv4->test(d_packet->m_data, cb_data);
+        d_m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 

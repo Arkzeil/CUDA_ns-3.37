@@ -17,6 +17,7 @@
 namespace ns3 {
 
 class CUDA_cb_data;
+class CudaPacket;
 
 class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
@@ -39,12 +40,12 @@ public:
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
-    __device__ void Send(const uint8_t* packet, uint32_t size);
-    __device__ bool TransmitStart(const uint8_t* packet, uint32_t size, CUDA_cb_data* cb_data);
+    __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
+    __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
     void TransmitComplete(cudaStream_t stream);
     // Helper functions
-    __device__ bool EnqueuePacket(const uint8_t* packet, uint32_t size);
-    __device__ uint8_t* DequeuePacket();
+    __device__ bool EnqueuePacket(CudaPacket* packet);
+    __device__ CudaPacket* DequeuePacket();
     void TransmitPackets();
 
 private:
@@ -66,7 +67,7 @@ private:
 
     // CUDA-related members
     cudaStream_t m_stream;
-    uint8_t* d_packetQueue; // GPU packet queue
+    CudaPacket* d_packetQueue; // GPU packet queue
     NetDevice::ReceiveCallback m_rxCallback;
     CudaP2PChannel *m_channel;
     int* d_queueFront;

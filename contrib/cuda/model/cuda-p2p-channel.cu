@@ -1,6 +1,7 @@
 #include "cuda-p2p-channel.h"
 #include "cuda-net-device.h"
 #include "ns3/cuda-helper.h"
+#include "ns3/cuda-packet.h"
 
 namespace ns3 {
 
@@ -94,16 +95,29 @@ namespace ns3 {
         return true;
     }
 
-    __device__ void CudaP2PChannel::TransmitPacket(CudaNetDevice* src, const uint8_t* packet, uint32_t size) {
+    __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
-        // For simplicity, we will just copy the packet to the destination device
-        // and process it there
+        printf("TransmitStart function in channel, packet 0: %d\n", d_packet->m_data[0]);
+        // printf("Transmission time: %f\n", txTime);
         if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
             printf("Channel not initialized\n");
-            return;
+            return false;
         }
-        printf("transmitting packet in channel\n");
+        uint32_t wire = src == m_link[0].m_src ? 0 : 1;
 
+        if(cb_data->next == nullptr) {
+            printf("Next is null\n");
+        }
+        else{
+            cb_data->next->empty = false;
+            cb_data->packetSize = 256;
+            cb_data->next->dst = m_link[wire].m_dst;
+            cb_data->next->delay = txTime + d_delay;
+            cb_data->next->func_id = 0;
+            cb_data->next->packetBuffer[0] = d_packet->m_data[0];
+        }
+
+        return true;
         // uint8_t* d_packet;
         // cudaMalloc(&d_packet, size);
         // cudaMemcpy(d_packet, packet, size, cudaMemcpyDeviceToDevice);
