@@ -52,6 +52,8 @@ namespace ns3 {
         // Add an interface
         // m_interfaces.push_back(device);
         // Should also set traffic control layer, skip for now
+        m_node->RegisterProtocolHandler(MakeCallback(&CudaIpv4L3Protocol::Receive, this), 0, device);
+
         CudaIpv4Interface *interface = new CudaIpv4Interface();
         interface->SetDevice(device);
         interface->SetNode(m_node);
@@ -148,6 +150,13 @@ namespace ns3 {
     //     // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
     //     printf("Packet contents: %s\n", packet);
     // }
+    void CudaIpv4L3Protocol::Receive(Ptr<NetDevice> device, CudaPacket *packet, uint16_t protocol, const Address& from, const Address& to, NetDevice::PacketType packetType) {
+        // Receive a packet
+        // For simplicity, we will just print the packet contents
+        printf("Ipv4L3: Received packet\n");
+        // printf("Packet contents: %s\n", packet);
+    }
+
     __device__ void CudaIpv4L3Protocol::test(const uint8_t *data, CUDA_cb_data* cb_data) {
         // Test function
         printf("Ipv4L3: Test function, packet0: %d\n", data[0]);

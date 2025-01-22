@@ -11,6 +11,7 @@ NS_LOG_COMPONENT_DEFINE("SimpleCudaUdpHelperExample");
 
 int main(int argc, char *argv[]) {
     LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
+    LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
     // Create two nodes
     NodeContainer nodes;
     nodes.Create(2);
@@ -47,9 +48,9 @@ int main(int argc, char *argv[]) {
     // Set up the UDP server application on node 1
     uint16_t port = 4000;
     UdpServerHelper server(port);
-    // ApplicationContainer serverApp = server.Install(nodes.Get(1));
-    // serverApp.Start(Seconds(1.0));
-    // serverApp.Stop(Seconds(10.0));
+    ApplicationContainer serverApp = server.Install(nodes.Get(1));
+    serverApp.Start(Seconds(1.0));
+    serverApp.Stop(Seconds(10.0));
 
     UdpClientHelper client(interfaces.GetAddress(1), port);
     client.SetAttribute("MaxPackets", UintegerValue(100));
