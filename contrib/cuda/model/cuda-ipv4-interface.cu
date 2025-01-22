@@ -78,7 +78,7 @@ namespace ns3{
 
     __device__ void CudaIpv4Interface::Send(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data) {
         // Send a packet
-        printf("CudaIpv4Interface Send, packet0: %d\n", d_packet->m_data[0]);
+        printf("CudaIpv4Interface Send, packet id: %d\n", d_packet->GetUid());
         device->Send(d_packet, destination, 0, cb_data);
     }
 

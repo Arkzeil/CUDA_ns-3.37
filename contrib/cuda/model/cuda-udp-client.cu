@@ -221,8 +221,10 @@ namespace ns3 {
                     break;
                 case 0:
                     printf("Function: Receive, delay: %f\n", cbData->delay);
+                    // printf("h_packet: %p, d_packet: %p\n", cbData->h_packet, cbData->d_packet);
+                    printf("packet id: %d\n", cbData->packet->GetUid());
                     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, cbData]() {
-                        device->Receive(cbData->packetBuffer[0]);
+                        device->Receive(cbData->packet);
                     });
                     break;
                 case 1:
@@ -277,15 +279,17 @@ namespace ns3 {
         packet[0] = idx % 256; // Example payload logic
         // Call the socket's Send logic directly
         if (threadIdx.x == 0) { // Single thread handles the send
-            CudaPacket* cuda_packet;
-            cudaMalloc(&cuda_packet, sizeof(CudaPacket));
-            new(cuda_packet) CudaPacket();
-            cuda_packet->Allocate(packetSize);
-            cuda_packet->m_data[0] = packet[0];
-            printf("packet uid: %d, packet size: %d\n", cuda_packet->GetUid(), cuda_packet->GetSize());
+            // CudaPacket* cuda_packet;
+            // cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+            // new(cuda_packet) CudaPacket();
+            // cuda_packet->Allocate(packetSize);
+            // cuda_packet->m_data[0] = packet[0];
+            d_data->packet->Allocate(packetSize);
+            d_data->packet->m_data[0] = packet[0];
+            printf("packet uid: %d, packet size: %d\n", d_data->packet->GetUid(), d_data->packet->GetSize());
 
-            printf("Sending packet from CUDA UDP client, packet 0: %d\n", cuda_packet->m_data[0]);
-            socket->Send(cuda_packet, d_data);
+            printf("Sending packet from CUDA UDP client, packet id: %d\n", d_data->packet->GetUid());
+            socket->Send(d_data->packet, d_data);
         }
         // cudaFree(d_packet);
     }
@@ -303,6 +307,7 @@ namespace ns3 {
         }
         
         CUDA_cb_data* d_data = new CUDA_cb_data(256);
+        d_data->init_pkt();
         // cb_data_list.push_back(new CUDA_cb_data(256));
         // CUDA_cb_data* d_data = cb_data_list.back();
         d_data->addNext(1);
@@ -327,6 +332,7 @@ namespace ns3 {
 
         notifyHost<<<1,1>>>(receiveEventFlag);
         cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);
+        // cudaMemcpyAsync(d_data->h_packet, d_data->d_packet, sizeof(CudaPacket), cudaMemcpyDeviceToHost, m_cudaStream);
         cudaStreamAddCallback(m_cudaStream, CudaUdpClient::Cuda_ReceiveCallback, d_data, 0);
     }
 

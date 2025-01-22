@@ -195,7 +195,7 @@ namespace ns3 {
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
-        printf("Ipv4L3: Send function, packet0: %d\n", d_packet->m_data[0]);
+        printf("Ipv4L3: Send function, packet id: %d\n", d_packet->GetUid());
 
         // assuming only one interface
         CudaIpv4Interface *outInterface = GetInterface(0);

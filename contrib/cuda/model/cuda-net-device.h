@@ -34,7 +34,7 @@ public:
     void SetDataRate(DataRate bps);
     Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
-    void Receive(int packet);
+    void Receive(CudaPacket *packet);
 
     // GPU-specific methods
     void InitializeCudaBuffers();

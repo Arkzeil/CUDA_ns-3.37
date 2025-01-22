@@ -122,6 +122,7 @@ namespace ns3
             ~CUDA_cb_data();
 
             __host__ __device__ void init();
+            __host__ void init_pkt();
             void addNext(uint8_t length);
 
             bool empty;
@@ -129,6 +130,7 @@ namespace ns3
             void* dst;
             int32_t func_id;
             // DeviceCallback callback;
+            CudaPacket* packet;
             uint8_t* packetBuffer;
             uint32_t packetSize;
             Time sendTime;

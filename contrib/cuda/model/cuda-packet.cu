@@ -11,6 +11,7 @@ namespace ns3{
         // m_data = static_cast<uint8_t*>(malloc(m_capacity));
         // #endif
         m_uid = g_packetUidCounter++;
+        // printf("*------------------------------------------------*\n");
     }
 
     __host__ __device__ CudaPacket::~CudaPacket() {

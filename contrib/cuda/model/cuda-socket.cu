@@ -196,7 +196,7 @@ namespace ns3{
         // cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
         // Send data to the network device
         // SendToNetDevice(d_sendBuffer, size);
-        printf("Sending packet from CUDA Socket, packet0: %d\n", d_packet->m_data[0]);
+        printf("Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
         // if(m_netDevice == nullptr){
         //     // m_netDevice = new CudaNetDevice();
         //     printf("NetDevice is null\n");
@@ -212,7 +212,7 @@ namespace ns3{
         // Send data to the specified address
         // Send data to the network device
         // SendToNetDevice(d_buffer, size);
-        printf("DoSendTo: Sending packet from CUDA Socket, packet0: %d\n", d_packet->m_data[0]);
+        printf("DoSendTo: Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
         // d_m_udp->test(d_packet->m_data, cb_data);  
         d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);

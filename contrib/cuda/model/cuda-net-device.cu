@@ -20,7 +20,7 @@ namespace ns3 {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
-      cudaMalloc(&d_packetQueue, m_queueSize * sizeof(CudaPacket)); // Example size
+      cudaMallocManaged(&d_packetQueue, m_queueSize * sizeof(CudaPacket)); // Example size
       cudaMallocManaged(&d_queueFront, sizeof(int));
       cudaMallocManaged(&d_queueRear, sizeof(int));
       // initliaze queue front and rear
@@ -147,9 +147,9 @@ namespace ns3 {
       m_node = node;
   }
 
-  void CudaNetDevice::Receive(int packet) {
+  void CudaNetDevice::Receive(CudaPacket* packet) {
       // Process received packet
-      printf("Received packet on GPU, data 0: %d\n", packet);
+      printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
       // ProcessPacketOnCuda(packet);
   } 
 
@@ -175,7 +175,7 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
-      printf("CudaNetDevice: Send function, packet0: %d\n", d_packet->m_data[0]);
+      printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
       if(m_linkUp == false)
         printf("Link is down\n");
 

@@ -67,16 +67,20 @@ namespace ns3
             printf("Error: %s\n", cudaGetErrorString(err));
     }
 
-    CUDA_cb_data::CUDA_cb_data(): empty(true), next(nullptr), packetBuffer(nullptr), func_id(-1) {
+    CUDA_cb_data::CUDA_cb_data(): 
+    empty(true), next(nullptr), packetBuffer(nullptr), packet(nullptr), func_id(-1) {
         cudaMallocManaged((void**)&packetBuffer, 256);
+        // cudaHostAlloc(&h_packet, sizeof(CudaPacket), cudaHostAllocDefault);
     }
 
-    CUDA_cb_data::CUDA_cb_data(uint32_t packet_size): empty(true), next(nullptr), func_id(-1) {
+    CUDA_cb_data::CUDA_cb_data(uint32_t packet_size): 
+    empty(true), next(nullptr), packet(nullptr), func_id(-1) {
         cudaMallocManaged((void**)&packetBuffer, packet_size);
         this->packetSize = packet_size;
     }
 
-    CUDA_cb_data::CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay): empty(true), next(nullptr), func_id(-1) {
+    CUDA_cb_data::CUDA_cb_data(uint32_t context, void* dst, uint8_t* packetBuffer, uint32_t packetSize, Time sendTime, float delay): 
+    empty(true), next(nullptr), packet(nullptr), func_id(-1) {
         this->context = context;
         this->dst = dst;
         this->packetBuffer = packetBuffer;
@@ -93,9 +97,15 @@ namespace ns3
         empty = true;
         next = nullptr;
         dst = nullptr;
+        packet = nullptr;
         func_id = -1;
         packetSize = 0;
         delay = 0;
+    }
+
+    __host__ void CUDA_cb_data::init_pkt() {
+        cudaMallocManaged(&packet, sizeof(CudaPacket));
+        new(packet) CudaPacket();
     }
 
     void CUDA_cb_data::addNext(uint8_t length) {
@@ -130,7 +140,7 @@ namespace ns3
                 case 0:
                     // printf("Callback function 0\n");
                     Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, cbData](){
-                        device->Receive(cbData->packetBuffer[0]);
+                        device->Receive(cbData->packet);
                     });
                     break;
                 case 1:

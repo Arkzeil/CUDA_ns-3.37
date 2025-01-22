@@ -97,7 +97,7 @@ namespace ns3 {
 
     __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
-        printf("TransmitStart function in channel, packet 0: %d\n", d_packet->m_data[0]);
+        printf("TransmitStart function in channel, packet id: %d\n", d_packet->GetUid());
         // printf("Transmission time: %f\n", txTime);
         if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
             printf("Channel not initialized\n");
@@ -115,6 +115,8 @@ namespace ns3 {
             cb_data->next->delay = txTime + d_delay;
             cb_data->next->func_id = 0;
             cb_data->next->packetBuffer[0] = d_packet->m_data[0];
+            cb_data->next->packet = d_packet;
+            // printf("d_packet: %p\n", packet);
         }
 
         return true;

@@ -87,7 +87,7 @@ namespace ns3 {
         // printf("Sending packet from %s to %s\n", saddr.GetLocal(), daddr.GetLocal());
         // printf("Packet contents: %s\n", packet);
         // call the send function of callback
-        printf("UdpL4: Send function, packet0: %d\n", d_packet->m_data[0]);
+        printf("UdpL4: Send function, packet id: %d\n", d_packet->GetUid());
         // d_m_ipv4->test(d_packet->m_data, cb_data);
         d_m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
