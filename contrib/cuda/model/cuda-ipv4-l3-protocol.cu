@@ -52,7 +52,7 @@ namespace ns3 {
         // Add an interface
         // m_interfaces.push_back(device);
         // Should also set traffic control layer, skip for now
-        m_node->RegisterProtocolHandler(MakeCallback(&CudaIpv4L3Protocol::Receive, this), 0, device);
+        m_node->RegisterProtocolHandler(MakeCallback(&CudaIpv4L3Protocol::Receive, this), 69, device);
 
         CudaIpv4Interface *interface = new CudaIpv4Interface();
         interface->SetDevice(device);

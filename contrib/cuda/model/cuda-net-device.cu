@@ -58,6 +58,7 @@ namespace ns3 {
 
   void CudaNetDevice::SetReceiveCallback(NetDevice::ReceiveCallback cb) {
       m_rxCallback = cb;
+      printf("Set receive callback at CudaNetDevice\n");
   }
 
   bool CudaNetDevice::SupportsSendFrom() const {
@@ -150,6 +151,7 @@ namespace ns3 {
   void CudaNetDevice::Receive(CudaPacket* packet) {
       // Process received packet
       printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
+      m_rxCallback(this, (ns3::Packet*)packet, 69, Address());
       // ProcessPacketOnCuda(packet);
   } 
 
