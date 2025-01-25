@@ -27,6 +27,8 @@ public:
     virtual ~CudaNetDevice();
 
     // Overridden methods for packet transmission
+    void SetAddress(Address address) override;
+    Address GetAddress() const override;
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
     virtual bool SupportsSendFrom(void) const;
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
@@ -58,6 +60,7 @@ private:
     };
 
     TxMachineState m_txMachineState;
+    Mac48Address m_address;                              //!< Mac48Address of this NetDevice
 
     bool m_linkUp;
     DataRate m_bps;

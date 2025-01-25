@@ -14,6 +14,8 @@ namespace ns3
     class CudaIpv4L3Protocol;
     class CUDA_cb_data;
     class CudaPacket;
+    class CudaIpv4Interface;
+    
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
     class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
@@ -36,6 +38,7 @@ namespace ns3
             CudaSocket* CreateSocket();
             __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
             __device__ void Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data);
+            __device__ void Receive(CudaPacket *packet, CudaIpv4Interface *interface);
         protected:
             // void DoDispose() override;
             void NotifyNewAggregate() override;

@@ -6,6 +6,7 @@
 #include "cuda-udp-socket-factory-impl.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-ipv4-interface.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
@@ -93,6 +94,11 @@ namespace ns3 {
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 
+    __device__ void CudaUdpL4Protocol::Receive(CudaPacket *packet, CudaIpv4Interface *interface){
+        // Receive a packet
+        printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
+    }
+
     void CudaUdpL4Protocol::NotifyNewAggregate() {
         // Notify a new aggregate
         Ptr<Node> node = this->GetObject<Node>();
@@ -123,6 +129,10 @@ namespace ns3 {
             m_ipv4->SetNode(node);
             cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
             checkCudaErr();
+        }
+
+        if(ipv4){
+            GetPointer(DynamicCast<CudaIpv4L3Protocol>(ipv4))->Insert(this);
         }
         // Ptr<Ipv6> ipv6 = node->GetObject<Ipv6>();
     }

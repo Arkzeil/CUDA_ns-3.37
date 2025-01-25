@@ -4,6 +4,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-udp-l4-protocol.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaIpv4L3Protocol");
@@ -41,6 +42,11 @@ namespace ns3 {
     void CudaIpv4L3Protocol::Remove(Ptr<IpL4Protocol> protocol) {
         // Remove an IP L4 protocol
         // m_protocols.erase(std::remove(m_protocols.begin(), m_protocols.end(), protocol), m_protocols.end());
+    }
+
+    void CudaIpv4L3Protocol::Insert(CudaUdpL4Protocol* protocol) {
+        // Insert a UDP L4 protocol
+        m_udp = protocol;
     }
 
     void CudaIpv4L3Protocol::SetNode(Ptr<Node> node) {
@@ -150,11 +156,30 @@ namespace ns3 {
     //     // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
     //     printf("Packet contents: %s\n", packet);
     // }
+    __global__ void cuda_LocalDeliver(CudaPacket *pacekt, CudaIpv4Interface *interface, CudaUdpL4Protocol *udp) {
+        // Local deliver
+        printf("Local deliver, packet: %d\n", pacekt->GetUid());
+        // assuming no fragmentation
+        // skip protocol lookup
+        udp->Receive(pacekt, interface);
+    }
+
     void CudaIpv4L3Protocol::Receive(Ptr<NetDevice> device, CudaPacket *packet, uint16_t protocol, const Address& from, const Address& to, NetDevice::PacketType packetType) {
         // Receive a packet
         // For simplicity, we will just print the packet contents
-        printf("Ipv4L3: Received packet\n");
-        // printf("Packet contents: %s\n", packet);
+        printf("Ipv4L3: Received packet: %d\n", packet->GetUid());
+        std::cout << "address to: " << to << std::endl;
+        int32_t interface = GetInterfaceForDevice(GetPointer(DynamicCast<CudaNetDevice>(device)));
+        // printf("interface: %d\n", interface);
+        CudaIpv4Interface *Interface = GetInterface(interface);
+        if(Interface->IsUp() == false){
+            printf("Ipv4 interface is down\n");
+            return;
+        }
+
+        // assuming no ARP cache and raw socket
+
+        cuda_LocalDeliver<<<1, 1>>>(packet, Interface, m_udp);
     }
 
     __device__ void CudaIpv4L3Protocol::test(const uint8_t *data, CUDA_cb_data* cb_data) {

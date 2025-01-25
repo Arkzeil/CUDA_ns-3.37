@@ -10,6 +10,7 @@ namespace ns3{
     class CudaIpv4Interface;
     class CUDA_cb_data;
     class CudaPacket;
+    class CudaUdpL4Protocol;
 
     class CudaIpv4L3Protocol : public Ipv4L3Protocol, public Managed{
         public:
@@ -19,6 +20,9 @@ namespace ns3{
             void Insert(Ptr<IpL4Protocol> protocol) override;
             void Insert(Ptr<IpL4Protocol> protocol, uint32_t interfaceIndex) override;
             void Remove(Ptr<IpL4Protocol> protocol) override;
+            // cuda Insert, this is only for testing as only one protocol is used
+            void Insert(CudaUdpL4Protocol* protocol);
+
             void SetNode(Ptr<Node> node);
             uint32_t AddInterface(CudaNetDevice* device);
             uint32_t AddIpv4Interface(CudaIpv4Interface* interface);
@@ -44,6 +48,7 @@ namespace ns3{
             Ptr<Node> m_node;
             // std::vector<CudaIpv4Interface*> m_ipv4Interfaces;
             CudaIpv4Interface** m_ipv4Interface;
+            CudaUdpL4Protocol* m_udp;
             int m_interfaceCount;
             static const uint32_t m_maxInterfaceCount = 10;
     };

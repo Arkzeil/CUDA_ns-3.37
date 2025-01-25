@@ -40,6 +40,15 @@ namespace ns3 {
       checkCudaErr();
   }
 
+  void CudaNetDevice::SetAddress(Address address) {
+      m_address = Mac48Address::ConvertFrom(address);
+      printf("Set address at CudaNetDevice\n");
+  }
+
+  Address CudaNetDevice::GetAddress() const {
+      return m_address;
+  }
+
   bool CudaNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) {
       // Copy packet to GPU
       uint8_t* d_packet;

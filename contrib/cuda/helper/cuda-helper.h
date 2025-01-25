@@ -141,6 +141,58 @@ namespace ns3
     };
 
     void CUDART_CB Cuda_ScheduleCallBack(cudaStream_t stream, cudaError_t status, void* data);
+
+    class CudaKeyValuePair: public Managed{
+        public:
+            int key;     
+            void* protocol;         // should be a pointer to a CUDA L4 protocol
+
+            __host__ __device__ CudaKeyValuePair() : key(-1), protocol(nullptr) {} // Default constructor
+
+            __host__ __device__ CudaKeyValuePair(int k, void* p) : key(k), protocol(p) {} // Parameterized constructor
+    };
+    
+    class Cuda_L4List: public Managed{
+        public:
+            CudaKeyValuePair* m_protocols;
+
+            __host__ __device__ Cuda_L4List() : m_protocols(nullptr), m_size(0), m_capacity(0) {} // Default constructor
+
+            __host__ __device__ Cuda_L4List(int capacity) : m_size(0), m_capacity(capacity) {
+                m_protocols = new CudaKeyValuePair[capacity];
+            } // Parameterized constructor
+
+            __host__ __device__ ~Cuda_L4List(){
+                delete[] m_protocols;
+            }
+
+            __host__ __device__ void Add(int key, void* protocol){
+                if(m_size < m_capacity){
+                    m_protocols[m_size++] = CudaKeyValuePair(key, protocol);
+                }
+            }
+
+            __host__ __device__ void Remove(int key){
+                for(int i = 0; i < m_size; i++){
+                    if(m_protocols[i].key == key){
+                        m_protocols[i] = m_protocols[--m_size];
+                        break;
+                    }
+                }
+            }
+
+            __host__ __device__ void* Get(int key){
+                for(int i = 0; i < m_size; i++){
+                    if(m_protocols[i].key == key){
+                        return m_protocols[i].protocol;
+                    }
+                }
+                return nullptr;
+            }
+        private:
+            int m_size;
+            int m_capacity;
+    };
 }
 
 #endif /* CUDA_HELPER_H */
