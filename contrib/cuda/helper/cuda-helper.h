@@ -142,52 +142,104 @@ namespace ns3
 
     void CUDART_CB Cuda_ScheduleCallBack(cudaStream_t stream, cudaError_t status, void* data);
 
-    class CudaKeyValuePair: public Managed{
-        public:
-            int key;     
-            void* protocol;         // should be a pointer to a CUDA L4 protocol
-
-            __host__ __device__ CudaKeyValuePair() : key(-1), protocol(nullptr) {} // Default constructor
-
-            __host__ __device__ CudaKeyValuePair(int k, void* p) : key(k), protocol(p) {} // Parameterized constructor
-    };
     
-    class Cuda_L4List: public Managed{
+    template <typename T1, typename T2>
+    class CudaPair: public Managed{
         public:
-            CudaKeyValuePair* m_protocols;
+            T1 first;
+            T2 second;
 
-            __host__ __device__ Cuda_L4List() : m_protocols(nullptr), m_size(0), m_capacity(0) {} // Default constructor
+            // Default constructor
+            __host__ __device__
+            CudaPair() : first(), second() {}
 
-            __host__ __device__ Cuda_L4List(int capacity) : m_size(0), m_capacity(capacity) {
-                m_protocols = new CudaKeyValuePair[capacity];
-            } // Parameterized constructor
+            // Parameterized constructor
+            __host__ __device__
+            CudaPair(const T1& a, const T2& b) : first(a), second(b) {}
 
-            __host__ __device__ ~Cuda_L4List(){
-                delete[] m_protocols;
+            // Copy constructor
+            __host__ __device__
+            CudaPair(const CudaPair& other) : first(other.first), second(other.second) {}
+
+            // Assignment operator
+            __host__ __device__
+            CudaPair& operator=(const CudaPair& other) {
+                if (this != &other) {
+                    first = other.first;
+                    second = other.second;
+                }
+                return *this;
             }
 
-            __host__ __device__ void Add(int key, void* protocol){
+            // Equality operator
+            __host__ __device__
+            bool operator==(const CudaPair& other) const {
+                return (first == other.first) && (second == other.second);
+            }
+
+            // Less-than operator for sorting
+            __host__ __device__
+            bool operator<(const CudaPair& other) const {
+                return first < other.first || (first == other.first && second < other.second);
+            }
+    };
+    
+    template <typename T1, typename T2>
+    class Cuda_PairList: public Managed{
+        public:
+            CudaPair<T1, T2>* pair_elements;
+
+            __host__ __device__ Cuda_PairList() : pair_elements(nullptr), m_size(0), m_capacity(0) {} // Default constructor
+
+            __host__ __device__ Cuda_PairList(int capacity) : m_size(0), m_capacity(capacity) {
+                pair_elements = new CudaPair<T1, T2>[capacity];
+            } // Parameterized constructor
+
+            __host__ __device__ ~Cuda_PairList(){
+                delete[] pair_elements;
+            }
+
+            __host__ __device__ bool Add(T1 key, T2 protocol){
                 if(m_size < m_capacity){
-                    m_protocols[m_size++] = CudaKeyValuePair(key, protocol);
+                    pair_elements[m_size++] = pair_elements(key, protocol);
                 }
             }
 
-            __host__ __device__ void Remove(int key){
+            __host__ __device__ void Remove(T1 key){
                 for(int i = 0; i < m_size; i++){
-                    if(m_protocols[i].key == key){
-                        m_protocols[i] = m_protocols[--m_size];
+                    if(pair_elements[i].first == key){
+                        pair_elements[i] = pair_elements[--m_size];
                         break;
                     }
                 }
             }
 
-            __host__ __device__ void* Get(int key){
+            __host__ __device__ CudaPair<T1, T2> front(){
+                return pair_elements[0];
+            }
+
+            __host__ __device__ CudaPair<T1, T2> back(){
+                return pair_elements[m_size - 1];
+            }
+
+            __host__ __device__ void pop_front(){
+                for(int i = 0; i < m_size - 1; i++){
+                    pair_elements[i] = pair_elements[i + 1];
+                }
+                m_size--;
+            }
+
+            __host__ __device__ T2 Get(T1 key){
                 for(int i = 0; i < m_size; i++){
-                    if(m_protocols[i].key == key){
-                        return m_protocols[i].protocol;
+                    if(pair_elements[i].first == key){
+                        return pair_elements[i].protocol;
                     }
                 }
                 return nullptr;
+            }
+
+            __host__ __device__ bool empty(){
+                return m_size == 0;
             }
         private:
             int m_size;

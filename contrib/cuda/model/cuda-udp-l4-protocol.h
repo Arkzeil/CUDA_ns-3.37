@@ -15,7 +15,7 @@ namespace ns3
     class CUDA_cb_data;
     class CudaPacket;
     class CudaIpv4Interface;
-    
+
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
     class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
@@ -28,6 +28,10 @@ namespace ns3
 
             void SetNode(Ptr<Node> node);
             Ipv4EndPoint* Allocate();
+            Ipv4EndPoint* Allocate(Ipv4Address address);
+            Ipv4EndPoint* Allocate(Ptr<NetDevice> boundNetDevice, uint16_t port);
+            Ipv4EndPoint* Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address address, uint16_t port);
+            Ipv4EndPoint* Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address localAddress, uint16_t localPort, Ipv4Address peerAddress, uint16_t peerPort);
 
             void setDownTarget(DownDeviceFunctionPtr callback);
 

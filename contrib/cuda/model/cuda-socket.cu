@@ -27,7 +27,7 @@ namespace ns3{
         return tid;
     }
 
-    CudaSocket::CudaSocket() : m_netDevice(nullptr){
+    CudaSocket::CudaSocket() : m_netDevice(nullptr), m_shutdownRecv(false), m_shutdownSend(false), m_connected(false), m_rxAvailable(0){
         // Constructor
         // cudaStreamCreate(&m_cudaStream);
         printf("CudaSocket initialized\n");
@@ -38,6 +38,7 @@ namespace ns3{
         m_defaultAddress = new Address();
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
         // m_netDevice = new CudaNetDevice();
+        m_deliveryQueue = new Cuda_PairList<CudaPacket*, uint32_t>(10000);
     }
 
     CudaSocket::~CudaSocket(){
@@ -119,9 +120,39 @@ namespace ns3{
 
     int CudaSocket::Bind(const Address& address){
         // Bind the socket to the specified address
-        *m_defaultAddress = address;
+        // *m_defaultAddress = address;
+        InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
+        Ipv4Address ipv4 = transport.GetIpv4();
+        uint16_t port = transport.GetPort();
+
+        SetIpTos(transport.GetTos());
+        if (ipv4 == Ipv4Address::GetAny() && port == 0)
+        {
+            m_endPoint = m_udp->Allocate();
+        }
+        else if (ipv4 == Ipv4Address::GetAny() && port != 0)
+        {
+            m_endPoint = m_udp->Allocate(GetBoundNetDevice(), port);
+        }
+        else if (ipv4 != Ipv4Address::GetAny() && port == 0)
+        {
+            m_endPoint = m_udp->Allocate(ipv4);
+        }
+        else if (ipv4 != Ipv4Address::GetAny() && port != 0)
+        {
+            m_endPoint = m_udp->Allocate(GetBoundNetDevice(), ipv4, port);
+        }
+        if (nullptr == m_endPoint)
+        {
+            m_errno = port ? ERROR_ADDRINUSE : ERROR_ADDRNOTAVAIL;
+            return -1;
+        }
+        if (m_boundnetdevice)
+        {
+            m_endPoint->BindToNetDevice(m_boundnetdevice);
+        }
         // NotifyBind();
-        return 0;
+        return FinishBind();
     }
 
     int CudaSocket::Bind6(){
@@ -134,6 +165,8 @@ namespace ns3{
         cudaFree(d_sendBuffer);
         checkCudaErr();
         d_sendBuffer = nullptr;
+        m_shutdownRecv = true;
+        m_shutdownSend = true;
         // cudaStreamDestroy(m_cudaStream);
         return 0;
     }
@@ -233,6 +266,38 @@ namespace ns3{
         return nullptr;
     }
 
+    __device__ void CudaSocket::ForwardPacket(CudaPacket* d_packet){
+        // Forward the packet
+        if(m_shutdownRecv){
+            return;
+        }
+        printf("Forwarding packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
+
+        if(m_rxAvailable + d_packet->GetSize() <= m_rcvBufSize){
+            if(m_deliveryQueue->Add(d_packet, 0) == false){
+                printf("Failed to add packet to delivery queue\n");
+            }
+            m_rxAvailable += d_packet->GetSize();
+        }
+    }
+
+    __device__ CudaPacket* CudaSocket::CudaRecv(uint32_t maxSize, uint32_t flags, uint32_t* from){
+        // Receive data from the socket
+        if(m_deliveryQueue->empty()){
+            printf("No packets in delivery queue\n");
+            return nullptr;
+        }
+        CudaPair<CudaPacket*, uint32_t> pair = m_deliveryQueue->front();
+        CudaPacket* d_packet = pair.first;
+        *from = pair.second;
+
+        if(d_packet->GetSize() < maxSize){
+            m_rxAvailable -= d_packet->GetSize();
+            m_deliveryQueue->pop_front();
+            return d_packet;
+        }
+    }
+
     int CudaSocket::GetSockName(Address& address) const{
         // Get the socket name
         // address = *m_defaultAddress;
@@ -292,5 +357,10 @@ namespace ns3{
     bool CudaSocket::GetAllowBroadcast() const{
         // Get the broadcast flag
         return false;
+    }
+
+    void CudaSocket::SetRcvBufSize(uint32_t size){
+        // Set the receive buffer size
+        m_rcvBufSize = size;
     }
 }

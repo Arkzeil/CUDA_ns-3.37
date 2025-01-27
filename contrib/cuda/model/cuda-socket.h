@@ -9,6 +9,7 @@
 #include <cuda_runtime.h>
 #include <queue>
 #include "helper.h"
+#include "ns3/cuda-helper.h"
 
 namespace ns3{
     class CudaUdpL4Protocol;
@@ -40,6 +41,8 @@ namespace ns3{
             // __device__ void DoSendTo(const uint8_t* d_buffer, Ipv4Address dest, uint16_t port, uint8_t tos, uint32_t size);
             Ptr<Packet> Recv(uint32_t maxSize, uint32_t flags) override;
             Ptr<Packet> RecvFrom(uint32_t maxSize, uint32_t flags, Address& fromAddress) override;
+            __device__ void ForwardPacket(CudaPacket* d_packet);
+            __device__ CudaPacket* CudaRecv(uint32_t maxSize, uint32_t flags, uint32_t* from);
             int GetSockName(Address& address) const override;
             
             uint32_t GetTxAvailable() const override;
@@ -53,6 +56,7 @@ namespace ns3{
             int GetPeerName(Address& address) const override;
             bool SetAllowBroadcast(bool allowBroadcast) override;
             bool GetAllowBroadcast() const override;
+            void SetRcvBufSize(uint32_t size);
 
             // void SetRecvCallback(Callback<void, Ptr<Socket>> receivedData) override;
         private:
@@ -79,7 +83,9 @@ namespace ns3{
             bool m_connected;                 //!< Connection established
             bool m_allowBroadcast;            //!< Allow send broadcast packets
 
-            std::queue<std::pair<Ptr<Packet>, Address>> m_deliveryQueue; //!< Queue for incoming packets
+            // std::queue<std::pair<Ptr<Packet>, Address>> m_deliveryQueue; //!< Queue for incoming packets
+            Cuda_PairList<CudaPacket*, uint32_t> *m_deliveryQueue;
+
             uint32_t m_rxAvailable; //!< Number of available bytes to be received
 
             // Socket attributes

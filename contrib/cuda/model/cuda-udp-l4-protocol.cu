@@ -56,6 +56,26 @@ namespace ns3 {
         return m_endPoints->Allocate();
     }
 
+    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ipv4Address address) {
+        // Allocate an IPv4 end point
+        return m_endPoints->Allocate(address);
+    }
+
+    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ptr<NetDevice> boundNetDevice, uint16_t port) {
+        // Allocate an IPv4 end point
+        return m_endPoints->Allocate(boundNetDevice, port);
+    }
+
+    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address address, uint16_t port) {
+        // Allocate an IPv4 end point
+        return m_endPoints->Allocate(boundNetDevice, address, port);
+    }
+
+    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address localAddress, uint16_t localPort, Ipv4Address peerAddress, uint16_t peerPort) {
+        // Allocate an IPv4 end point
+        return m_endPoints->Allocate(boundNetDevice, localAddress, localPort, peerAddress, peerPort);
+    }
+
     void CudaUdpL4Protocol::setDownTarget(DownDeviceFunctionPtr callback) {
         // Set the down target
         // m_downTarget = callback;
@@ -64,7 +84,7 @@ namespace ns3 {
     CudaSocket* CudaUdpL4Protocol::CreateSocket() {
         // Create a new socket
         CudaSocket* socket = new CudaSocket();
-        checkCudaErr();
+        // checkCudaErr();
         socket->SetNode(m_node);
         socket->SetUdp(this);
         m_sockets.push_back(socket);
