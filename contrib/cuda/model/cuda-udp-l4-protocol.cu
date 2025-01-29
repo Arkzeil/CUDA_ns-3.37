@@ -7,6 +7,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-packet.h"
 #include "ns3/cuda-ipv4-interface.h"
+#include "ns3/cuda-ipv4-end-point.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
@@ -21,7 +22,7 @@ namespace ns3 {
         return tid;
     }
 
-    CudaUdpL4Protocol::CudaUdpL4Protocol(): m_endPoints(new Ipv4EndPointDemux()), m_ipv4(nullptr) {
+    CudaUdpL4Protocol::CudaUdpL4Protocol(): m_ipv4(nullptr), m_node(nullptr), m_endPoints(nullptr), m_ephemeral(49152), index(0) {
         // Constructor
         // cudaMallocManaged(&m_downTarget, sizeof(DownDeviceFunctionPtr));
         printf("CudaUdpL4Protocol initialized\n");
@@ -35,6 +36,7 @@ namespace ns3 {
         // m_downTarget = CudaIpv4L3Protocol::Send;
         // Ptr<CudaIpv4L3Protocol> ipv4 = this->GetObject<CudaIpv4L3Protocol>();
         // m_downTarget = ipv4->Send();
+        m_endPoints = new CudaIpv4EndPoint[10];
     }
 
     CudaUdpL4Protocol::~CudaUdpL4Protocol() {
@@ -51,29 +53,40 @@ namespace ns3 {
         // }
     }
 
-    Ipv4EndPoint* CudaUdpL4Protocol::Allocate() {
+    CudaIpv4EndPoint* CudaUdpL4Protocol::Allocate() {
         // Allocate an IPv4 end point
-        return m_endPoints->Allocate();
+        return &m_endPoints[index++];
     }
 
-    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ipv4Address address) {
+    CudaIpv4EndPoint* CudaUdpL4Protocol::Allocate(Ipv4Address address) {
         // Allocate an IPv4 end point
-        return m_endPoints->Allocate(address);
+        m_endPoints[index].SetLocalAddress(address.Get());
+        return &m_endPoints[index++];
     }
 
-    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ptr<NetDevice> boundNetDevice, uint16_t port) {
+    CudaIpv4EndPoint* CudaUdpL4Protocol::Allocate(CudaNetDevice* boundNetDevice, uint16_t port) {
         // Allocate an IPv4 end point
-        return m_endPoints->Allocate(boundNetDevice, port);
+        m_endPoints[index].BindToNetDevice(boundNetDevice);
+        m_endPoints[index].SetLocalPort(port);
+        return &m_endPoints[index++];
     }
 
-    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address address, uint16_t port) {
+    CudaIpv4EndPoint* CudaUdpL4Protocol::Allocate(CudaNetDevice* boundNetDevice, Ipv4Address address, uint16_t port) {
         // Allocate an IPv4 end point
-        return m_endPoints->Allocate(boundNetDevice, address, port);
+        m_endPoints[index].BindToNetDevice(boundNetDevice);
+        m_endPoints[index].SetLocalAddress(address.Get());
+        m_endPoints[index].SetLocalPort(port);
+        return &m_endPoints[index++];
     }
 
-    Ipv4EndPoint* CudaUdpL4Protocol::Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address localAddress, uint16_t localPort, Ipv4Address peerAddress, uint16_t peerPort) {
+    CudaIpv4EndPoint* CudaUdpL4Protocol::Allocate(CudaNetDevice* boundNetDevice, Ipv4Address localAddress, uint16_t localPort, Ipv4Address peerAddress, uint16_t peerPort) {
         // Allocate an IPv4 end point
-        return m_endPoints->Allocate(boundNetDevice, localAddress, localPort, peerAddress, peerPort);
+        m_endPoints[index].BindToNetDevice(boundNetDevice);
+        m_endPoints[index].SetLocalAddress(localAddress.Get());
+        m_endPoints[index].SetLocalPort(localPort);
+        m_endPoints[index].SetPeerAddress(peerAddress.Get());
+        m_endPoints[index].SetPeerPort(peerPort);
+        return &m_endPoints[index++];
     }
 
     void CudaUdpL4Protocol::setDownTarget(DownDeviceFunctionPtr callback) {
@@ -117,6 +130,7 @@ namespace ns3 {
     __device__ void CudaUdpL4Protocol::Receive(CudaPacket *packet, CudaIpv4Interface *interface){
         // Receive a packet
         printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
+        m_endPoints[0].GetSocket()->ForwardPacket(packet);
     }
 
     void CudaUdpL4Protocol::NotifyNewAggregate() {

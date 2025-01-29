@@ -16,6 +16,7 @@ namespace ns3{
     class CudaNetDevice;
     class CUDA_cb_data;
     class CudaPacket;
+    class CudaIpv4EndPoint;
 
     class CudaSocket : public Socket, public Managed{
         public:
@@ -57,6 +58,7 @@ namespace ns3{
             bool SetAllowBroadcast(bool allowBroadcast) override;
             bool GetAllowBroadcast() const override;
             void SetRcvBufSize(uint32_t size);
+            CudaNetDevice* GetBoundNetDevice();
 
             // void SetRecvCallback(Callback<void, Ptr<Socket>> receivedData) override;
         private:
@@ -64,7 +66,8 @@ namespace ns3{
             cudaStream_t m_cudaStream;
             CudaNetDevice *m_netDevice;
             // Connections to other layers of TCP/IP
-            Ipv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
+            CudaNetDevice* m_boundnetdevice; 
+            CudaIpv4EndPoint* m_endPoint;  //!< the IPv4 endpoint
             // Ipv6EndPoint* m_endPoint6; //!< the IPv6 endpoint
             Ptr<Node> m_node;          //!< the associated node
             static CudaUdpL4Protocol *m_udp;  //!< the associated UDP L4 protocol

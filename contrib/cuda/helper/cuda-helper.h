@@ -201,7 +201,7 @@ namespace ns3
 
             __host__ __device__ bool Add(T1 key, T2 protocol){
                 if(m_size < m_capacity){
-                    pair_elements[m_size++] = pair_elements(key, protocol);
+                    pair_elements[m_size++] = CudaPair(key, protocol);
                 }
             }
 
@@ -244,6 +244,115 @@ namespace ns3
         private:
             int m_size;
             int m_capacity;
+    };
+
+    template <typename T>
+    class CudaList {
+        public:
+            struct Node {
+                T data;        // The data stored in the node
+                Node* next;    // Pointer to the next node
+
+                __host__ __device__
+                Node() : next(nullptr) {}
+
+                __host__ __device__
+                Node(T& value) : data(value), next(nullptr) {}
+            };
+
+            Node* head; // Head of the list
+
+            __host__ __device__
+            CudaList() : head(nullptr) {}
+
+            __host__ __device__
+            ~CudaList() {
+                // Destructor is host-only since it requires memory deallocation
+                // Ensure proper cleanup on the host
+            }
+
+            // Add a new element to the front of the list
+            __host__ __device__
+            void PushFront(T& value) {
+                Node* newNode = CreateNode(value);
+                newNode->next = head;
+                head = newNode;
+            }
+
+            // Add a new element to the back of the list
+            __host__ __device__
+            void PushBack(T& value) {
+                Node* newNode = CreateNode(value);
+
+                if (!head) {
+                    head = newNode;
+                    return;
+                }
+
+                Node* current = head;
+                while (current->next) {
+                    current = current->next;
+                }
+                current->next = newNode;
+            }
+
+            // Remove the first element from the list
+            __host__ __device__
+            bool PopFront() {
+                if (!head) return false;
+
+                Node* temp = head;
+                head = head->next;
+                DestroyNode(temp);
+                return true;
+            }
+
+            // Check if the list is empty
+            __host__ __device__
+            bool IsEmpty() const {
+                return head == nullptr;
+            }
+
+            // Traverse the list and apply a callback function to each element
+            template <typename Callback>
+            __host__ __device__
+            void Traverse(Callback callback) const {
+                Node* current = head;
+                while (current) {
+                    callback(current->data);
+                    current = current->next;
+                }
+            }
+
+        private:
+            // Utility function to create a new node
+            __host__ __device__
+            Node* CreateNode(T& value) {
+        #ifdef __CUDA_ARCH__
+                // On the device, use `cudaMalloc`
+                Node* newNode = (Node*)malloc(sizeof(Node));
+        #else
+                // On the host, use regular `new`
+                Node* newNode = new Node(value);
+        #endif
+                if (newNode) {
+                    newNode->data = value;
+                    newNode->next = nullptr;
+                }
+                return newNode;
+            }
+
+            // Utility function to destroy a node
+            __host__ __device__
+            void DestroyNode(Node* node) {
+        #ifdef __CUDA_ARCH__
+                // On the device, use `free`
+                free(node);
+        #else
+                // On the host, use `delete`
+                delete node;
+        #endif
+            }
     };
 }
 

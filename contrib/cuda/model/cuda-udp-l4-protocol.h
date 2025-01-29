@@ -15,6 +15,9 @@ namespace ns3
     class CUDA_cb_data;
     class CudaPacket;
     class CudaIpv4Interface;
+    class CudaIpv4EndPoint;
+    class CudaNetDevice;
+    // class CudaList<CudaIpv4EndPoint*>;
 
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
     
@@ -27,11 +30,11 @@ namespace ns3
             ~CudaUdpL4Protocol() override;
 
             void SetNode(Ptr<Node> node);
-            Ipv4EndPoint* Allocate();
-            Ipv4EndPoint* Allocate(Ipv4Address address);
-            Ipv4EndPoint* Allocate(Ptr<NetDevice> boundNetDevice, uint16_t port);
-            Ipv4EndPoint* Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address address, uint16_t port);
-            Ipv4EndPoint* Allocate(Ptr<NetDevice> boundNetDevice, Ipv4Address localAddress, uint16_t localPort, Ipv4Address peerAddress, uint16_t peerPort);
+            CudaIpv4EndPoint* Allocate();
+            CudaIpv4EndPoint* Allocate(Ipv4Address address);
+            CudaIpv4EndPoint* Allocate(CudaNetDevice* boundNetDevice, uint16_t port);
+            CudaIpv4EndPoint* Allocate(CudaNetDevice* boundNetDevice, Ipv4Address address, uint16_t port);
+            CudaIpv4EndPoint* Allocate(CudaNetDevice* boundNetDevice, Ipv4Address localAddress, uint16_t localPort, Ipv4Address peerAddress, uint16_t peerPort);
 
             void setDownTarget(DownDeviceFunctionPtr callback);
 
@@ -49,7 +52,11 @@ namespace ns3
         
         private:
             Ptr<Node> m_node; //!< the node this stack is associated with
-            Ipv4EndPointDemux *m_endPoints; //!< A list of IPv4 end points.
+            // Ipv4EndPointDemux *m_endPoints; //!< A list of IPv4 end points.
+            // CudaList<CudaIpv4EndPoint*> m_endPoints; //!< A list of IPv4 end points.
+            CudaIpv4EndPoint* m_endPoints; //!< A list of IPv4 end points.
+            uint32_t m_ephemeral; //!< Ephemeral port number
+            uint32_t index; //!< index of the end point
             CudaIpv4L3Protocol *m_ipv4; //!< A pointer to the IPv4 L3 protocol
             // Ptr<CudaUdpSocketFactoryImpl> m_socketFactory;
             std::vector<CudaSocket*> m_sockets; //!< list of sockets

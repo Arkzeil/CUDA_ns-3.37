@@ -4,6 +4,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-udp-socket-factory-impl.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-ipv4-end-point.h"
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
@@ -94,6 +95,7 @@ namespace ns3{
             //     MakeCallback(&UdpSocketImpl::ForwardIcmp, Ptr<UdpSocketImpl>(this)));
             // m_endPoint->SetDestroyCallback(
             //     MakeCallback(&UdpSocketImpl::Destroy, Ptr<UdpSocketImpl>(this)));
+            m_endPoint->SetSocket(this);
             done = true;
         }
 
@@ -362,5 +364,10 @@ namespace ns3{
     void CudaSocket::SetRcvBufSize(uint32_t size){
         // Set the receive buffer size
         m_rcvBufSize = size;
+    }
+
+    CudaNetDevice* CudaSocket::GetBoundNetDevice(){
+        // Get the bound network device
+        return m_boundnetdevice;
     }
 }
