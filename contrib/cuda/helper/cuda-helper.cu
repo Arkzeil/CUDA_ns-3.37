@@ -70,6 +70,7 @@ namespace ns3
     CUDA_cb_data::CUDA_cb_data(): 
     empty(true), next(nullptr), packetBuffer(nullptr), packet(nullptr), func_id(-1) {
         cudaMallocManaged((void**)&packetBuffer, 256);
+        checkCudaErr();
         // cudaHostAlloc(&h_packet, sizeof(CudaPacket), cudaHostAllocDefault);
     }
 
@@ -105,6 +106,7 @@ namespace ns3
 
     __host__ void CUDA_cb_data::init_pkt() {
         cudaMallocManaged(&packet, sizeof(CudaPacket));
+        checkCudaErr();
         new(packet) CudaPacket();
     }
 

@@ -35,10 +35,12 @@ namespace ns3{
         printf("CudaSocket initialized\n");
         // void *d_temp;
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
+        checkCudaErr();
         // cudaMallocManaged(&m_defaultAddress, sizeof(Address));
         // m_defaultAddress = new(m_defaultAddress) Address();
         m_defaultAddress = new Address();
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
+        checkCudaErr();
         // m_netDevice = new CudaNetDevice();
         m_deliveryQueue = new Cuda_PairList<CudaPacket*, uint32_t>(10000);
     }
@@ -290,6 +292,7 @@ namespace ns3{
     }
 
     __device__ CudaPacket* CudaSocket::CudaRecv(uint32_t maxSize, uint32_t flags, uint32_t* from){
+        printf("Trying to fetch packet from delivery queue\n");
         // Receive data from the socket
         if(m_deliveryQueue->empty()){
             printf("No packets in delivery queue\n");

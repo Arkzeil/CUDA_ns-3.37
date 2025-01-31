@@ -305,6 +305,8 @@ namespace ns3 {
         if(m_cudaSocket == nullptr){
             printf("Cuda socket is null\n");
         }
+
+        // checkCudaErr();
         
         CUDA_cb_data* d_data = new CUDA_cb_data(256);
         d_data->init_pkt();

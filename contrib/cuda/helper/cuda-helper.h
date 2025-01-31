@@ -202,7 +202,9 @@ namespace ns3
             __host__ __device__ bool Add(T1 key, T2 protocol){
                 if(m_size < m_capacity){
                     pair_elements[m_size++] = CudaPair(key, protocol);
+                    return true;
                 }
+                return false;
             }
 
             __host__ __device__ void Remove(T1 key){
@@ -241,6 +243,7 @@ namespace ns3
             __host__ __device__ bool empty(){
                 return m_size == 0;
             }
+            
         private:
             int m_size;
             int m_capacity;
