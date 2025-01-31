@@ -5,6 +5,7 @@
 #include "ns3/cuda-udp-socket-factory-impl.h"
 #include "ns3/cuda-packet.h"
 #include "ns3/cuda-ipv4-end-point.h"
+#include "ns3/cuda-udp-server.h"
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
@@ -144,7 +145,7 @@ namespace ns3{
         {
             m_endPoint = m_udp->Allocate(GetBoundNetDevice(), ipv4, port);
         }
-        if (nullptr == m_endPoint)
+        if (m_endPoint == nullptr)
         {
             m_errno = port ? ERROR_ADDRINUSE : ERROR_ADDRNOTAVAIL;
             return -1;
@@ -280,6 +281,11 @@ namespace ns3{
                 printf("Failed to add packet to delivery queue\n");
             }
             m_rxAvailable += d_packet->GetSize();
+
+            m_server->HandleRead(this);
+        }
+        else{
+            printf("No space in receive buffer\n");
         }
     }
 
@@ -369,5 +375,10 @@ namespace ns3{
     CudaNetDevice* CudaSocket::GetBoundNetDevice(){
         // Get the bound network device
         return m_boundnetdevice;
+    }
+
+    void CudaSocket::SetRecv(CudaUdpServer* server){
+        // Set the receive server
+        m_server = server;
     }
 }

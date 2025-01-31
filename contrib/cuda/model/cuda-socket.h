@@ -17,6 +17,7 @@ namespace ns3{
     class CUDA_cb_data;
     class CudaPacket;
     class CudaIpv4EndPoint;
+    class CudaUdpServer;
 
     class CudaSocket : public Socket, public Managed{
         public:
@@ -59,6 +60,7 @@ namespace ns3{
             bool GetAllowBroadcast() const override;
             void SetRcvBufSize(uint32_t size);
             CudaNetDevice* GetBoundNetDevice();
+            void SetRecv(CudaUdpServer* server);
 
             // void SetRecvCallback(Callback<void, Ptr<Socket>> receivedData) override;
         private:
@@ -97,6 +99,8 @@ namespace ns3{
             int32_t m_ipMulticastIf;  //!< Multicast Interface
             bool m_ipMulticastLoop;   //!< Allow multicast loop
             bool m_mtuDiscover;       //!< Allow MTU discovery
+
+            CudaUdpServer* m_server;
 
             // Send function
             void SendToNetDevice(const uint8_t* d_buffer, uint32_t size);

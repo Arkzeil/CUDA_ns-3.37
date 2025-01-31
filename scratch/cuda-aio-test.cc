@@ -11,6 +11,7 @@
 #include "ns3/cuda-udp-l4-protocol.h"
 #include "ns3/cuda-internet-stack-helper.h"
 #include "ns3/cuda-ipv4-address-helper.h"
+#include "ns3/cuda-udp-server.h"
 
 using namespace ns3;
 
@@ -79,6 +80,12 @@ int main(int argc, char* argv[]) {
   app->SetStartTime(Seconds(1.0));
   app->SetStopTime(Seconds(10.0));
   // cudaNode0->AddApplication(app);
+  Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
+  server->SetPort(9);
+
+  node1->AddApplication(server);
+  server->SetStartTime(Seconds(0.0));
+  server->SetStopTime(Seconds(10.0));
 
   // Install a UDP echo server on node 1
   // UdpEchoServerHelper server(9);

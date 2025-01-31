@@ -32,6 +32,11 @@ namespace ns3 {
         // Constructor
     }
 
+    CudaUdpServer::CudaUdpServer(uint16_t port): m_cudaSocket(nullptr), m_lossCounter(0), m_received(0) {
+        // Constructor
+        m_port = port;
+    }
+
     CudaUdpServer::~CudaUdpServer() {
         // Destructor
     }
@@ -56,15 +61,19 @@ namespace ns3 {
             if(node == nullptr){
                 printf("Node is null\n");
             }
-            m_cudaSocket = CudaSocket::CreateSocket(node);
-            // m_cudaSocket->SetNode(node);
-            // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
-            // m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
-            InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
-            if(m_cudaSocket->Bind(local) == -1){
-                NS_LOG_ERROR("Failed to bind socket");
-                return;
+            if(!m_cudaSocket){
+                m_cudaSocket = CudaSocket::CreateSocket(node);
+                // m_cudaSocket->SetNode(node);
+                // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
+                // m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
+                InetSocketAddress local = InetSocketAddress(Ipv4Address::GetAny(), m_port);
+                if(m_cudaSocket->Bind(local) == -1){
+                    NS_LOG_ERROR("Failed to bind socket");
+                    return;
+                }
             }
+            m_cudaSocket->SetRecv(this);
+            printf("CudaUdpServer started: %p\n", m_cudaSocket);
             // m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
         }
     }
@@ -83,9 +92,15 @@ namespace ns3 {
         uint32_t from;
         while((packet = socket->CudaRecv(UINT32_MAX, 0, &from)) != nullptr){
             if(packet->GetSize() > 0){
+                printf("CudaUdpServer Received packet: %d\n", packet->GetUid());
                 uint32_t receivedSize = packet->GetSize();
                 m_received++;
             }
         }
+    }
+
+    void CudaUdpServer::SetPort(uint16_t port) {
+        // Set the port
+        m_port = port;
     }
 } // namespace ns3

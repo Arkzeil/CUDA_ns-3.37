@@ -19,6 +19,7 @@ namespace ns3{
             __host__ static TypeId GetTypeId(void);
 
             CudaUdpServer();
+            CudaUdpServer(uint16_t port);
             virtual ~CudaUdpServer();
 
             /**
@@ -32,10 +33,6 @@ namespace ns3{
              * \return the number of received packets
              */
             uint64_t GetReceived() const;
-
-        private:
-            void StartApplication() override;
-            void StopApplication() override;
             /**
              * \brief Handle a packet reception.
              *
@@ -44,6 +41,12 @@ namespace ns3{
              * \param socket the socket the packet was received to.
              */
             __device__ void HandleRead(CudaSocket* socket);
+
+            void SetPort(uint16_t port);
+
+        private:
+            void StartApplication() override;
+            void StopApplication() override;
             
             uint16_t m_port;                 //!< Port on which we listen for incoming packets.
             CudaSocket* m_cudaSocket;            //!< IPv4 Socket

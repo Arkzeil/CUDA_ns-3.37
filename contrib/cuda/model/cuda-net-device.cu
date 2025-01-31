@@ -159,7 +159,7 @@ namespace ns3 {
 
   void CudaNetDevice::Receive(CudaPacket* packet) {
       // Process received packet
-      printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
+      printf("Received packet on GPU, Node id: %d, packet id: %d\n", m_node->GetId(), packet->GetUid());
       m_rxCallback(this, (ns3::Packet*)packet, 69, Address());
       // ProcessPacketOnCuda(packet);
   } 
