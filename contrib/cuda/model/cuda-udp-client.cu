@@ -133,6 +133,7 @@ namespace ns3 {
             if(node == nullptr){
                 printf("Node is null\n");
             }
+            printf("Creating client new socket at node %d, addr: %p\n", node->GetId(), GetPointer(node));
             m_cudaSocket = CudaSocket::CreateSocket(node);
             // m_cudaSocket->SetNode(node);
             // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
@@ -221,6 +222,7 @@ namespace ns3 {
                     break;
                 case 0:
                     printf("Function: Receive, delay: %f, dst: %d\n", cbData->delay, device->GetNode()->GetId());
+                    printf("device address: %p\n", device);
                     // printf("h_packet: %p, d_packet: %p\n", cbData->h_packet, cbData->d_packet);
                     printf("packet id: %d\n", cbData->packet->GetUid());
                     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, cbData]() {
@@ -229,6 +231,7 @@ namespace ns3 {
                     break;
                 case 1:
                     printf("Function: TransmitComplete, delay: %f, target:%d\n", cbData->delay, device->GetNode()->GetId());
+                    printf("device address: %p\n", device);
                     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, stream]() {
                         device->TransmitComplete(stream);
                     });
@@ -253,6 +256,7 @@ namespace ns3 {
         // OffloadToCuda(1, m_size); // Offload packet generation to GPU.
         double simTime = Simulator::Now().GetSeconds();
         std::cout << "Send executed at simulation time: " << simTime << "s\n";
+        printf("Node: %p\n",GetPointer(GetNode()));
 
         GeneratePacketOnGpu(); // Generate packet on GPU.
         // uint8_t* h_packetData = new uint8_t[m_size];
@@ -307,6 +311,7 @@ namespace ns3 {
         }
 
         // checkCudaErr();
+        // printf("Node: %d\n", GetNode()->GetId());
         
         CUDA_cb_data* d_data = new CUDA_cb_data(256);
         d_data->init_pkt();

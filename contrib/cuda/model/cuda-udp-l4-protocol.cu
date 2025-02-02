@@ -12,7 +12,7 @@
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
     NS_OBJECT_ENSURE_REGISTERED(CudaUdpL4Protocol);
-    __device__ CudaIpv4L3Protocol* d_m_ipv4 = nullptr;
+    // __device__ CudaIpv4L3Protocol* d_m_ipv4;
 
     TypeId CudaUdpL4Protocol::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpL4Protocol")
@@ -101,6 +101,7 @@ namespace ns3 {
         // Create a new socket
         CudaSocket* socket = new CudaSocket();
         // checkCudaErr();
+        printf("UdpL4: %p\n", this);
         socket->SetNode(m_node);
         socket->SetUdp(this);
         socket->SetRcvBufSize(131072);
@@ -116,7 +117,7 @@ namespace ns3 {
         //     a = i / 2;
         //     b = a * i / 5;
         // }
-        d_m_ipv4->test(data, cb_data);
+        m_ipv4->test(data, cb_data);
     }
 
     __device__ void CudaUdpL4Protocol::Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data){
@@ -127,7 +128,8 @@ namespace ns3 {
         // call the send function of callback
         printf("UdpL4: Send function, packet id: %d\n", d_packet->GetUid());
         // d_m_ipv4->test(d_packet->m_data, cb_data);
-        d_m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
+        printf("m_ipv4: %p\n", m_ipv4);
+        m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 
@@ -161,13 +163,15 @@ namespace ns3 {
                 }
                 socketFactory->SetUdp(this);
                 node->AggregateObject(socketFactory);
+                // printf("UdpL4: Socket factory added, node: %p, UdpL4: %p\n", GetPointer(node), this);
             }
         }
         if(m_ipv4 == nullptr){
             m_ipv4 = GetPointer(DynamicCast<CudaIpv4L3Protocol>(ipv4));
             m_ipv4->SetNode(node);
-            cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
-            checkCudaErr();
+            // cudaMemcpyToSymbol(d_m_ipv4, &m_ipv4, sizeof(CudaIpv4L3Protocol*));
+            // checkCudaErr();
+            // printf("UdpL4: node: %p, UdpL4: %p, ipv4: %p\n", GetPointer(node), this, m_ipv4);
         }
 
         if(ipv4){

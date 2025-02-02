@@ -54,6 +54,8 @@ namespace ns3 {
         
         a->AddDevice(deviceA);
         b->AddDevice(deviceB);
+        printf("Node 0 address: %p, device 0 address: %p\n", GetPointer(a), deviceA);
+        printf("Node 1 address: %p, device 1 address: %p\n", GetPointer(b), deviceB);
         
         container.Add(deviceA);
         container.Add(deviceB);

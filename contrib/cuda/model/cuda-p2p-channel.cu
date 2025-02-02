@@ -43,6 +43,8 @@ namespace ns3 {
             m_link[1].m_dst = m_link[0].m_src;
             m_link[0].m_state = IDLE;
             m_link[1].m_state = IDLE;
+
+            printf("Device 0: %p, Device 1: %p\n", m_link[0].m_src, m_link[1].m_src);
         }
     }
 
@@ -98,6 +100,7 @@ namespace ns3 {
     __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
         printf("TransmitStart function in channel, packet id: %d\n", d_packet->GetUid());
+        printf("Device address: %p\n", src);
         // printf("Transmission time: %f\n", txTime);
         if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
             printf("Channel not initialized\n");

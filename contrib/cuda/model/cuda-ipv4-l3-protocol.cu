@@ -54,15 +54,18 @@ namespace ns3 {
         m_node = node;
     }
 
-    uint32_t CudaIpv4L3Protocol::AddInterface(CudaNetDevice* device) {
+    uint32_t CudaIpv4L3Protocol::AddInterface(Ptr<NetDevice> device) {
         // Add an interface
         // m_interfaces.push_back(device);
         // Should also set traffic control layer, skip for now
-        m_node->RegisterProtocolHandler(MakeCallback(&CudaIpv4L3Protocol::Receive, this), 69, device);
+        CudaNetDevice *devicePtr = GetPointer(DynamicCast<CudaNetDevice>(device));
+        m_node = device->GetNode();
+        m_node->RegisterProtocolHandler(MakeCallback(&CudaIpv4L3Protocol::Receive, this), 69, devicePtr);
 
         CudaIpv4Interface *interface = new CudaIpv4Interface();
-        interface->SetDevice(device);
+        interface->SetDevice(devicePtr);
         interface->SetNode(m_node);
+        // printf("AddInterface, node: %p, device: %p, interface: %p\n",GetPointer(m_node), devicePtr, interface);
         return AddIpv4Interface(interface);
     }
 
@@ -70,6 +73,7 @@ namespace ns3 {
         // Add an IPv4 interface
         // m_ipv4Interfaces.push_back(interface);
         m_ipv4Interface[m_interfaceCount++] = interface;
+        printf("Interface count: %d\n", m_interfaceCount);
         return m_interfaceCount - 1;
     }
 
@@ -245,6 +249,7 @@ namespace ns3 {
         }
         else{
             CudaNetDevice *device = outInterface->GetDevice();
+            // printf("Interface: %p, Device address: %p\n",outInterface, device);
             int32_t interface = GetInterfaceForDevice(device);
             if(interface == -1){
                 printf("No device found for interface\n");
@@ -277,6 +282,8 @@ namespace ns3 {
             // the node has not been set before
             if(node)
                 this->SetNode(node);
+
+            // printf("CudaIpv4L3Protocol: %p, Node: %p\n", this, GetPointer(node));
         }
     }
 }

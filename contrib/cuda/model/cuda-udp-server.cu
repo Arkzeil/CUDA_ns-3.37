@@ -30,6 +30,7 @@ namespace ns3 {
 
     CudaUdpServer::CudaUdpServer(): m_cudaSocket(nullptr), m_lossCounter(0), m_received(0) {
         // Constructor
+        printf("CudaUdpServer initialized\n");
     }
 
     CudaUdpServer::CudaUdpServer(uint16_t port): m_cudaSocket(nullptr), m_lossCounter(0), m_received(0) {
@@ -62,6 +63,7 @@ namespace ns3 {
                 printf("Node is null\n");
             }
             if(!m_cudaSocket){
+                printf("Creating new socket at node %d\n", node->GetId());
                 m_cudaSocket = CudaSocket::CreateSocket(node);
                 // m_cudaSocket->SetNode(node);
                 // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);

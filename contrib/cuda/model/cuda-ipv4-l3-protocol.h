@@ -24,7 +24,7 @@ namespace ns3{
             void Insert(CudaUdpL4Protocol* protocol);
 
             void SetNode(Ptr<Node> node);
-            uint32_t AddInterface(CudaNetDevice* device);
+            uint32_t AddInterface(Ptr<NetDevice> device);
             uint32_t AddIpv4Interface(CudaIpv4Interface* interface);
             __host__ __device__ int32_t GetInterfaceForDevice(CudaNetDevice* device);
             __host__ __device__ CudaIpv4Interface* GetInterface(uint32_t interfaceIndex) const;

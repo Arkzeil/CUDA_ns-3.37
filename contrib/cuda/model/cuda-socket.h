@@ -73,6 +73,7 @@ namespace ns3{
             // Ipv6EndPoint* m_endPoint6; //!< the IPv6 endpoint
             Ptr<Node> m_node;          //!< the associated node
             static CudaUdpL4Protocol *m_udp;  //!< the associated UDP L4 protocol
+            CudaUdpL4Protocol* d_m_udp;       //!< the associated UDP L4 protocol on the device
             Callback<void, Ipv4Address, uint8_t, uint8_t, uint8_t, uint32_t>
                 m_icmpCallback; //!< ICMP callback
             // Callback<void, Ipv6Address, uint8_t, uint8_t, uint8_t, uint32_t>

@@ -51,7 +51,7 @@ namespace ns3{
             uint16_t m_port;                 //!< Port on which we listen for incoming packets.
             CudaSocket* m_cudaSocket;            //!< IPv4 Socket
             // Ptr<Socket> m_socket6;           //!< IPv6 Socket
-            uint64_t m_received;             //!< Number of received packets
+            uint32_t m_received;             //!< Number of received packets
             uint32_t m_lossCounter; //!< Lost packet counter
     };
 }

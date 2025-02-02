@@ -66,8 +66,10 @@ namespace ns3{
         Ipv4InterfaceContainer retval;
 
         for(uint32_t i = 0; i < c.GetN(); i++) {
+            // as we're using PointToPointNetDevice::SetNode in ns3::Node::AddDevice, so we need to get device in this way
             Ptr<NetDevice> device = c.Get(i);
             Ptr<Node> node = device->GetNode();
+            // printf("Node address: %p, device address: %p\n", GetPointer(node), GetPointer(device));
             // Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
             Ptr<CudaIpv4L3Protocol> ipv4 = node->GetObject<CudaIpv4L3Protocol>();
             if(ipv4 == nullptr){
@@ -77,7 +79,7 @@ namespace ns3{
             int32_t interface = ipv4->GetInterfaceForDevice(GetPointer(DynamicCast<CudaNetDevice>(device)));
             if(interface == -1) {
                 NS_LOG_ERROR("helper: No interface found for device");
-                interface = ipv4->AddInterface(GetPointer(DynamicCast<CudaNetDevice>(device)));
+                interface = ipv4->AddInterface(device);
             }
             Ipv4InterfaceAddress ipv4Addr = Ipv4InterfaceAddress(NewAddress(), m_mask);
             if(ipv4->AddAddress(interface, ipv4Addr) == false) {

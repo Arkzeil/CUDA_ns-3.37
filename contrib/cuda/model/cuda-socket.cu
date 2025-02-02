@@ -9,7 +9,7 @@
 
 namespace ns3{
     CudaUdpL4Protocol* CudaSocket::m_udp = nullptr;
-    __device__ CudaUdpL4Protocol* d_m_udp;
+    // __device__ CudaUdpL4Protocol* d_m_udp;
 
     NS_LOG_COMPONENT_DEFINE("CudaSocket");
 
@@ -252,6 +252,7 @@ namespace ns3{
         // SendToNetDevice(d_buffer, size);
         printf("DoSendTo: Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
         // d_m_udp->test(d_packet->m_data, cb_data);  
+        printf("d_m_udp: %p\n", d_m_udp);
         d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }
@@ -353,6 +354,10 @@ namespace ns3{
     void CudaSocket::SetUdp(CudaUdpL4Protocol* udp){
         // Set the associated UDP L4 protocol
         m_udp = udp;
+        // cudaMemcpyToSymbol(d_m_udp, &m_udp, sizeof(CudaUdpL4Protocol*));
+        // checkCudaErr();
+        d_m_udp = m_udp;
+        // printf("CudaSocket: SetUdp: %p\n", m_udp);
     }
 
     int CudaSocket::GetPeerName(Address& address) const{
