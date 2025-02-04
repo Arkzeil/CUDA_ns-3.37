@@ -23,8 +23,8 @@ namespace ns3{
             // assignment operations
             __device__ CudaPacket& operator=(const CudaPacket& other);
             // Packet operations
-            __device__ void AddHeader(const uint8_t* header, uint32_t headerSize);
-            __device__ void AddTrailer(const uint8_t* trailer, uint32_t trailerSize);
+            __device__ void AddHeader(void* header, uint32_t headerSize);
+            __device__ void AddTrailer(void* trailer, uint32_t trailerSize);
             __device__ void ExtractPayload(uint8_t* dstBuffer, uint32_t offset, uint32_t length) const;
             __host__ __device__ uint32_t GetSize() const;
             __host__ __device__ uint32_t GetUid() const;

@@ -55,7 +55,7 @@ namespace ns3{
         return *this;
     }
 
-    __device__ void CudaPacket::AddHeader(const uint8_t* header, uint32_t headerSize) {
+    __device__ void CudaPacket::AddHeader(void* header, uint32_t headerSize) {
         if (headerSize + m_size > m_capacity) {
             printf("Error: Adding header exceeds packet capacity\n");
             return;
@@ -66,7 +66,7 @@ namespace ns3{
         m_size += headerSize;
     }
 
-    __device__ void CudaPacket::AddTrailer(const uint8_t* trailer, uint32_t trailerSize) {
+    __device__ void CudaPacket::AddTrailer(void* trailer, uint32_t trailerSize) {
         if (m_size + trailerSize > m_capacity) {
             printf("Error: Adding trailer exceeds packet capacity\n");
             return;

@@ -15,6 +15,8 @@ namespace ns3{
 
     NS_OBJECT_ENSURE_REGISTERED(CudaSocket);
 
+    static const uint32_t MAX_IPV4_UDP_DATAGRAM_SIZE = 65507; //!< Maximum UDP datagram size
+
     TypeId CudaSocket::GetTypeId(void){
         // Get the type ID
         static TypeId tid = TypeId("ns3::CudaSocket")
@@ -229,7 +231,7 @@ namespace ns3{
         return 0;
     }
 
-    __device__ void CudaSocket::Send(CudaPacket* d_packet, CUDA_cb_data* cb_data){
+    __device__ int CudaSocket::Send(CudaPacket* d_packet, CUDA_cb_data* cb_data){
         // Send data to the socket
         // cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
         // Send data to the network device
@@ -240,19 +242,40 @@ namespace ns3{
         //     printf("NetDevice is null\n");
         // }
         // printf("%p\n", d_m_udp);
-        DoSendTo(d_packet, 0, *m_defaultPort, 0, cb_data);
+        return DoSendTo(d_packet, 0, *m_defaultPort, 0, cb_data);
         // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
         // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
         // m_netDevice->EnqueuePacket(d_buffer, size);
     }
 
-    __device__ void CudaSocket::DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data){
+    __device__ int CudaSocket::DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data){
         // Send data to the specified address
         // Send data to the network device
         // SendToNetDevice(d_buffer, size);
         printf("DoSendTo: Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
         // d_m_udp->test(d_packet->m_data, cb_data);  
-        printf("d_m_udp: %p\n", d_m_udp);
+        // printf("d_m_udp: %p\n", d_m_udp);
+        if(m_endPoint == nullptr){
+            printf("Endpoint is null\n");
+            // just return without retrying bind
+            // if(bind() == -1){
+            //     printf("Failed to bind socket\n");
+            //     return;
+            // }
+            return -1;
+        }
+
+        if(d_packet->GetSize() > MAX_IPV4_UDP_DATAGRAM_SIZE){
+            printf("Packet size exceeds maximum UDP datagram size\n");
+            return -1;
+        }
+
+        if(m_shutdownSend){
+            printf("Send side of the socket is shutdown\n");
+            return -1;
+        }
+        // Skip the check of tos, ttl, priority and broadcast
+
         d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }

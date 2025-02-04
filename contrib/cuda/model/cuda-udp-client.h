@@ -17,6 +17,8 @@ namespace ns3{
 
     class CUDA_cb_data;
 
+    typedef unsigned long long int uint64_cu;
+
     class CudaUdpClient : public Application {
         public:
             __host__ static TypeId GetTypeId(void);
@@ -47,8 +49,8 @@ namespace ns3{
             Time m_interval;  //!< Packet inter-send time
             uint32_t m_size;  //!< Size of the sent packet (including the SeqTsHeader)
 
-            uint32_t m_sent;       //!< Counter for sent packets
-            uint64_t m_totalTx;    //!< Total bytes sent
+            uint32_t *m_sent;       //!< Counter for sent packets
+            uint64_cu *m_totalTx;    //!< Total bytes sent
             Ptr<Socket> m_socket;  //!< Socket
             CudaSocket* m_cudaSocket; //!< CUDA socket
             Address m_peerAddress; //!< Remote peer address

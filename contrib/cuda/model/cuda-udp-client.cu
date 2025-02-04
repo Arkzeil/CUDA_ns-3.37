@@ -55,10 +55,12 @@ namespace ns3 {
     CudaUdpClient::CudaUdpClient() 
         : d_packetBuffer(nullptr), m_size(1500), 
         m_interval(Seconds(1.0)), m_count(100), 
-        m_peerPort(0), m_socket(nullptr), m_sent(0), 
-        m_totalTx(0), m_running(false), m_cudaSocket(nullptr) {
+        m_peerPort(0), m_socket(nullptr), m_running(false), m_cudaSocket(nullptr) {
         
         InitCudaResources();
+        *m_sent = 0;
+        *m_totalTx = 0;
+        
         printf("CudaUdpClient initialized\n");
         printf("Packet size: %d bytes\n", m_size);
         printf("Interval: %f seconds\n", m_interval.GetSeconds());
@@ -182,10 +184,19 @@ namespace ns3 {
             printf("Failed to allocate GPU memory for packet buffer\n");
         }
         checkCudaErr();
+
+        cudaMallocManaged(&m_sent, sizeof(uint32_t));
+        checkCudaErr();
+        cudaMallocManaged(&m_totalTx, sizeof(uint64_cu));
+        checkCudaErr();
     }
 
     __host__ void CudaUdpClient::CleanupCudaResources() {
         cudaFree(d_packetBuffer);
+        checkCudaErr();
+        cudaFree(m_sent);
+        checkCudaErr();
+        cudaFree(m_totalTx);
         checkCudaErr();
         cudaStreamDestroy(m_cudaStream);
         checkCudaErr(); 
@@ -268,7 +279,7 @@ namespace ns3 {
         m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
     }   
 
-    __global__ void GeneratePacketKernel(CudaSocket* socket, int packetSize, CUDA_cb_data* d_data) {
+    __global__ void GeneratePacketKernel(CudaSocket* socket, int packetSize, uint32_t *m_sent, uint64_cu *m_totalTx, CUDA_cb_data* d_data) {
         // Allocate packet data in shared memory or local GPU memory
         // printf("Generating packet on GPU\n");
         __shared__ uint8_t packet[1500]; // Example size of a packet
@@ -293,7 +304,10 @@ namespace ns3 {
             printf("packet uid: %d, packet size: %d\n", d_data->packet->GetUid(), d_data->packet->GetSize());
 
             printf("Sending packet from CUDA UDP client, packet id: %d\n", d_data->packet->GetUid());
-            socket->Send(d_data->packet, d_data);
+            if(socket->Send(d_data->packet, d_data) >= 0){
+                atomicAdd(m_sent, 1);
+                atomicAdd(m_totalTx, d_data->packet->GetSize());
+            }
         }
         // cudaFree(d_packet);
     }
@@ -326,7 +340,7 @@ namespace ns3 {
         
         // cudaEventCreate(&startEvent);
 
-        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, m_size, d_data);
+        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, m_size, m_sent, m_totalTx, d_data);
         // cudaEventCreate(&stopEvent);
         
         cudaStreamSynchronize(m_cudaStream);

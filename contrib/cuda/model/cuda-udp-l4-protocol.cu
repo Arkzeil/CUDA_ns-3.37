@@ -120,7 +120,7 @@ namespace ns3 {
         m_ipv4->test(data, cb_data);
     }
 
-    __device__ void CudaUdpL4Protocol::Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data){
+    __device__ int CudaUdpL4Protocol::Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data){
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", saddr.GetLocal(), daddr.GetLocal());
@@ -128,8 +128,12 @@ namespace ns3 {
         // call the send function of callback
         printf("UdpL4: Send function, packet id: %d\n", d_packet->GetUid());
         // d_m_ipv4->test(d_packet->m_data, cb_data);
-        printf("m_ipv4: %p\n", m_ipv4);
+        // printf("m_ipv4: %p\n", m_ipv4);
+        d_packet->AddHeader(&dport, sizeof(uint16_t));
+        d_packet->AddHeader(&sport, sizeof(uint16_t));
         m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
+
+        return d_packet->GetSize();
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 
