@@ -26,6 +26,7 @@ namespace ns3{
             __device__ void AddHeader(void* header, uint32_t headerSize);
             __device__ void AddTrailer(void* trailer, uint32_t trailerSize);
             __device__ void ExtractPayload(uint8_t* dstBuffer, uint32_t offset, uint32_t length) const;
+            __host__ __device__ void RemoveHeader(uint32_t headerSize);
             __host__ __device__ uint32_t GetSize() const;
             __host__ __device__ uint32_t GetUid() const;
             __device__ void ComputeCRC();

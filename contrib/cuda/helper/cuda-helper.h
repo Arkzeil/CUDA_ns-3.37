@@ -21,6 +21,7 @@ namespace ns3
 /* ... */
     bool InitCUDA(cudaDeviceProp &prop);
     void checkCudaErr();
+    __host__ __device__ uint16_t ones_complement_sum(uint32_t sum);
 
     class CudaPacket;
 

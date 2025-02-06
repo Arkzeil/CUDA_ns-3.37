@@ -83,6 +83,16 @@ namespace ns3{
         memcpy(dstBuffer, m_data + offset, length);
     }
 
+    __host__ __device__ void CudaPacket::RemoveHeader(uint32_t headerSize) {
+        if (headerSize > m_size) {
+            printf("Error: Removing header exceeds packet size\n");
+            return;
+        }
+        // memmove(m_data, m_data + headerSize, m_size - headerSize); // Shift data
+        memcpy(m_data, m_data + headerSize, m_size - headerSize); // Shift data
+        m_size -= headerSize;
+    }
+
     __host__ __device__ uint32_t CudaPacket::GetSize() const {
         return m_size;
     }

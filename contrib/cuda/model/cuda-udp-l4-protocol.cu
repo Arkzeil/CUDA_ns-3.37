@@ -13,6 +13,8 @@ namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpL4Protocol");
     NS_OBJECT_ENSURE_REGISTERED(CudaUdpL4Protocol);
     // __device__ CudaIpv4L3Protocol* d_m_ipv4;
+    /* see http://www.iana.org/assignments/protocol-numbers */
+    const uint8_t CudaUdpL4Protocol::PROT_NUMBER = 17;
 
     TypeId CudaUdpL4Protocol::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpL4Protocol")
@@ -120,6 +122,24 @@ namespace ns3 {
         m_ipv4->test(data, cb_data);
     }
 
+    __device__ uint16_t compute_udp_checksum(const uint8_t *udp_header, const uint8_t *payload, int length, uint32_t pseudo_header_sum) {
+        uint32_t sum = pseudo_header_sum; // Start with pseudo-header sum
+        
+        for (int i = 0; i < 4; i++) { // 8-byte UDP header
+            sum += (udp_header[i * 2] << 8) | udp_header[i * 2 + 1];
+        }
+        
+        for (int i = 0; i < length / 2; i++) { // Payload
+            sum += (payload[i * 2] << 8) | payload[i * 2 + 1];
+        }
+        
+        if (length % 2) { // If payload length is odd, pad last byte with 0
+            sum += payload[length - 1] << 8;
+        }
+        
+        return ones_complement_sum(sum);
+    }
+
     __device__ int CudaUdpL4Protocol::Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data){
         // Send a packet
         // For simplicity, we will just print the packet contents
@@ -128,19 +148,70 @@ namespace ns3 {
         // call the send function of callback
         printf("UdpL4: Send function, packet id: %d\n", d_packet->GetUid());
         // d_m_ipv4->test(d_packet->m_data, cb_data);
+        // uint8_t protocol = PROT_NUMBER;
         // printf("m_ipv4: %p\n", m_ipv4);
-        d_packet->AddHeader(&dport, sizeof(uint16_t));
-        d_packet->AddHeader(&sport, sizeof(uint16_t));
+        uint16_t udp_length = d_packet->GetSize() - 20; // UDP length = total length - IP header length
+
+        // Compute UDP checksum
+        uint8_t udp_header[8];
+        udp_header[0] = sport >> 8;
+        udp_header[1] = sport & 0xFF;
+        udp_header[2] = dport >> 8;
+        udp_header[3] = dport & 0xFF;
+        udp_header[4] = udp_length >> 8;
+        udp_header[5] = udp_length & 0xFF;
+        udp_header[6] = 0;
+        udp_header[7] = 0;
+
+        uint32_t pseudo_header_sum = 0;
+        pseudo_header_sum += (saddr >> 16) & 0xFFFF;
+        pseudo_header_sum += saddr & 0xFFFF;
+        pseudo_header_sum += (daddr >> 16) & 0xFFFF;
+        pseudo_header_sum += daddr & 0xFFFF;
+        pseudo_header_sum += PROT_NUMBER; // Protocol number
+        pseudo_header_sum += udp_length;
+        uint16_t checksum = compute_udp_checksum(udp_header, d_packet->m_data, udp_length, pseudo_header_sum);
+        
+        udp_header[6] = checksum >> 8;
+        udp_header[7] = checksum & 0xFF;
+
+        d_packet->AddHeader(udp_header, 8);
+
         m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
 
         return d_packet->GetSize();
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 
-    __device__ void CudaUdpL4Protocol::Receive(CudaPacket *packet, CudaIpv4Interface *interface){
+    __device__ bool verify_udp_checksum(const uint8_t *udp_header, const uint8_t *payload, int length, uint32_t pseudo_header_sum, uint16_t received_checksum) {
+        uint32_t sum = pseudo_header_sum;
+        
+        for (int i = 0; i < 4; i++) { // 8-byte UDP header
+            sum += (udp_header[i * 2] << 8) | udp_header[i * 2 + 1];
+        }
+        
+        for (int i = 0; i < length / 2; i++) { // Payload
+            sum += (payload[i * 2] << 8) | payload[i * 2 + 1];
+        }
+        
+        if (length % 2) { // If payload length is odd, pad last byte with 0
+            sum += payload[length - 1] << 8;
+        }
+        
+        sum += received_checksum;
+        
+        return ones_complement_sum(sum) == 0xFFFF;
+    }
+
+    __device__ void CudaUdpL4Protocol::Receive(CudaPacket *packet, uint8_t* Ipv4Header, CudaIpv4Interface *interface){
         // Receive a packet
         printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
-        printf("UdpL4: socket: %p\n", m_endPoints[0].GetSocket());
+        // printf("UdpL4: socket: %p\n", m_endPoints[0].GetSocket());
+        uint8_t* udp_header;
+        cudaMalloc(&udp_header, 8);
+        packet->ExtractPayload(udp_header, 0, 8);
+        
+
         m_endPoints[0].GetSocket()->ForwardPacket(packet);
     }
 

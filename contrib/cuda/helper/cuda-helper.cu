@@ -67,6 +67,14 @@ namespace ns3
             printf("Error: %s\n", cudaGetErrorString(err));
     }
 
+    __host__ __device__ uint16_t ones_complement_sum(uint32_t sum) {
+        // Fold 32-bit sum to 16-bit
+        while (sum >> 16) {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        return (uint16_t)~sum;
+    }
+
     CUDA_cb_data::CUDA_cb_data(): 
     empty(true), next(nullptr), packetBuffer(nullptr), packet(nullptr), func_id(-1) {
         cudaMallocManaged((void**)&packetBuffer, 256);

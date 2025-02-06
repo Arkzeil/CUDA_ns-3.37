@@ -160,12 +160,45 @@ namespace ns3 {
     //     // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
     //     printf("Packet contents: %s\n", packet);
     // }
-    __global__ void cuda_LocalDeliver(CudaPacket *pacekt, CudaIpv4Interface *interface, CudaUdpL4Protocol *udp) {
+    __device__ uint16_t compute_ipv4_checksum(const uint8_t *header) {
+        uint32_t sum = 0;
+        
+        for (int i = 0; i < 10; i++) { // 20 bytes (excluding checksum field)
+            if (i == 5) continue; // Skip checksum field (bytes 10-11)
+            sum += (header[i * 2] << 8) | header[i * 2 + 1];
+        }
+        
+        return ones_complement_sum(sum);
+    }
+    
+    __device__ bool verify_ipv4_checksum(const uint8_t *header) {
+        uint32_t sum = 0;
+        
+        for (int i = 0; i < 10; i++) { // 20 bytes including checksum field
+            sum += (header[i * 2] << 8) | header[i * 2 + 1];
+        }
+        // maybe check if sum is all 0 should equivalent
+        return ones_complement_sum(sum) == 0xFFFF;
+    }
+
+    __global__ void cuda_LocalDeliver(CudaPacket *packet, CudaIpv4Interface *interface, CudaUdpL4Protocol *udp) {
         // Local deliver
-        printf("Local deliver, packet: %d\n", pacekt->GetUid());
+        printf("Local deliver, packet: %d\n", packet->GetUid());
         // assuming no fragmentation
         // skip protocol lookup
-        udp->Receive(pacekt, interface);
+        uint8_t *Ipv4Header;
+        cudaMalloc(&Ipv4Header, sizeof(uint8_t) * 20);
+        packet->ExtractPayload(Ipv4Header, 0, 20);
+
+        // Verify checksum
+        if(verify_ipv4_checksum(Ipv4Header) == false){
+            printf("Ipv4 Checksum failed\n");
+            // return;
+        }
+        // remove Ipv4 header
+        packet->RemoveHeader(20);
+
+        udp->Receive(packet, Ipv4Header, interface);
     }
 
     void CudaIpv4L3Protocol::Receive(Ptr<NetDevice> device, CudaPacket *packet, uint16_t protocol, const Address& from, const Address& to, NetDevice::PacketType packetType) {
@@ -228,25 +261,6 @@ namespace ns3 {
         //     a = i;
         //     b = a + 1;
         // }
-    }
-
-    __device__ uint16_t ones_complement_sum(uint32_t sum) {
-        // Fold 32-bit sum to 16-bit
-        while (sum >> 16) {
-            sum = (sum & 0xFFFF) + (sum >> 16);
-        }
-        return (uint16_t)~sum;
-    }
-
-    __device__ uint16_t compute_ipv4_checksum(const uint8_t *header) {
-        uint32_t sum = 0;
-        
-        for (int i = 0; i < 10; i++) { // 20 bytes (excluding checksum field)
-            if (i == 5) continue; // Skip checksum field (bytes 10-11)
-            sum += (header[i * 2] << 8) | header[i * 2 + 1];
-        }
-        
-        return ones_complement_sum(sum);
     }
 
     __device__ void CudaIpv4L3Protocol::Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data){
