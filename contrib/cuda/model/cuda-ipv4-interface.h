@@ -36,7 +36,7 @@ namespace ns3{
             void SetMetric (uint16_t metric);
 
             __device__ void test(CudaNetDevice* device, const uint8_t *data, CUDA_cb_data* cb_data);
-            __device__ void Send(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data);
+            __device__ void Send(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, uint8_t* RawIpv4Header, CUDA_cb_data* cb_data);
 
             __host__ __device__ bool IsUp (void) const;
             void SetUp (void);

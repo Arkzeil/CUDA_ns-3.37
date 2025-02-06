@@ -51,6 +51,7 @@ namespace ns3{
             CudaUdpL4Protocol* m_udp;
             int m_interfaceCount;
             static const uint32_t m_maxInterfaceCount = 10;
+            static const uint8_t m_defaultTtl = 64; 
     };
 } // namespace ns3
 

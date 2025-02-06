@@ -229,11 +229,55 @@ namespace ns3 {
         //     b = a + 1;
         // }
     }
+
+    __device__ uint16_t ones_complement_sum(uint32_t sum) {
+        // Fold 32-bit sum to 16-bit
+        while (sum >> 16) {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        return (uint16_t)~sum;
+    }
+
+    __device__ uint16_t compute_ipv4_checksum(const uint8_t *header) {
+        uint32_t sum = 0;
+        
+        for (int i = 0; i < 10; i++) { // 20 bytes (excluding checksum field)
+            if (i == 5) continue; // Skip checksum field (bytes 10-11)
+            sum += (header[i * 2] << 8) | header[i * 2 + 1];
+        }
+        
+        return ones_complement_sum(sum);
+    }
+
     __device__ void CudaIpv4L3Protocol::Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data){
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
         printf("Ipv4L3: Send function, packet id: %d\n", d_packet->GetUid());
+
+        bool mayFragment = false;
+        uint8_t ttl = m_defaultTtl;
+        // Skip ttl check(assuming no ttl in the first place)
+        uint8_t tos = 0;
+        // skip tos check(assuming no tos in the first place)
+        uint8_t *ipHeader;
+        cudaMalloc(&ipHeader, sizeof(uint8_t) * 20);
+
+        *(ipHeader + 0) = 0x00;        // version and IHL
+        *(ipHeader + 1) = 0x45;         // DSCP and ECN
+        *(ipHeader + 2) = d_packet->GetSize() >> 8; // total length
+        *(ipHeader + 3) = d_packet->GetSize() & 0xFF;
+        *(ipHeader + 4) = 0x00;         // identification
+        *(ipHeader + 6) = 0x00;         // flags and fragment offset
+        *(ipHeader + 8) = ttl;          // ttl
+        *(ipHeader + 9) = protocol;     // protocol
+        *(ipHeader + 12) = source;      // source address
+        *(ipHeader + 16) = destination; // destination address
+
+        // Compute checksum
+        uint16_t checksum = compute_ipv4_checksum(ipHeader);
+        *(ipHeader + 10) = checksum >> 8;
+        *(ipHeader + 11) = checksum & 0xFF;
 
         // assuming only one interface
         CudaIpv4Interface *outInterface = GetInterface(0);
@@ -259,7 +303,9 @@ namespace ns3 {
                 printf("device found\n");
             }
 
-            outInterface->Send(device, d_packet, 0, cb_data);
+            // Skip the checking of device MTU
+
+            outInterface->Send(device, d_packet, 0, ipHeader, cb_data);
         }
     }
 

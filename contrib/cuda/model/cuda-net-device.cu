@@ -227,7 +227,7 @@ namespace ns3 {
 
     bool result = m_channel->TransmitStart(packet, this, TxTime, cb_data);
     if(result == false) {
-      printf("Channel test failed\n");
+      printf("Channel TransmitStart failed\n");
     }
 
     return result;
