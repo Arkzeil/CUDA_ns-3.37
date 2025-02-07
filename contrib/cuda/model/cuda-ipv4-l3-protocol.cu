@@ -178,7 +178,8 @@ namespace ns3 {
             sum += (header[i * 2] << 8) | header[i * 2 + 1];
         }
         // maybe check if sum is all 0 should equivalent
-        return ones_complement_sum(sum) == 0xFFFF;
+        // return ones_complement_sum(sum) == 0x0000;
+        return sum == 0xFFFF;
     }
 
     __global__ void cuda_LocalDeliver(CudaPacket *packet, CudaIpv4Interface *interface, CudaUdpL4Protocol *udp) {
@@ -277,16 +278,16 @@ namespace ns3 {
         uint8_t *ipHeader;
         cudaMalloc(&ipHeader, sizeof(uint8_t) * 20);
 
-        *(ipHeader + 0) = 0x00;        // version and IHL
+        *(ipHeader + 0) = 0x05;        // version and IHL(20 bytes = 5 words)
         *(ipHeader + 1) = 0x45;         // DSCP and ECN
         *(ipHeader + 2) = d_packet->GetSize() >> 8; // total length
         *(ipHeader + 3) = d_packet->GetSize() & 0xFF;
-        *(ipHeader + 4) = 0x00;         // identification
+        *(ipHeader + 4) = 0x00;         // identification (fragmentation)
         *(ipHeader + 6) = 0x00;         // flags and fragment offset
         *(ipHeader + 8) = ttl;          // ttl
         *(ipHeader + 9) = protocol;     // protocol
-        *(ipHeader + 12) = source;      // source address
-        *(ipHeader + 16) = destination; // destination address
+        *(uint32_t*)(ipHeader + 12) = source;      // source address
+        *(uint32_t*)(ipHeader + 16) = destination; // destination address
 
         // Compute checksum
         uint16_t checksum = compute_ipv4_checksum(ipHeader);

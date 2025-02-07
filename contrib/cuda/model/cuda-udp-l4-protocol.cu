@@ -124,19 +124,24 @@ namespace ns3 {
 
     __device__ uint16_t compute_udp_checksum(const uint8_t *udp_header, const uint8_t *payload, int length, uint32_t pseudo_header_sum) {
         uint32_t sum = pseudo_header_sum; // Start with pseudo-header sum
+        uint32_t UDP_sum = 0;
+        uint32_t payload_sum = 0;
         
         for (int i = 0; i < 4; i++) { // 8-byte UDP header
             sum += (udp_header[i * 2] << 8) | udp_header[i * 2 + 1];
+            UDP_sum += (udp_header[i * 2] << 8) | udp_header[i * 2 + 1];
         }
         
         for (int i = 0; i < length / 2; i++) { // Payload
             sum += (payload[i * 2] << 8) | payload[i * 2 + 1];
+            payload_sum += (payload[i * 2] << 8) | payload[i * 2 + 1];
         }
         
         if (length % 2) { // If payload length is odd, pad last byte with 0
             sum += payload[length - 1] << 8;
         }
         
+        printf("Udp sum: %d, payload sum: %d\n", UDP_sum, payload_sum);
         return ones_complement_sum(sum);
     }
 
@@ -150,7 +155,9 @@ namespace ns3 {
         // d_m_ipv4->test(d_packet->m_data, cb_data);
         // uint8_t protocol = PROT_NUMBER;
         // printf("m_ipv4: %p\n", m_ipv4);
-        uint16_t udp_length = d_packet->GetSize() - 20; // UDP length = total length - IP header length
+        
+        // length = payload length + 8-byte UDP header
+        uint16_t udp_length = d_packet->GetSize() + 8;
 
         // Compute UDP checksum
         uint8_t udp_header[8];
@@ -170,7 +177,9 @@ namespace ns3 {
         pseudo_header_sum += daddr & 0xFFFF;
         pseudo_header_sum += PROT_NUMBER; // Protocol number
         pseudo_header_sum += udp_length;
-        uint16_t checksum = compute_udp_checksum(udp_header, d_packet->m_data, udp_length, pseudo_header_sum);
+        printf("UdpL4: send pseudo checksum: %d\n", pseudo_header_sum);
+        printf("First payload byte: %d\n", d_packet->m_data[100]);
+        uint16_t checksum = compute_udp_checksum(udp_header, d_packet->m_data, d_packet->GetSize(), pseudo_header_sum);
         
         udp_header[6] = checksum >> 8;
         udp_header[7] = checksum & 0xFF;
@@ -184,23 +193,29 @@ namespace ns3 {
     }
 
     __device__ bool verify_udp_checksum(const uint8_t *udp_header, const uint8_t *payload, int length, uint32_t pseudo_header_sum, uint16_t received_checksum) {
-        uint32_t sum = pseudo_header_sum;
+        uint32_t sum = pseudo_header_sum; // Start with pseudo-header sum
+        uint32_t UDP_sum = 0;
+        uint32_t payload_sum = 0;
         
         for (int i = 0; i < 4; i++) { // 8-byte UDP header
             sum += (udp_header[i * 2] << 8) | udp_header[i * 2 + 1];
+            UDP_sum += (udp_header[i * 2] << 8) | udp_header[i * 2 + 1];
         }
         
         for (int i = 0; i < length / 2; i++) { // Payload
             sum += (payload[i * 2] << 8) | payload[i * 2 + 1];
+            payload_sum += (payload[i * 2] << 8) | payload[i * 2 + 1];
         }
         
         if (length % 2) { // If payload length is odd, pad last byte with 0
             sum += payload[length - 1] << 8;
         }
         
-        sum += received_checksum;
+        // sum += received_checksum;
         
-        return ones_complement_sum(sum) == 0xFFFF;
+        // return ones_complement_sum(sum) == 0xFFFF;
+        printf("Udp sum: %d, payload sum: %d, received checksum: %d\n", UDP_sum, payload_sum, received_checksum);
+        return sum == 0xFFFF;
     }
 
     __device__ void CudaUdpL4Protocol::Receive(CudaPacket *packet, uint8_t* Ipv4Header, CudaIpv4Interface *interface){
@@ -208,9 +223,26 @@ namespace ns3 {
         printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
         // printf("UdpL4: socket: %p\n", m_endPoints[0].GetSocket());
         uint8_t* udp_header;
+        uint32_t pseudo_header_sum = 0;
         cudaMalloc(&udp_header, 8);
         packet->ExtractPayload(udp_header, 0, 8);
         
+        pseudo_header_sum += Ipv4Header[12] << 8 | Ipv4Header[13];
+        pseudo_header_sum += Ipv4Header[14] << 8 | Ipv4Header[15];
+        pseudo_header_sum += Ipv4Header[16] << 8 | Ipv4Header[17];
+        pseudo_header_sum += Ipv4Header[18] << 8 | Ipv4Header[19];
+        pseudo_header_sum += PROT_NUMBER;
+        pseudo_header_sum += (udp_header[4] << 8) | udp_header[5];
+        printf("UdpL4: receive pseudo checksum: %d\n", pseudo_header_sum);
+
+        packet->RemoveHeader(8);
+        printf("First payload byte: %d\n", packet->m_data[100]);
+
+        if(!verify_udp_checksum(udp_header, packet->m_data, packet->GetSize(), pseudo_header_sum, (udp_header[6] << 8) | udp_header[7])){
+            printf("UdpL4: Checksum failed\n");
+            printf("checksum: %d\n", (udp_header[6] << 8) | udp_header[7]);
+            // return;
+        }
 
         m_endPoints[0].GetSocket()->ForwardPacket(packet);
     }
