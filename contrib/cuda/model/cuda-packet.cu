@@ -47,11 +47,11 @@ namespace ns3{
 
             // Copy packet data
             if (m_data != nullptr) {
-                free(m_data);
+                cudaFree(m_data);
             }
             cudaMalloc((void**)&m_data, m_capacity);
-            printf("Copying packet data\n");
-            memcpy(m_data, other.m_data, m_size);
+            printf("Copying packet data, size: %d\n", m_size);
+            cudaMemcpyAsync(m_data, other.m_data, m_size, cudaMemcpyDeviceToDevice);
         }
         return *this;
     }
@@ -62,8 +62,10 @@ namespace ns3{
             return;
         }
         // memmove(m_data + headerSize, m_data, m_size); // Shift existing data
-        memcpy(m_data + headerSize, m_data, m_size); // Shift existing data
-        memcpy(m_data, header, headerSize);          // Copy header
+        // memcpy(m_data + headerSize, m_data, m_size); // Shift existing data
+        // memcpy(m_data, header, headerSize);          // Copy header
+        cudaMemcpyAsync(m_data + headerSize, m_data, m_size, cudaMemcpyDeviceToDevice);
+        cudaMemcpyAsync(m_data, header, headerSize, cudaMemcpyDeviceToDevice);
         m_size += headerSize;
     }
 
@@ -72,7 +74,7 @@ namespace ns3{
             printf("Error: Adding trailer exceeds packet capacity\n");
             return;
         }
-        memcpy(m_data + m_size, trailer, trailerSize); // Append trailer
+        cudaMemcpyAsync(m_data + m_size, trailer, trailerSize, cudaMemcpyDeviceToDevice); // Append trailer
         m_size += trailerSize;
     }
 
@@ -81,7 +83,7 @@ namespace ns3{
             printf("Error: Extracting payload exceeds packet size\n");
             return;
         }
-        memcpy(dstBuffer, m_data + offset, length);
+        cudaMemcpyAsync(dstBuffer, m_data + offset, length, cudaMemcpyDeviceToDevice);
     }
 
     __host__ __device__ void CudaPacket::RemoveHeader(uint32_t headerSize) {
@@ -90,7 +92,7 @@ namespace ns3{
             return;
         }
         // memmove(m_data, m_data + headerSize, m_size - headerSize); // Shift data
-        memcpy(m_data, m_data + headerSize, m_size - headerSize); // Shift data
+        cudaMemcpyAsync(m_data, m_data + headerSize, m_size - headerSize, cudaMemcpyDeviceToDevice); // Shift data
         m_size -= headerSize;
     }
 

@@ -141,7 +141,7 @@ namespace ns3 {
             sum += payload[length - 1] << 8;
         }
         
-        printf("Udp sum: %d, payload sum: %d\n", UDP_sum, payload_sum);
+        // printf("Udp sum: %d, payload sum: %d\n", UDP_sum, payload_sum);
         return ones_complement_sum(sum);
     }
 
@@ -160,7 +160,8 @@ namespace ns3 {
         uint16_t udp_length = d_packet->GetSize() + 8;
 
         // Compute UDP checksum
-        uint8_t udp_header[8];
+        uint8_t *udp_header;
+        cudaMalloc(&udp_header, 8);
         udp_header[0] = sport >> 8;
         udp_header[1] = sport & 0xFF;
         udp_header[2] = dport >> 8;
@@ -177,14 +178,36 @@ namespace ns3 {
         pseudo_header_sum += daddr & 0xFFFF;
         pseudo_header_sum += PROT_NUMBER; // Protocol number
         pseudo_header_sum += udp_length;
-        printf("UdpL4: send pseudo checksum: %d\n", pseudo_header_sum);
-        printf("First payload byte: %d\n", d_packet->m_data[100]);
+        // printf("UdpL4: send pseudo checksum: %d\n", pseudo_header_sum);
+        
         uint16_t checksum = compute_udp_checksum(udp_header, d_packet->m_data, d_packet->GetSize(), pseudo_header_sum);
         
         udp_header[6] = checksum >> 8;
         udp_header[7] = checksum & 0xFF;
 
+        // if(d_packet->GetUid() == 7){
+        //     printf("UdpL4: udp header: ");
+        //     for(int i = 0; i < 8; i++){
+        //         printf("%d ", udp_header[i]);
+        //     }
+        //     printf("\n");
+        // }
+
+        // if(d_packet->GetUid() == 7){
+        //     for(int i = 0; i < d_packet->GetSize(); i++){
+        //         printf("%d ", d_packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
+
         d_packet->AddHeader(udp_header, 8);
+
+        // if(d_packet->GetUid() == 7){
+        //     for(int i = 0; i < d_packet->GetSize(); i++){
+        //         printf("%d ", d_packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
 
         m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
 
@@ -214,7 +237,7 @@ namespace ns3 {
         // sum += received_checksum;
         
         // return ones_complement_sum(sum) == 0xFFFF;
-        printf("Udp sum: %d, payload sum: %d, received checksum: %d\n", UDP_sum, payload_sum, received_checksum);
+        // printf("Udp sum: %d, payload sum: %d, received checksum: %d\n", UDP_sum, payload_sum, received_checksum);
         return sum == 0xFFFF;
     }
 
@@ -233,10 +256,22 @@ namespace ns3 {
         pseudo_header_sum += Ipv4Header[18] << 8 | Ipv4Header[19];
         pseudo_header_sum += PROT_NUMBER;
         pseudo_header_sum += (udp_header[4] << 8) | udp_header[5];
-        printf("UdpL4: receive pseudo checksum: %d\n", pseudo_header_sum);
+        // printf("UdpL4: receive pseudo checksum: %d\n", pseudo_header_sum);
+
+        // if(packet->GetUid() == 7){
+        //     for(int i = 0; i < packet->GetSize(); i++){
+        //         printf("%d ", packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
 
         packet->RemoveHeader(8);
-        printf("First payload byte: %d\n", packet->m_data[100]);
+        // if(packet->GetUid() == 7){
+        //     for(int i = 0; i < packet->GetSize(); i++){
+        //         printf("%d ", packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
 
         if(!verify_udp_checksum(udp_header, packet->m_data, packet->GetSize(), pseudo_header_sum, (udp_header[6] << 8) | udp_header[7])){
             printf("UdpL4: Checksum failed\n");

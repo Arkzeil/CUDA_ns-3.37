@@ -242,6 +242,12 @@ namespace ns3{
         //     printf("NetDevice is null\n");
         // }
         // printf("%p\n", d_m_udp);
+        // if(d_packet->GetUid() == 7){
+        //     for(int i = 0; i < d_packet->GetSize(); i++){
+        //         printf("%d ", d_packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
         return DoSendTo(d_packet, 0, *m_defaultPort, 0, cb_data);
         // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
         // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
@@ -275,6 +281,12 @@ namespace ns3{
             return -1;
         }
         // Skip the check of tos, ttl, priority and broadcast
+        // if(d_packet->GetUid() == 7){
+        //     for(int i = 0; i < d_packet->GetSize(); i++){
+        //         printf("%d ", d_packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
 
         d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);

@@ -277,6 +277,12 @@ namespace ns3 {
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
     // __syncthreads();
+    // if(pos == 7){
+    //   for(int i = 0; i < packet->GetSize(); i++){
+    //     printf("%d ", packet->m_data[i]);
+    //   }
+    //   printf("\n");
+    // }
 
     return true;
   }
@@ -291,6 +297,13 @@ namespace ns3 {
     CudaPacket* entry = d_packetQueue + pos;         // Get position in the queue
 
     printf("Dequeued packet on GPU, pos: %d\n", pos);
+
+    // if(pos == 7){
+    //   for(int i = 0; i < entry->GetSize(); i++){
+    //     printf("%d ", entry->m_data[i]);
+    //   }
+    //   printf("\n");
+    // }
     return entry;
   }
 

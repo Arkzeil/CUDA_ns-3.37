@@ -196,6 +196,12 @@ namespace ns3 {
             printf("Ipv4 Checksum failed\n");
             // return;
         }
+        // if(packet->GetUid() == 7){
+        //     for(int i = 0; i < packet->GetSize(); i++){
+        //         printf("%d ", packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
         // remove Ipv4 header
         packet->RemoveHeader(20);
 
@@ -317,6 +323,13 @@ namespace ns3 {
             else{
                 printf("device found\n");
             }
+
+            // if(d_packet->GetUid() == 7){
+            //     for(int i = 0; i < d_packet->GetSize(); i++){
+            //         printf("%d ", d_packet->m_data[i]);
+            //     }
+            //     printf("\n");
+            // }
 
             // Skip the checking of device MTU
 

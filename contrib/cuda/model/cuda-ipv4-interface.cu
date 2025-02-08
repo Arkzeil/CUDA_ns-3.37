@@ -83,8 +83,15 @@ namespace ns3{
         // Add the IPv4 header
         d_packet->AddHeader(RawIpv4Header, 20);
         
-        if(RawIpv4Header != nullptr)
-            cudaFree(RawIpv4Header);
+        // if(RawIpv4Header != nullptr)
+        //     cudaFree(RawIpv4Header);
+
+        // if(d_packet->GetUid() == 7){
+        //     for(int i = 0; i < d_packet->GetSize(); i++){
+        //         printf("%d ", d_packet->m_data[i]);
+        //     }
+        //     printf("\n");
+        // }
 
         device->Send(d_packet, destination, 0, cb_data);
 

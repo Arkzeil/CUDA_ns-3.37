@@ -304,6 +304,12 @@ namespace ns3 {
             printf("packet uid: %d, packet size: %d\n", d_data->packet->GetUid(), d_data->packet->GetSize());
 
             printf("Sending packet from CUDA UDP client, packet id: %d\n", d_data->packet->GetUid());
+            // if(d_data->packet->GetUid() == 7){
+            //     for(int i = 0; i < d_data->packet->GetSize(); i++){
+            //         printf("%d ", d_data->packet->m_data[i]);
+            //     }
+            //     printf("\n");
+            // }
             if(socket->Send(d_data->packet, d_data) >= 0){
                 atomicAdd(m_sent, 1);
                 atomicAdd(m_totalTx, d_data->packet->GetSize());
