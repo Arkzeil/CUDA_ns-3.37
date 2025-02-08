@@ -233,7 +233,7 @@ namespace ns3 {
                     break;
                 case 0:
                     printf("Function: Receive, delay: %f, dst: %d\n", cbData->delay, device->GetNode()->GetId());
-                    printf("device address: %p\n", device);
+                    // printf("device address: %p\n", device);
                     // printf("h_packet: %p, d_packet: %p\n", cbData->h_packet, cbData->d_packet);
                     printf("packet id: %d\n", cbData->packet->GetUid());
                     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, cbData]() {
@@ -242,7 +242,7 @@ namespace ns3 {
                     break;
                 case 1:
                     printf("Function: TransmitComplete, delay: %f, target:%d\n", cbData->delay, device->GetNode()->GetId());
-                    printf("device address: %p\n", device);
+                    // printf("device address: %p\n", device);
                     EventDispatcher::GetInstance().Dispatch(device->GetNode()->GetId(), delay, [device, stream]() {
                         device->TransmitComplete(stream);
                     });
@@ -251,6 +251,8 @@ namespace ns3 {
                     printf("Unknown function\n");
                     break;
             }
+
+            CUDA_cb_data* next = cbData->next;
             cbData = cbData->next;
         }
         
@@ -294,25 +296,25 @@ namespace ns3 {
         packet[0] = idx % 256; // Example payload logic
         // Call the socket's Send logic directly
         if (threadIdx.x == 0) { // Single thread handles the send
-            // CudaPacket* cuda_packet;
-            // cudaMalloc(&cuda_packet, sizeof(CudaPacket));
-            // new(cuda_packet) CudaPacket();
-            // cuda_packet->Allocate(packetSize);
-            // cuda_packet->m_data[0] = packet[0];
-            d_data->packet->Allocate(packetSize);
-            d_data->packet->m_data[0] = packet[0];
-            printf("packet uid: %d, packet size: %d\n", d_data->packet->GetUid(), d_data->packet->GetSize());
+            CudaPacket* cuda_packet;
+            cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+            new(cuda_packet) CudaPacket();
+            cuda_packet->Allocate(packetSize);
+            cuda_packet->m_data[0] = packet[0];
+            // d_data->packet->Allocate(packetSize);
+            // d_data->packet->m_data[0] = packet[0];
+            printf("packet uid: %d, packet size: %d\n", cuda_packet->GetUid(),cuda_packet->GetSize());
 
-            printf("Sending packet from CUDA UDP client, packet id: %d\n", d_data->packet->GetUid());
+            printf("Sending packet from CUDA UDP client, packet id: %d\n", cuda_packet->GetUid());
             // if(d_data->packet->GetUid() == 7){
             //     for(int i = 0; i < d_data->packet->GetSize(); i++){
             //         printf("%d ", d_data->packet->m_data[i]);
             //     }
             //     printf("\n");
             // }
-            if(socket->Send(d_data->packet, d_data) >= 0){
+            if(socket->Send(cuda_packet, d_data) >= 0){
                 atomicAdd(m_sent, 1);
-                atomicAdd(m_totalTx, d_data->packet->GetSize());
+                atomicAdd(m_totalTx, cuda_packet->GetSize());
             }
         }
         // cudaFree(d_packet);
@@ -334,7 +336,7 @@ namespace ns3 {
         // printf("Node: %d\n", GetNode()->GetId());
         
         CUDA_cb_data* d_data = new CUDA_cb_data(256);
-        d_data->init_pkt();
+        // d_data->init_pkt();
         // cb_data_list.push_back(new CUDA_cb_data(256));
         // CUDA_cb_data* d_data = cb_data_list.back();
         d_data->addNext(1);
@@ -360,7 +362,7 @@ namespace ns3 {
         notifyHost<<<1,1>>>(receiveEventFlag);
         cudaMemcpyAsync(nullptr, nullptr, 0, cudaMemcpyDeviceToHost, m_cudaStream);
         // cudaMemcpyAsync(d_data->h_packet, d_data->d_packet, sizeof(CudaPacket), cudaMemcpyDeviceToHost, m_cudaStream);
-        cudaStreamAddCallback(m_cudaStream, CudaUdpClient::Cuda_ReceiveCallback, d_data, 0);
+        cudaStreamAddCallback(m_cudaStream, Cuda_ScheduleCallBack, d_data, 0);
     }
 
     // __host__ void CudaUdpClient::OffloadToCuda(int numPackets, int packetSize) {

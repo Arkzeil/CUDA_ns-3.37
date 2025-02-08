@@ -200,6 +200,7 @@ namespace ns3 {
       else{
         if(m_txMachineState == READY){
           // cudaFree((void*)data);
+          cudaFree(d_packet->m_data);
           CudaPacket* packet = DequeuePacket();
           TransmitStart(packet, cb_data);
         }
@@ -220,10 +221,13 @@ namespace ns3 {
     cb_data->empty = false;
     // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
     // cb_data->next->init();
-    cb_data->packetSize = 666;
+    cb_data->packetSize = 0;
     cb_data->dst = this;
     cb_data->delay = TxTime;
     cb_data->func_id = 1;
+
+    // cudaEventSynchronize(m_event);
+    // cudaFree(cb_data->packet->m_data);
 
     bool result = m_channel->TransmitStart(packet, this, TxTime, cb_data);
     if(result == false) {
@@ -273,7 +277,10 @@ namespace ns3 {
 
     int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
     CudaPacket* entry = d_packetQueue + pos;         // Get position in the queue
+
+    // cudaEventCreate(&m_event);
     *entry = *packet; // Assign packet (uses device-side assignment operator)
+    // cudaEventRecord(m_event, 0);
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
     // __syncthreads();

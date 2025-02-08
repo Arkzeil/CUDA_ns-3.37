@@ -113,7 +113,7 @@ namespace ns3 {
         }
         else{
             cb_data->next->empty = false;
-            cb_data->packetSize = 256;
+            cb_data->packetSize = d_packet->GetSize();
             cb_data->next->dst = m_link[wire].m_dst;
             cb_data->next->delay = txTime + d_delay;
             cb_data->next->func_id = 0;

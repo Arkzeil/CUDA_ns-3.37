@@ -149,12 +149,15 @@ namespace ns3
                     break;
                 case 0:
                     // printf("Callback function 0\n");
+                    printf("Function: Receive, delay: %f, dst: %d\n", cbData->delay, device->GetNode()->GetId());
+                    printf("packet id: %d\n", cbData->packet->GetUid());
                     Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, cbData](){
                         device->Receive(cbData->packet);
                     });
                     break;
                 case 1:
                     // printf("Callback function 1\n");
+                    printf("Function: TransmitComplete, delay: %f, target:%d\n", cbData->delay, device->GetNode()->GetId());
                     Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, stream](){
                         device->TransmitComplete(stream);
                     });
@@ -164,7 +167,10 @@ namespace ns3
                     break;
             }
 
-            cbData = cbData->next;
+            CUDA_cb_data* next = cbData->next;
+            // delete cbData;
+            cudaFree(cbData);
+            cbData = next;
         }
     }
 }

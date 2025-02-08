@@ -50,7 +50,7 @@ namespace ns3{
                 cudaFree(m_data);
             }
             cudaMalloc((void**)&m_data, m_capacity);
-            printf("Copying packet data, size: %d\n", m_size);
+            // printf("Copying packet data, size: %d\n", m_size);
             cudaMemcpyAsync(m_data, other.m_data, m_size, cudaMemcpyDeviceToDevice);
         }
         return *this;
