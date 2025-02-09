@@ -86,6 +86,8 @@ namespace ns3 {
         //     delete m_cudaSocket;
         //     m_cudaSocket = nullptr;
         // }
+        cudaDeviceSynchronize();
+        printf("Total packets received: %ld\n", m_received);
     }
 
     __device__ void CudaUdpServer::HandleRead(CudaSocket* socket) {
@@ -96,7 +98,7 @@ namespace ns3 {
             if(packet->GetSize() > 0){
                 printf("CudaUdpServer Received packet: %d\n", packet->GetUid());
                 uint32_t receivedSize = packet->GetSize();
-                m_received++;
+                atomicAdd(&m_received, 1);
             }
         }
     }

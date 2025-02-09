@@ -17,8 +17,6 @@ namespace ns3{
 
     class CUDA_cb_data;
 
-    typedef unsigned long long int uint64_cu;
-
     class CudaUdpClient : public Application {
         public:
             __host__ static TypeId GetTypeId(void);

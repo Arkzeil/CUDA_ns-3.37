@@ -116,7 +116,7 @@ namespace ns3 {
     void 
     CudaUdpClient::StartApplication(){
         printf("Initial thread: %ld\n", std::this_thread::get_id());
-        EventDispatcher::GetInstance().StartWorker();
+        // EventDispatcher::GetInstance().StartWorker();
         // NS_LOG_FUNCTION(this);
         // if (!m_socket) {
         //     m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
@@ -164,7 +164,7 @@ namespace ns3 {
             m_socket = nullptr;
         }
         else if(m_cudaSocket){
-            EventDispatcher::GetInstance().StopWorker();
+            // EventDispatcher::GetInstance().StopWorker();
             cudaDeviceSynchronize();
             m_cudaSocket->Close();
             // checkCudaErr();
@@ -175,6 +175,8 @@ namespace ns3 {
         }
         
         Simulator::Cancel(m_sendEvent);
+
+        printf("Total packets sent: %d\n", *m_sent);
     }
 
     __host__ void CudaUdpClient::InitCudaResources() {

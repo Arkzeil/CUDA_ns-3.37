@@ -4,6 +4,8 @@
 #include <cuda_runtime.h>
 #include <cstdio>
 
+typedef unsigned long long int uint64_cu;
+
 class Managed {
 public:
   void *operator new(size_t len) {

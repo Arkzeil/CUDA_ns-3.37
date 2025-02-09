@@ -64,6 +64,7 @@ int main(int argc, char* argv[]) {
 
   // Install CUDA UDP application on node 0
   Ptr<CudaUdpClient> app = CreateObject<CudaUdpClient>();
+  Ptr<CudaUdpClient> app1 = CreateObject<CudaUdpClient>();
   
   uint32_t ipAddress = cudaInterfaces.GetAddress(1).Get();
   char ipAddr[16];
@@ -79,13 +80,25 @@ int main(int argc, char* argv[]) {
   node0->AddApplication(app);
   app->SetStartTime(Seconds(1.0));
   app->SetStopTime(Seconds(10.0));
+
+  app1->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
+  app1->SetPacketSize(256);
+  app1->SetSendInterval(Seconds(1.0));
+  node0->AddApplication(app1);
+  app1->SetStartTime(Seconds(1.0));
+  app1->SetStopTime(Seconds(10.0));
   // cudaNode0->AddApplication(app);
   Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
+  Ptr<CudaUdpServer> server1 = CreateObject<CudaUdpServer>();
   server->SetPort(9);
+  server1->SetPort(9);
 
   node1->AddApplication(server);
+  // node1->AddApplication(server1);
   server->SetStartTime(Seconds(0.0));
-  server->SetStopTime(Seconds(10.0));
+  server->SetStopTime(Seconds(20.0));
+  // server1->SetStartTime(Seconds(0.0));
+  // server1->SetStopTime(Seconds(10.0));
 
   // Install a UDP echo server on node 1
   // UdpEchoServerHelper server(9);

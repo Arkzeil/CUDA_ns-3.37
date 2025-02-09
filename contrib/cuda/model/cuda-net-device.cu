@@ -160,6 +160,7 @@ namespace ns3 {
   void CudaNetDevice::Receive(CudaPacket* packet) {
       // Process received packet
       printf("Received packet on GPU, Node id: %d, packet id: %d\n", m_node->GetId(), packet->GetUid());
+      printf("Current simulation time: %f\n", Simulator::Now().GetSeconds());
       m_rxCallback(this, (ns3::Packet*)packet, 69, Address());
       // ProcessPacketOnCuda(packet);
   } 
@@ -200,8 +201,14 @@ namespace ns3 {
       else{
         if(m_txMachineState == READY){
           // cudaFree((void*)data);
-          cudaFree(d_packet->m_data);
           CudaPacket* packet = DequeuePacket();
+          if(packet == nullptr){
+            printf("dequeued packet is null\n");
+            return;
+          }
+
+          cudaFree(d_packet->m_data);
+          
           TransmitStart(packet, cb_data);
         }
       }
