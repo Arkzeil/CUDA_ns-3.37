@@ -84,9 +84,9 @@ int main(int argc, char* argv[]) {
   app1->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
   app1->SetPacketSize(256);
   app1->SetSendInterval(Seconds(1.0));
-  node0->AddApplication(app1);
-  app1->SetStartTime(Seconds(1.0));
-  app1->SetStopTime(Seconds(10.0));
+  // node0->AddApplication(app1);
+  // app1->SetStartTime(Seconds(1.0));
+  // app1->SetStopTime(Seconds(10.0));
   // cudaNode0->AddApplication(app);
   Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
   Ptr<CudaUdpServer> server1 = CreateObject<CudaUdpServer>();

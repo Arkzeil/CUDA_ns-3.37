@@ -273,30 +273,18 @@ namespace ns3 {
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ bool CudaNetDevice::EnqueuePacket(CudaPacket* packet) {
-    // EnqueueKernel<<<1, 256>>>(d_packetQueue, d_queueFront, d_queueRear, m_queueSize, d_packet, size);
-    // cudaDeviceSynchronize(); // Ensure enqueue completes
-    
-    // queue is full
+    // Check if the queue is full
     if ((*d_queueRear + 1) % m_queueSize == *d_queueFront) {
       printf("Queue is full, dropping packet\n");
       return false;
     }
 
     int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
-    CudaPacket* entry = d_packetQueue + pos;         // Get position in the queue
+    CudaPacket* entry = d_packetQueue + pos;           // Get position in the queue
 
-    // cudaEventCreate(&m_event);
     *entry = *packet; // Assign packet (uses device-side assignment operator)
-    // cudaEventRecord(m_event, 0);
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
-    // __syncthreads();
-    // if(pos == 7){
-    //   for(int i = 0; i < packet->GetSize(); i++){
-    //     printf("%d ", packet->m_data[i]);
-    //   }
-    //   printf("\n");
-    // }
 
     return true;
   }
@@ -307,17 +295,15 @@ namespace ns3 {
       return nullptr; // Queue is empty
     }
 
-    int pos = atomicAdd(d_queueFront, 1) % m_queueSize; // Use atomic operation for thread safety
-    CudaPacket* entry = d_packetQueue + pos;         // Get position in the queue
+    int pos = *d_queueFront % m_queueSize; // Get position in the queue
+    CudaPacket* entry = d_packetQueue + pos; // Access packet
+
+    // if (threadIdx.x == 0) {
+    *d_queueFront = (*d_queueFront + 1) % m_queueSize; // Update front position
+    // }
 
     printf("Dequeued packet on GPU, pos: %d\n", pos);
 
-    // if(pos == 7){
-    //   for(int i = 0; i < entry->GetSize(); i++){
-    //     printf("%d ", entry->m_data[i]);
-    //   }
-    //   printf("\n");
-    // }
     return entry;
   }
 
