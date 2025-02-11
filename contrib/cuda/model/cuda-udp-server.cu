@@ -87,6 +87,7 @@ namespace ns3 {
         //     m_cudaSocket = nullptr;
         // }
         cudaDeviceSynchronize();
+        // cudaStreamSynchronize(0);
         printf("Total packets received: %ld\n", m_received);
     }
 
@@ -100,6 +101,8 @@ namespace ns3 {
                 uint32_t receivedSize = packet->GetSize();
                 atomicAdd(&m_received, 1);
             }
+            
+            cudaFree(packet);
         }
     }
 

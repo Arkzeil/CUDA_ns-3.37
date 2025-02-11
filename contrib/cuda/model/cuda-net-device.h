@@ -71,7 +71,7 @@ private:
     // CUDA-related members
     cudaStream_t m_stream;
     cudaEvent_t m_event;        // !< CUDA event to synchronize packet enqueueing
-    CudaPacket* d_packetQueue; // GPU packet queue
+    CudaPacket** d_packetQueue; // GPU packet queue
     NetDevice::ReceiveCallback m_rxCallback;
     CudaP2PChannel *m_channel;
     int* d_queueFront;

@@ -18,7 +18,7 @@ namespace ns3{
         Free();
     }
 
-    __device__ void CudaPacket::Allocate(uint32_t size) {
+    __host__ __device__ void CudaPacket::Allocate(uint32_t size) {
         if (size > m_capacity) {
             printf("Error: Packet size exceeds maximum capacity\n");
             return;

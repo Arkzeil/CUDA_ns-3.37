@@ -28,6 +28,8 @@ int main(int argc, char* argv[]) {
   // nodes.Create(2);
   Ptr<Node> node0 = CreateObject<Node>();
   Ptr<Node> node1 = CreateObject<Node>();
+  Ptr<Node> node2 = CreateObject<Node>();
+  Ptr<Node> node3 = CreateObject<Node>(); 
   // CudaNode *cudaNode0 = new CudaNode();
   // CudaNode *cudaNode1 = new CudaNode();
 
@@ -37,6 +39,8 @@ int main(int argc, char* argv[]) {
   internet.SetIpv6StackInstall(false);
   internet.Install(node0);
   internet.Install(node1);
+  internet.Install(node2);
+  internet.Install(node3);
   // internet.Install(cudaNode0);
   // internet.Install(cudaNode1);
   // internet.Install(nodes);
@@ -52,6 +56,7 @@ int main(int argc, char* argv[]) {
   cudaP2P.SetDelay(MilliSeconds(2.0));
   cudaP2P.SetBandwidth(DataRate("10Mbps"));
   NetDeviceContainer cudaDevices = cudaP2P.Install(node0, node1);
+  NetDeviceContainer cudaDevices1 = cudaP2P.Install(node2, node3);
   // NetDeviceContainer cudaDevices = p2p.Install(cudaNode0, cudaNode1);
 
   // Assign IP addresses
@@ -60,6 +65,7 @@ int main(int argc, char* argv[]) {
   ipv4.SetBase("10.1.1.0", "255.255.255.0");
   // Ipv4InterfaceContainer interfaces = ipv4.Assign(devices);
   Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(cudaDevices);
+  Ipv4InterfaceContainer cudaInterfaces1 = ipv4.Assign(cudaDevices1);
   // Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(cudaDevices);
 
   // Install CUDA UDP application on node 0
@@ -81,12 +87,12 @@ int main(int argc, char* argv[]) {
   app->SetStartTime(Seconds(1.0));
   app->SetStopTime(Seconds(10.0));
 
-  app1->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
+  app1->SetRemote(cudaInterfaces1.GetAddress(1), 9); // Send to node 1
   app1->SetPacketSize(256);
   app1->SetSendInterval(Seconds(1.0));
-  // node0->AddApplication(app1);
-  // app1->SetStartTime(Seconds(1.0));
-  // app1->SetStopTime(Seconds(10.0));
+  node2->AddApplication(app1);
+  app1->SetStartTime(Seconds(1.0));
+  app1->SetStopTime(Seconds(10.0));
   // cudaNode0->AddApplication(app);
   Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
   Ptr<CudaUdpServer> server1 = CreateObject<CudaUdpServer>();
@@ -94,11 +100,11 @@ int main(int argc, char* argv[]) {
   server1->SetPort(9);
 
   node1->AddApplication(server);
-  // node1->AddApplication(server1);
+  node3->AddApplication(server1);
   server->SetStartTime(Seconds(0.0));
-  server->SetStopTime(Seconds(20.0));
-  // server1->SetStartTime(Seconds(0.0));
-  // server1->SetStopTime(Seconds(10.0));
+  server->SetStopTime(Seconds(10.0));
+  server1->SetStartTime(Seconds(0.0));
+  server1->SetStopTime(Seconds(10.0));
 
   // Install a UDP echo server on node 1
   // UdpEchoServerHelper server(9);

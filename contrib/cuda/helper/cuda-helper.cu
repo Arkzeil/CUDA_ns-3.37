@@ -6,6 +6,7 @@
 
 namespace ns3
 {
+    
     bool InitCUDA(cudaDeviceProp &prop) {
         int count;
         /* 取得支援 CUDA 的裝置的數目，如果系統上沒有支援 CUDA 的裝置，則它會傳回 1，
@@ -59,6 +60,20 @@ namespace ns3
         printf("----------------InitCUDA, CUDA check completed-------------------\n");
 
         return true;
+    }
+
+    int debug_printf(int output_flag, const char *format, ...) {
+        va_list args;
+        int chars_printed = 0;
+
+        va_start(args, format);
+
+        if (output_flag) {  // Check the flag before printing
+            chars_printed = vprintf(format, args); // Use vprintf for variable arguments
+        }
+
+        va_end(args);
+        return chars_printed;
     }
 /* ... */
     void checkCudaErr(){
@@ -150,7 +165,7 @@ namespace ns3
                 case 0:
                     // printf("Callback function 0\n");
                     printf("Function: Receive, delay: %f, dst: %d\n", cbData->delay, device->GetNode()->GetId());
-                    printf("packet id: %d\n", cbData->packet->GetUid());
+                    // printf("packet id: %d\n", cbData->packet->GetUid());
                     Simulator::ScheduleWithContext(device->GetNode()->GetId(), delay, [device, cbData](){
                         device->Receive(cbData->packet);
                     });

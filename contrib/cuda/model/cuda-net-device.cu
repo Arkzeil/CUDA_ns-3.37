@@ -20,7 +20,7 @@ namespace ns3 {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
-      cudaMallocManaged(&d_packetQueue, m_queueSize * sizeof(CudaPacket)); // Example size
+      cudaMallocManaged(&d_packetQueue, m_queueSize * sizeof(CudaPacket*)); // Example size
       cudaMallocManaged(&d_queueFront, sizeof(int));
       cudaMallocManaged(&d_queueRear, sizeof(int));
       // initliaze queue front and rear
@@ -207,7 +207,7 @@ namespace ns3 {
             return;
           }
 
-          cudaFree(d_packet->m_data);
+          // cudaFree(d_packet->m_data);
           
           TransmitStart(packet, cb_data);
         }
@@ -280,9 +280,11 @@ namespace ns3 {
     }
 
     int pos = atomicAdd(d_queueRear, 1) % m_queueSize; // Use atomic operation for thread safety
-    CudaPacket* entry = d_packetQueue + pos;           // Get position in the queue
+    // CudaPacket* entry = d_packetQueue[pos];           // Get position in the queue
 
-    *entry = *packet; // Assign packet (uses device-side assignment operator)
+    // *entry = *packet; // Assign packet (uses device-side assignment operator)
+    // entry = packet;
+    d_packetQueue[pos] = packet;
 
     printf("Enqueued packet on GPU, pos: %d\n", pos);
 
@@ -296,7 +298,7 @@ namespace ns3 {
     }
 
     int pos = *d_queueFront % m_queueSize; // Get position in the queue
-    CudaPacket* entry = d_packetQueue + pos; // Access packet
+    // CudaPacket* entry = d_packetQueue[pos];  // Access packet
 
     // if (threadIdx.x == 0) {
     *d_queueFront = (*d_queueFront + 1) % m_queueSize; // Update front position
@@ -304,7 +306,7 @@ namespace ns3 {
 
     printf("Dequeued packet on GPU, pos: %d\n", pos);
 
-    return entry;
+    return d_packetQueue[pos];
   }
 
   void CudaNetDevice::InitializeCudaBuffers() {

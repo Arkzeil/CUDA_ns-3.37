@@ -283,7 +283,7 @@ namespace ns3 {
         m_sendEvent = Simulator::Schedule(m_interval, &CudaUdpClient::Send, this);
     }   
 
-    __global__ void GeneratePacketKernel(CudaSocket* socket, int packetSize, uint32_t *m_sent, uint64_cu *m_totalTx, CUDA_cb_data* d_data) {
+    __global__ void GeneratePacketKernel(CudaPacket* cuda_packet, CudaSocket* socket, int packetSize, uint32_t *m_sent, uint64_cu *m_totalTx, CUDA_cb_data* d_data) {
         // Allocate packet data in shared memory or local GPU memory
         // printf("Generating packet on GPU\n");
         __shared__ uint8_t packet[1500]; // Example size of a packet
@@ -298,10 +298,10 @@ namespace ns3 {
         packet[0] = idx % 256; // Example payload logic
         // Call the socket's Send logic directly
         if (threadIdx.x == 0) { // Single thread handles the send
-            CudaPacket* cuda_packet;
-            cudaMalloc(&cuda_packet, sizeof(CudaPacket));
-            new(cuda_packet) CudaPacket();
-            cuda_packet->Allocate(packetSize);
+            // CudaPacket* cuda_packet;
+            // cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+            // new(cuda_packet) CudaPacket();
+            // cuda_packet->Allocate(packetSize);
             cuda_packet->m_data[0] = packet[0];
             // d_data->packet->Allocate(packetSize);
             // d_data->packet->m_data[0] = packet[0];
@@ -350,10 +350,15 @@ namespace ns3 {
         
         // cudaEventCreate(&startEvent);
 
-        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(m_cudaSocket, m_size, m_sent, m_totalTx, d_data);
+        CudaPacket* cuda_packet;
+        cudaMallocManaged(&cuda_packet, sizeof(CudaPacket));
+        new(cuda_packet) CudaPacket();
+        cuda_packet->Allocate(m_size);
+
+        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(cuda_packet, m_cudaSocket, m_size, m_sent, m_totalTx, d_data);
         // cudaEventCreate(&stopEvent);
         
-        cudaStreamSynchronize(m_cudaStream);
+        // cudaStreamSynchronize(m_cudaStream);
         // CUDA_cb_data* next = d_data->next;
         // CUDA_cb_data* next_cb = (CUDA_cb_data*)malloc(sizeof(CUDA_cb_data));
         // if(next != nullptr){

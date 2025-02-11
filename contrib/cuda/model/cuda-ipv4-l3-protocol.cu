@@ -211,6 +211,7 @@ namespace ns3 {
     void CudaIpv4L3Protocol::Receive(Ptr<NetDevice> device, CudaPacket *packet, uint16_t protocol, const Address& from, const Address& to, NetDevice::PacketType packetType) {
         // Receive a packet
         // For simplicity, we will just print the packet contents
+        // printf("Ipv4L3: Received packet: %d\n", packet->GetUid());
         printf("Ipv4L3: Received packet: %d\n", packet->GetUid());
         std::cout << "address to: " << to << std::endl;
         int32_t interface = GetInterfaceForDevice(GetPointer(DynamicCast<CudaNetDevice>(device)));

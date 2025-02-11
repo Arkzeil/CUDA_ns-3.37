@@ -12,14 +12,20 @@
 #include <condition_variable>
 #include <thread>
 
+#include <stdio.h>
+#include <stdarg.h>
+
 namespace ns3
 {
 
 // Each class should be documented using Doxygen,
 // and have an \ingroup cuda directive
+    #define debug_print 1
 
 /* ... */
     bool InitCUDA(cudaDeviceProp &prop);
+    // Alternative function to printf with a conditional output flag
+    int debug_printf(int output_flag, const char *format, ...);
     void checkCudaErr();
     __host__ __device__ uint16_t ones_complement_sum(uint32_t sum);
 

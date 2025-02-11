@@ -18,7 +18,7 @@ namespace ns3{
             __host__ __device__ ~CudaPacket();
 
             // Memory management
-            __device__ void Allocate(uint32_t size);
+            __host__ __device__ void Allocate(uint32_t size);
             __host__ __device__ void Free();
             // assignment operations
             __device__ CudaPacket& operator=(const CudaPacket& other);
