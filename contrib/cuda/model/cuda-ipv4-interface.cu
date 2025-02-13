@@ -11,7 +11,7 @@ namespace ns3{
         // Get the type ID
         static TypeId tid = TypeId("ns3::CudaIpv4Interface")
                             .SetParent<Ipv4Interface>()
-                            .SetGroupName("Internet")
+                            .SetGroupName("cuda")
                             .AddConstructor<CudaIpv4Interface>();
         return tid;
     }

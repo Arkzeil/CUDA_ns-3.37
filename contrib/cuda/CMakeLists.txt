@@ -372,6 +372,7 @@ build_cuda_lib(
         model/cuda-packet.cu
         model/cuda-ipv4-end-point.cu
         model/cuda-udp-server.cu
+        model/cuda-elp-simulator.cu
         helper/cuda-helper.cu
         helper/cuda-p2p-helper.cu
         helper/cuda-ipv4-address-helper.cu
@@ -392,6 +393,7 @@ build_cuda_lib(
         model/cuda-packet.h
         model/cuda-ipv4-end-point.h
         model/cuda-udp-server.h
+        model/cuda-elp-simulator.h
         helper/cuda-helper.h
         helper/cuda-p2p-helper.h
         helper/cuda-ipv4-address-helper.h

@@ -11,7 +11,7 @@ namespace ns3 {
     TypeId CudaP2PChannel::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaP2PChannel")
                             .SetParent<Channel>()
-                            .SetGroupName("PointToPoint")
+                            .SetGroupName("cuda")
                             .AddConstructor<CudaP2PChannel>()
                             .AddAttribute("Delay",
                                           "The propagation delay of the channel",

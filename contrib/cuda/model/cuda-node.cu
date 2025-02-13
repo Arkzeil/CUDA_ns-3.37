@@ -8,7 +8,7 @@ namespace ns3 {
     TypeId CudaNode::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaNode")
                             .SetParent<Node>()
-                            .SetGroupName("Network")
+                            .SetGroupName("cuda")
                             .AddConstructor<CudaNode>()
                             .AddAttribute("Id",
                                           "The unique ID of the node",

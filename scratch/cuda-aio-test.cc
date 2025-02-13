@@ -12,6 +12,7 @@
 #include "ns3/cuda-internet-stack-helper.h"
 #include "ns3/cuda-ipv4-address-helper.h"
 #include "ns3/cuda-udp-server.h"
+#include "ns3/cuda-elp-simulator.h"
 
 using namespace ns3;
 
@@ -24,6 +25,9 @@ int main(int argc, char* argv[]) {
   if (!InitCUDA(prop)) {
     return 1;
   }
+
+  GlobalValue::Bind("SimulatorImplementationType",
+                    StringValue("ns3::CudaELPSimulator"));
   // NodeContainer nodes;
   // nodes.Create(2);
   Ptr<Node> node0 = CreateObject<Node>();
@@ -71,6 +75,7 @@ int main(int argc, char* argv[]) {
   // Install CUDA UDP application on node 0
   Ptr<CudaUdpClient> app = CreateObject<CudaUdpClient>();
   Ptr<CudaUdpClient> app1 = CreateObject<CudaUdpClient>();
+  Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
   
   uint32_t ipAddress = cudaInterfaces.GetAddress(1).Get();
   char ipAddr[16];
@@ -87,12 +92,19 @@ int main(int argc, char* argv[]) {
   app->SetStartTime(Seconds(1.0));
   app->SetStopTime(Seconds(10.0));
 
-  app1->SetRemote(cudaInterfaces1.GetAddress(1), 9); // Send to node 1
-  app1->SetPacketSize(256);
-  app1->SetSendInterval(Seconds(1.0));
-  node2->AddApplication(app1);
-  app1->SetStartTime(Seconds(1.0));
-  app1->SetStopTime(Seconds(10.0));
+  // app1->SetRemote(cudaInterfaces1.GetAddress(1), 9); // Send to node 3
+  // app1->SetPacketSize(256);
+  // app1->SetSendInterval(Seconds(1.0));
+  // node2->AddApplication(app1);
+  // app1->SetStartTime(Seconds(1.0));
+  // app1->SetStopTime(Seconds(10.0));
+
+  // app2->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
+  // app2->SetPacketSize(256);
+  // app2->SetSendInterval(Seconds(1.0));
+  // node0->AddApplication(app2);
+  // app2->SetStartTime(Seconds(1.0));
+  // app2->SetStopTime(Seconds(10.0));
   // cudaNode0->AddApplication(app);
   Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
   Ptr<CudaUdpServer> server1 = CreateObject<CudaUdpServer>();
@@ -102,9 +114,9 @@ int main(int argc, char* argv[]) {
   node1->AddApplication(server);
   node3->AddApplication(server1);
   server->SetStartTime(Seconds(0.0));
-  server->SetStopTime(Seconds(10.0));
+  server->SetStopTime(Seconds(11.0));
   server1->SetStartTime(Seconds(0.0));
-  server1->SetStopTime(Seconds(10.0));
+  server1->SetStopTime(Seconds(11.0));
 
   // Install a UDP echo server on node 1
   // UdpEchoServerHelper server(9);

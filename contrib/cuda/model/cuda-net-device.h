@@ -27,6 +27,8 @@ public:
     virtual ~CudaNetDevice();
 
     // Overridden methods for packet transmission
+    void SetIfIndex(const uint32_t index) override;
+    uint32_t GetIfIndex() const override;
     void SetAddress(Address address) override;
     Address GetAddress() const override;
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
@@ -34,6 +36,8 @@ public:
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
     bool Attach(CudaP2PChannel *channel);
     void SetDataRate(DataRate bps);
+    bool SetMtu(const uint16_t mtu) override;
+    uint16_t GetMtu() const override;
     Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
     void Receive(CudaPacket *packet);
@@ -53,6 +57,8 @@ public:
 private:
     void ProcessPacketOnCuda(Ptr<Packet> packet);
 
+    static const uint16_t DEFAULT_MTU = 1500; //!< Default MTU
+
     enum TxMachineState
     {
         READY, /**< The transmitter is ready to begin transmission of a packet */
@@ -62,11 +68,13 @@ private:
     TxMachineState m_txMachineState;
     Mac48Address m_address;                              //!< Mac48Address of this NetDevice
 
+    uint32_t m_ifIndex;                                  //!< Index of the interface
     bool m_linkUp;
     DataRate m_bps;
     uint64_t d_bps;
     Time m_tInterframeGap;
     Ptr<Node> m_node;
+    uint32_t m_mtu;
 
     // CUDA-related members
     cudaStream_t m_stream;

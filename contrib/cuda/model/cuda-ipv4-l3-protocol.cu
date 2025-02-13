@@ -13,7 +13,7 @@ namespace ns3 {
     TypeId CudaIpv4L3Protocol::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaIpv4L3Protocol")
                             .SetParent<Ipv4L3Protocol>()
-                            .SetGroupName("Internet")
+                            .SetGroupName("cuda")
                             .AddConstructor<CudaIpv4L3Protocol>();
         return tid;
     }

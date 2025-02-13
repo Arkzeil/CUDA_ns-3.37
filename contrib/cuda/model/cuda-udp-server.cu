@@ -11,7 +11,7 @@ namespace ns3 {
     TypeId CudaUdpServer::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpServer")
                             .SetParent<Application>()
-                            .SetGroupName("Applications")
+                            .SetGroupName("cuda")
                             .AddConstructor<CudaUdpServer>()
                             .AddAttribute("Port",
                                         "Port on which we listen for incoming packets.",
@@ -88,7 +88,7 @@ namespace ns3 {
         // }
         cudaDeviceSynchronize();
         // cudaStreamSynchronize(0);
-        printf("Total packets received: %ld\n", m_received);
+        printf("Node %d: Total packets received: %ld\n", GetNode()->GetId(), m_received);
     }
 
     __device__ void CudaUdpServer::HandleRead(CudaSocket* socket) {

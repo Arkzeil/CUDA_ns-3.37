@@ -21,7 +21,7 @@ namespace ns3{
         // Get the type ID
         static TypeId tid = TypeId("ns3::CudaSocket")
                             .SetParent<Socket>()
-                            .SetGroupName("Internet")
+                            .SetGroupName("cuda")
                             .AddConstructor<CudaSocket>()
                             .AddAttribute("IcmpCallback",
                                         "Callback invoked whenever an icmp error is received on this socket.",

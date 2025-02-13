@@ -10,9 +10,25 @@ namespace ns3 {
 
   TypeId CudaNetDevice::GetTypeId(void) {
       static TypeId tid = TypeId("ns3::CudaNetDevice")
-                          .SetParent<PointToPointNetDevice>()
-                          .SetGroupName("Network")
-                          .AddConstructor<CudaNetDevice>();
+                          .SetParent<NetDevice>()
+                          .SetGroupName("cuda")
+                          .AddConstructor<CudaNetDevice>()
+                          .AddAttribute("Mtu",
+                                        "The MAC-level Maximum Transmission Unit",
+                                        UintegerValue(DEFAULT_MTU),
+                                        MakeUintegerAccessor(&CudaNetDevice::SetMtu,
+                                                            &CudaNetDevice::GetMtu),
+                                        MakeUintegerChecker<uint16_t>())
+                          .AddAttribute("DataRate",
+                                        "The default data rate for point to point links",
+                                        DataRateValue(DataRate("32768b/s")),
+                                        MakeDataRateAccessor(&CudaNetDevice::SetDataRate),
+                                        MakeDataRateChecker())
+                          .AddAttribute("InterframeGap",
+                                        "The time to wait between packet (frame) transmissions",
+                                        TimeValue(Seconds(0.0)),
+                                        MakeTimeAccessor(&CudaNetDevice::m_tInterframeGap),
+                                        MakeTimeChecker());
       return tid;
   }
 
@@ -38,6 +54,14 @@ namespace ns3 {
       checkCudaErr();
       cudaFree(d_queueRear);
       checkCudaErr();
+  }
+
+  void CudaNetDevice::SetIfIndex(const uint32_t index){
+      m_ifIndex = index;
+  }
+
+  uint32_t CudaNetDevice::GetIfIndex() const{
+      return m_ifIndex;
   }
 
   void CudaNetDevice::SetAddress(Address address) {
@@ -147,6 +171,15 @@ namespace ns3 {
   void CudaNetDevice::SetDataRate(DataRate bps) {
       m_bps = bps;
       d_bps = bps.GetBitRate();
+  }
+
+  bool CudaNetDevice::SetMtu(const uint16_t mtu) {
+      m_mtu = mtu;
+      return true;
+  }
+
+  uint16_t CudaNetDevice::GetMtu() const{
+      return m_mtu;
   }
 
   Ptr<Node> CudaNetDevice::GetNode() const {

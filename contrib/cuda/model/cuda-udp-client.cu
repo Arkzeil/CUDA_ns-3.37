@@ -21,7 +21,7 @@ namespace ns3 {
     __host__ TypeId CudaUdpClient::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpClient")
             .SetParent<Application>()
-            .SetGroupName("Applications")
+            .SetGroupName("cuda")
             .AddConstructor<CudaUdpClient>()
             .AddAttribute("MaxPackets",
                             "The maximum number of packets the application will send",
@@ -176,7 +176,7 @@ namespace ns3 {
         
         Simulator::Cancel(m_sendEvent);
 
-        printf("Total packets sent: %d\n", *m_sent);
+        printf("Node %d: Total packets sent: %d\n",GetNode()->GetId(), *m_sent);
     }
 
     __host__ void CudaUdpClient::InitCudaResources() {
