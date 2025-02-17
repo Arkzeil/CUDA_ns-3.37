@@ -6,6 +6,7 @@
 #include "ns3/socket.h"
 #include "ns3/udp-socket-factory.h"
 #include "ns3/log.h"
+#include "ns3/cuda-simulator.h"
 // #include "cuda-socket.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -28,6 +29,8 @@ namespace ns3{
             void SetPacketSize(uint32_t size);
             void SetSendInterval(Time interval);
             void RecvTest(Time sendTime);
+
+            __device__ void test();
 
         protected:
             __host__ virtual void Send(); // Override the Send method.

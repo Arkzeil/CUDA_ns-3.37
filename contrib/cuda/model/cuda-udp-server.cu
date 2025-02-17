@@ -3,6 +3,7 @@
 #include "cuda-packet.h"
 #include "ns3/cuda-helper.h"
 #include "cuda-socket.h"
+#include "ns3/cuda-elp-simulator.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaUdpServer");
@@ -89,6 +90,9 @@ namespace ns3 {
         cudaDeviceSynchronize();
         // cudaStreamSynchronize(0);
         printf("Node %d: Total packets received: %ld\n", GetNode()->GetId(), m_received);
+        // Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
+        // CudaELPSimulator* cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
+        // cudaSim->componentMethod();
     }
 
     __device__ void CudaUdpServer::HandleRead(CudaSocket* socket) {
@@ -104,6 +108,8 @@ namespace ns3 {
             
             cudaFree(packet);
         }
+
+        // cudaSim_d->deviceMethod();
     }
 
     void CudaUdpServer::SetPort(uint16_t port) {

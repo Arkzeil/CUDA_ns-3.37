@@ -21,15 +21,30 @@ namespace ns3
 // Each class should be documented using Doxygen,
 // and have an \ingroup cuda directive
     #define debug_print 1
-
+    #define cudaCheckErrors(msg) \
+                            do { \
+                                cudaError_t __err = cudaGetLastError(); \
+                                if (__err != cudaSuccess) { \
+                                    fprintf(stderr, "Fatal error: %s (%s at %s:%d)\n", \
+                                        msg, cudaGetErrorString(__err), \
+                                        __FILE__, __LINE__); \
+                                    fprintf(stderr, "*** FAILED - ABORTING\n"); \
+                                    exit(1); \
+                                } \
+                            } while (0)
 /* ... */
     bool InitCUDA(cudaDeviceProp &prop);
     // Alternative function to printf with a conditional output flag
     int debug_printf(int output_flag, const char *format, ...);
     void checkCudaErr();
     __host__ __device__ uint16_t ones_complement_sum(uint32_t sum);
+    __host__ void InitCudaSim();
 
     class CudaPacket;
+    class CudaELPSimulator;
+
+    extern CudaELPSimulator* cudaSim;
+    extern __device__ CudaELPSimulator* cudaSim_d;
 
     class DeviceCallback {
         public:

@@ -16,6 +16,24 @@ namespace ns3
     // Forward
     class Scheduler;
 
+    // A simplified device-side event structure
+    struct DeviceEvent {
+        void *impl;   // pointer to the event implementation
+        double ts;    // event timestamp
+        int context;  // event context
+        int uid;      // unique id
+        int type;     // event type identifier
+
+        // Add any additional event-specific payload here.
+        // For example, a union of data for different event types.
+    };
+
+    class CudaELPComponent {
+        public:
+            void mymethod();
+            // ... other methods
+    };
+
     class CudaELPSimulator : public SimulatorImpl
     {
     public:
@@ -35,6 +53,10 @@ namespace ns3
         void Remove(const EventId &id) override;
         void Cancel(const EventId &id) override;
         bool IsExpired(const EventId &id) const override;
+        __host__ void componentMethod();
+        __host__ void test(void *obj);
+        __device__ void deviceMethod(void *obj, int func_id);
+        __host__ __device__ void insert(DeviceEvent* eventQueue, void* impl, int* eventCounter, int totalEvents, double ts, int context, int uid, int type);
         void Run() override;
         Time Now() const override;
         Time GetDelayLeft(const EventId &id) const override;
@@ -69,6 +91,12 @@ namespace ns3
         DestroyEvents m_destroyEvents;
         bool m_stop;
         Ptr<Scheduler> m_events;
+
+        CudaELPComponent elpComponent;
+        DeviceEvent* d_eventQueue;
+        double* d_simulationTime;
+        int *d_stop;
+        int* eventCounter;
 
         uint32_t m_uid;
         uint32_t m_currentUid;

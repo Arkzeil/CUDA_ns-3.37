@@ -176,6 +176,8 @@ namespace ns3 {
         
         Simulator::Cancel(m_sendEvent);
 
+        // Simulator::test();
+
         printf("Node %d: Total packets sent: %d\n",GetNode()->GetId(), *m_sent);
     }
 
@@ -262,6 +264,10 @@ namespace ns3 {
 
     __global__ void notifyHost(bool &flag) {
         flag = true;
+    }
+
+    __device__ void CudaUdpClient::test(){
+        printf("CudaUdpClient: called Test from CUDA ELP Scheduler\n");
     }
 
     __host__ void CudaUdpClient::Send() {

@@ -123,9 +123,12 @@ int main(int argc, char* argv[]) {
   // ApplicationContainer serverApp = server.Install(node1);
   // serverApp.Start(Seconds(1.0));
   // serverApp.Stop(Seconds(10.0));
+  InitCudaSim();
 
   Simulator::Run();
   Simulator::Destroy();
+
+  cudaSim->test(GetPointer(app));
 
   return 0;
 }

@@ -3,10 +3,13 @@
 #include "ns3/cuda-net-device.h"
 #include "ns3/simulator.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-elp-simulator.h"
 
 namespace ns3
 {
-    
+    CudaELPSimulator* cudaSim = nullptr;
+    CudaELPSimulator* cudaSim_d = nullptr;
+
     bool InitCUDA(cudaDeviceProp &prop) {
         int count;
         /* 取得支援 CUDA 的裝置的數目，如果系統上沒有支援 CUDA 的裝置，則它會傳回 1，
@@ -88,6 +91,14 @@ namespace ns3
             sum = (sum & 0xFFFF) + (sum >> 16);
         }
         return (uint16_t)~sum;
+    }
+
+    __host__ void InitCudaSim(){
+        Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
+        cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
+
+        cudaMalloc((void**)&cudaSim_d, sizeof(CudaELPSimulator));
+        cudaMemcpy(cudaSim_d, cudaSim, sizeof(CudaELPSimulator), cudaMemcpyHostToDevice);
     }
 
     CUDA_cb_data::CUDA_cb_data(): 

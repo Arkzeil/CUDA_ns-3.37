@@ -2,6 +2,7 @@
 #include "cuda-net-device.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-elp-simulator.h"
 
 namespace ns3 {
 
@@ -53,6 +54,10 @@ namespace ns3 {
         d_delay = delay.GetSeconds();
     }
 
+    __device__ void CudaP2PChannel::test(){
+        printf("CudaP2PChannel: called Test from CUDA ELP Scheduler\n");
+    }
+
     __device__ bool CudaP2PChannel::test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Test function for the channel
         printf("Test function in channel, packet 0: %d\n", data[0]);
@@ -100,7 +105,7 @@ namespace ns3 {
     __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
         printf("TransmitStart function in channel, packet id: %d\n", d_packet->GetUid());
-        printf("Device address: %p\n", src);
+        // printf("Device address: %p\n", src);
         // printf("Transmission time: %f\n", txTime);
         if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
             printf("Channel not initialized\n");
@@ -121,6 +126,8 @@ namespace ns3 {
             cb_data->next->packet = d_packet;
             // printf("d_packet: %p\n", packet);
         }
+
+        cudaSim_d->deviceMethod(this, 0);
 
         return true;
         // uint8_t* d_packet;
