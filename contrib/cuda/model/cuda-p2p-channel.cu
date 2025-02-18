@@ -56,6 +56,7 @@ namespace ns3 {
 
     __device__ void CudaP2PChannel::test(){
         printf("CudaP2PChannel: called Test from CUDA ELP Scheduler\n");
+        // cudaSim_d->insert(this, 0, 0, 0);
     }
 
     __device__ bool CudaP2PChannel::test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
@@ -127,7 +128,7 @@ namespace ns3 {
             // printf("d_packet: %p\n", packet);
         }
 
-        cudaSim_d->deviceMethod(this, 0);
+        // cudaSim_d->deviceMethod(this, 0);
 
         return true;
         // uint8_t* d_packet;

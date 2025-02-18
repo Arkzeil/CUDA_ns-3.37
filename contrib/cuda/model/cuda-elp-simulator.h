@@ -11,6 +11,8 @@
 #include <thread>
 #include <cuda_runtime.h>
 
+#define DEVICE_QUEUE_LENGTH 2048
+
 namespace ns3
 {
     // Forward
@@ -19,11 +21,11 @@ namespace ns3
     // A simplified device-side event structure
     struct DeviceEvent {
         void *impl;   // pointer to the event implementation
-        double ts;    // event timestamp
+        double ts;    // event timestamp, assuming to be second (so using double to store floating point)
         int context;  // event context
-        int uid;      // unique id
+        uint32_t uid;      // unique id
         int type;     // event type identifier
-
+        void *payload; // event-specific payload(usually a pointer to a packet)
         // Add any additional event-specific payload here.
         // For example, a union of data for different event types.
     };
@@ -54,9 +56,10 @@ namespace ns3
         void Cancel(const EventId &id) override;
         bool IsExpired(const EventId &id) const override;
         __host__ void componentMethod();
+        __host__ bool is_safe();
         __host__ void test(void *obj);
         __device__ void deviceMethod(void *obj, int func_id);
-        __host__ __device__ void insert(DeviceEvent* eventQueue, void* impl, int* eventCounter, int totalEvents, double ts, int context, int uid, int type);
+        __device__ void insert(void* impl, double delay, int context, uint32_t type);
         void Run() override;
         Time Now() const override;
         Time GetDelayLeft(const EventId &id) const override;
@@ -93,8 +96,10 @@ namespace ns3
         Ptr<Scheduler> m_events;
 
         CudaELPComponent elpComponent;
+        DeviceEvent* h_safeEventQueue1;
+        DeviceEvent* h_safeEventQueue2;
         DeviceEvent* d_eventQueue;
-        double* d_simulationTime;
+        double *safe_ts;
         int *d_stop;
         int* eventCounter;
 
