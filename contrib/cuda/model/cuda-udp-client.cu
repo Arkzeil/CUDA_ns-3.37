@@ -268,6 +268,8 @@ namespace ns3 {
 
     __device__ void CudaUdpClient::test(){
         printf("CudaUdpClient: called Test from CUDA ELP Scheduler\n");
+        printf("m_sent: %d\n", *m_sent);
+        m_cudaSocket->test();
     }
 
     __host__ void CudaUdpClient::Send() {

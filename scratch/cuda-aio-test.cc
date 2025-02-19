@@ -125,10 +125,18 @@ int main(int argc, char* argv[]) {
   // serverApp.Stop(Seconds(10.0));
   InitCudaSim();
 
+  ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
+  printf("cudaSim: %p\n", cudaSim);
+  cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
+  printf("cudaSim main: %p\n", cudaSim);
+  cudaSim->print_test();
+  // Simulator::GetSystemId();
   Simulator::Run();
-  Simulator::Destroy();
 
   cudaSim->test(GetPointer(app));
+  ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->test(GetPointer(app));
+
+  Simulator::Destroy();
 
   return 0;
 }

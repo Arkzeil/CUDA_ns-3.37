@@ -93,6 +93,13 @@ namespace ns3 {
         // Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
         // CudaELPSimulator* cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
         // cudaSim->componentMethod();
+        Simulator::GetSystemId();
+    }
+
+    __device__ void CudaUdpServer::test(){
+        printf("CudaUdpServer: called Test from CUDA ELP Scheduler\n");
+        // cudaSim_d->insert(this, 0, 0, 0);
+        printf("m_received: %d\n", m_received);
     }
 
     __device__ void CudaUdpServer::HandleRead(CudaSocket* socket) {

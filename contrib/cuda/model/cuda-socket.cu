@@ -345,6 +345,13 @@ namespace ns3{
         }
     }
 
+    __device__ void CudaSocket::test(){
+        printf("CudaSocket: called Test from CUDA ELP Scheduler\n");
+        // cudaSim_d->insert(this, 0, 0, 0);
+        // make sure we can access the member variable, if free is called, it would be nullptr
+        // printf("m_rxAvailable: %d\n", m_rxAvailable);
+    }
+
     int CudaSocket::GetSockName(Address& address) const{
         // Get the socket name
         // address = *m_defaultAddress;

@@ -40,6 +40,7 @@ namespace ns3{
              *
              * \param socket the socket the packet was received to.
              */
+            __device__ void test();
             __device__ void HandleRead(CudaSocket* socket);
 
             void SetPort(uint16_t port);

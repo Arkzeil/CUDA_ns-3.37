@@ -5,6 +5,7 @@
 #include "ns3/ptr.h"
 #include "ns3/scheduler.h"
 #include "ns3/simulator-impl.h"
+#include "helper.h"
 
 #include <list>
 #include <mutex>
@@ -36,81 +37,82 @@ namespace ns3
             // ... other methods
     };
 
-    class CudaELPSimulator : public SimulatorImpl
-    {
-    public:
-        static TypeId GetTypeId();
+    class CudaELPSimulator : public SimulatorImpl, public Managed{
+        public:
+            static TypeId GetTypeId();
 
-        CudaELPSimulator();
-        ~CudaELPSimulator() override;
+            CudaELPSimulator();
+            ~CudaELPSimulator() override;
 
-        void Destroy() override;
-        bool IsFinished() const override;
-        void Stop() override;
-        void Stop(const Time &delay) override;
-        EventId Schedule(const Time &delay, EventImpl *event) override;
-        void ScheduleWithContext(uint32_t context, const Time &delay, EventImpl *event) override;
-        EventId ScheduleNow(EventImpl *event) override;
-        EventId ScheduleDestroy(EventImpl *event) override;
-        void Remove(const EventId &id) override;
-        void Cancel(const EventId &id) override;
-        bool IsExpired(const EventId &id) const override;
-        __host__ void componentMethod();
-        __host__ bool is_safe();
-        __host__ void test(void *obj);
-        __device__ void deviceMethod(void *obj, int func_id);
-        __device__ void insert(void* impl, double delay, int context, uint32_t type);
-        void Run() override;
-        Time Now() const override;
-        Time GetDelayLeft(const EventId &id) const override;
-        Time GetMaximumSimulationTime() const override;
-        void SetScheduler(ObjectFactory schedulerFactory) override;
-        uint32_t GetSystemId() const override;
-        uint32_t GetContext() const override;
-        uint64_t GetEventCount() const override;
+            void Destroy() override;
+            bool IsFinished() const override;
+            void Stop() override;
+            void Stop(const Time &delay) override;
+            EventId Schedule(const Time &delay, EventImpl *event) override;
+            void ScheduleWithContext(uint32_t context, const Time &delay, EventImpl *event) override;
+            EventId ScheduleNow(EventImpl *event) override;
+            EventId ScheduleDestroy(EventImpl *event) override;
+            void Remove(const EventId &id) override;
+            void Cancel(const EventId &id) override;
+            bool IsExpired(const EventId &id) const override;
+            __host__ void componentMethod();
+            __host__ bool is_safe();
+            void test(void *obj);
+            void print_test() const;
+            __device__ void deviceMethod(void *obj, int func_id);
+            __device__ void insert(void* impl, double delay, int context, uint32_t type);
+            void Run() override;
+            Time Now() const override;
+            Time GetDelayLeft(const EventId &id) const override;
+            Time GetMaximumSimulationTime() const override;
+            void SetScheduler(ObjectFactory schedulerFactory) override;
+            uint32_t GetSystemId() const override;
+            uint32_t GetContext() const override;
+            uint64_t GetEventCount() const override;
 
-    private:
-        void DoDispose() override;
+        private:
+            void DoDispose() override;
 
-        void ProcessOneEvent();
-        void ProcessEventsWithContext();
+            void ProcessOneEvent();
+            void ProcessEventsWithContext();
 
-        struct EventWithContext
-        {
-            uint32_t context;
-            uint64_t timestamp;
-            EventImpl *event;
-        };
-        typedef std::list<struct EventWithContext> EventsWithContext;
-        EventsWithContext m_eventsWithContext;
-        bool m_eventsWithContextEmpty;
-        std::mutex m_eventsWithContextMutex;
+            struct EventWithContext
+            {
+                uint32_t context;
+                uint64_t timestamp;
+                EventImpl *event;
+            };
+            typedef std::list<struct EventWithContext> EventsWithContext;
+            EventsWithContext m_eventsWithContext;
+            bool m_eventsWithContextEmpty;
+            std::mutex m_eventsWithContextMutex;
 
-        // struct DestroyEvents
-        // {
-        //     EventId PeekEventImpl() const;
-        // };
-        typedef std::list<EventId> DestroyEvents;
-        DestroyEvents m_destroyEvents;
-        bool m_stop;
-        Ptr<Scheduler> m_events;
+            // struct DestroyEvents
+            // {
+            //     EventId PeekEventImpl() const;
+            // };
+            typedef std::list<EventId> DestroyEvents;
+            DestroyEvents m_destroyEvents;
+            bool m_stop;
+            Ptr<Scheduler> m_events;
 
-        CudaELPComponent elpComponent;
-        DeviceEvent* h_safeEventQueue1;
-        DeviceEvent* h_safeEventQueue2;
-        DeviceEvent* d_eventQueue;
-        double *safe_ts;
-        int *d_stop;
-        int* eventCounter;
+            CudaELPComponent elpComponent;
+            DeviceEvent* h_safeEventQueue1;
+            DeviceEvent* h_safeEventQueue2;
+            DeviceEvent* d_eventQueue;
+            double *safe_ts;
+            int *d_stop;
+            int* eventCounter;
+            uint32_t m_test;
 
-        uint32_t m_uid;
-        uint32_t m_currentUid;
-        uint64_t m_currentTs;
-        uint32_t m_currentContext;
-        uint64_t m_eventCount;
-        int m_unscheduledEvents;
+            uint32_t m_uid;
+            uint32_t m_currentUid;
+            uint64_t m_currentTs;
+            uint32_t m_currentContext;
+            uint64_t m_eventCount;
+            int m_unscheduledEvents;
 
-        std::thread::id m_mainThreadId;
+            std::thread::id m_mainThreadId;
     };
 } // namespace ns3
 

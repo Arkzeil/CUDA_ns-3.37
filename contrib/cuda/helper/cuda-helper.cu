@@ -7,8 +7,8 @@
 
 namespace ns3
 {
-    CudaELPSimulator* cudaSim = nullptr;
-    CudaELPSimulator* cudaSim_d = nullptr;
+    __managed__ CudaELPSimulator* cudaSim = nullptr;
+    __device__ CudaELPSimulator* cudaSim_d = nullptr;
 
     bool InitCUDA(cudaDeviceProp &prop) {
         int count;
@@ -94,11 +94,14 @@ namespace ns3
     }
 
     __host__ void InitCudaSim(){
-        Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
-        cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
+        // Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
+        // cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
+        // CudaELPSimulator* cudaSim = static_cast<CudaELPSimulator*>(GetPointer(Simulator::GetImplementation()));
+        cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
+        printf("cudaSim Init: %p\n", cudaSim);
 
-        cudaMalloc((void**)&cudaSim_d, sizeof(CudaELPSimulator));
-        cudaMemcpy(cudaSim_d, cudaSim, sizeof(CudaELPSimulator), cudaMemcpyHostToDevice);
+        // cudaMalloc((void**)&cudaSim_d, sizeof(CudaELPSimulator));
+        // cudaMemcpy(cudaSim_d, cudaSim, sizeof(CudaELPSimulator), cudaMemcpyHostToDevice);
     }
 
     CUDA_cb_data::CUDA_cb_data(): 

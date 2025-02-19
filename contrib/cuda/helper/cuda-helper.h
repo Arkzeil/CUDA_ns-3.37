@@ -43,7 +43,7 @@ namespace ns3
     class CudaPacket;
     class CudaELPSimulator;
 
-    extern CudaELPSimulator* cudaSim;
+    extern __managed__ CudaELPSimulator* cudaSim;
     extern __device__ CudaELPSimulator* cudaSim_d;
 
     class DeviceCallback {

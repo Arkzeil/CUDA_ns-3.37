@@ -18,7 +18,7 @@ namespace ns3{
 
     class CUDA_cb_data;
 
-    class CudaUdpClient : public Application {
+    class CudaUdpClient : public Application, public Managed{
         public:
             __host__ static TypeId GetTypeId(void);
 

@@ -45,6 +45,7 @@ namespace ns3{
             Ptr<Packet> RecvFrom(uint32_t maxSize, uint32_t flags, Address& fromAddress) override;
             __device__ void ForwardPacket(CudaPacket* d_packet);
             __device__ CudaPacket* CudaRecv(uint32_t maxSize, uint32_t flags, uint32_t* from);
+            __device__ void test();
             int GetSockName(Address& address) const override;
             
             uint32_t GetTxAvailable() const override;
