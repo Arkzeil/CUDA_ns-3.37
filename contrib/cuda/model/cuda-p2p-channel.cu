@@ -114,20 +114,21 @@ namespace ns3 {
         }
         uint32_t wire = src == m_link[0].m_src ? 0 : 1;
 
-        if(cb_data->next == nullptr) {
-            printf("Next is null\n");
+        if(cb_data != nullptr){
+            if(cb_data->next == nullptr) {
+                printf("Next is null\n");
+            }
+            else{
+                cb_data->next->empty = false;
+                cb_data->packetSize = d_packet->GetSize();
+                cb_data->next->dst = m_link[wire].m_dst;
+                cb_data->next->delay = txTime + d_delay;
+                cb_data->next->func_id = 0;
+                cb_data->next->packetBuffer[0] = d_packet->m_data[0];
+                cb_data->next->packet = d_packet;
+                // printf("d_packet: %p\n", packet);
+            }
         }
-        else{
-            cb_data->next->empty = false;
-            cb_data->packetSize = d_packet->GetSize();
-            cb_data->next->dst = m_link[wire].m_dst;
-            cb_data->next->delay = txTime + d_delay;
-            cb_data->next->func_id = 0;
-            cb_data->next->packetBuffer[0] = d_packet->m_data[0];
-            cb_data->next->packet = d_packet;
-            // printf("d_packet: %p\n", packet);
-        }
-
         // cudaSim_d->deviceMethod(this, 0);
 
         return true;

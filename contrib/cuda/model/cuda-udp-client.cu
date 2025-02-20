@@ -4,6 +4,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-elp-simulator.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
 #include <iostream>
@@ -149,6 +150,9 @@ namespace ns3 {
         // cudaMallocManaged((void**)&(d_data->packetBuffer), m_size);
         // m_socket->SetRecvCallback(MakeCallback(&CudaUdpClient::Receive, this));
         m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
+
+        ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
+        ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
     }
 
     void
@@ -270,6 +274,15 @@ namespace ns3 {
         printf("CudaUdpClient: called Test from CUDA ELP Scheduler\n");
         printf("m_sent: %d\n", *m_sent);
         m_cudaSocket->test();
+    }
+
+    __device__ void CudaUdpClient::ELP_Send(){
+        CudaPacket* cuda_packet;
+        cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+        new(cuda_packet) CudaPacket();
+        cuda_packet->Allocate(m_size);
+
+        m_cudaSocket->Send(cuda_packet, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

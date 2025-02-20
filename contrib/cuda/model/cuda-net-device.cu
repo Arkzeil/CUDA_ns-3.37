@@ -258,14 +258,15 @@ namespace ns3 {
     // assuming m_InterframeGap is 0
     float TxTime = (float)(packet->GetSize() * 8) / d_bps; // in seconds
 
-    cb_data->empty = false;
-    // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
-    // cb_data->next->init();
-    cb_data->packetSize = 0;
-    cb_data->dst = this;
-    cb_data->delay = TxTime;
-    cb_data->func_id = 1;
-
+    if(cb_data != nullptr){
+      cb_data->empty = false;
+      // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
+      // cb_data->next->init();
+      cb_data->packetSize = 0;
+      cb_data->dst = this;
+      cb_data->delay = TxTime;
+      cb_data->func_id = 1;
+    }
     // cudaEventSynchronize(m_event);
     // cudaFree(cb_data->packet->m_data);
 

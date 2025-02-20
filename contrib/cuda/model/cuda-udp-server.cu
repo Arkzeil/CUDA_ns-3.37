@@ -93,7 +93,7 @@ namespace ns3 {
         // Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
         // CudaELPSimulator* cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
         // cudaSim->componentMethod();
-        Simulator::GetSystemId();
+        // Simulator::GetSystemId();
     }
 
     __device__ void CudaUdpServer::test(){
@@ -115,7 +115,7 @@ namespace ns3 {
             
             cudaFree(packet);
         }
-
+        // cudaSim->print_test();
         // cudaSim_d->deviceMethod();
     }
 

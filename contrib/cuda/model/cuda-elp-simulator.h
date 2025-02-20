@@ -26,6 +26,7 @@ namespace ns3
         int context;  // event context
         uint32_t uid;      // unique id
         int type;     // event type identifier
+        bool valid;  // a flag to indicate if the event is valid
         void *payload; // event-specific payload(usually a pointer to a packet)
         // Add any additional event-specific payload here.
         // For example, a union of data for different event types.
@@ -57,10 +58,12 @@ namespace ns3
             bool IsExpired(const EventId &id) const override;
             __host__ void componentMethod();
             __host__ bool is_safe();
+            __host__ void ELP_Init();
             void test(void *obj);
-            void print_test() const;
+            __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
-            __device__ void insert(void* impl, double delay, int context, uint32_t type);
+            __host__ void h_insert(void* impl, double delay, int context, int type, int nodeID);
+            __device__ void insert(void* impl, double delay, int context, int type);
             void Run() override;
             Time Now() const override;
             Time GetDelayLeft(const EventId &id) const override;
@@ -97,16 +100,23 @@ namespace ns3
             Ptr<Scheduler> m_events;
 
             CudaELPComponent elpComponent;
+            // these are ping-pong buffers for host to save the events and device to fetch
             DeviceEvent* h_safeEventQueue1;
             DeviceEvent* h_safeEventQueue2;
+            // this is a array for device-side to check if there is any event to be executed
             DeviceEvent* d_eventQueue;
+            // this is a array for device-side to store the next event to be scheduled on host
+            DeviceEvent* d_nextEventQueue;
+            // safe timestamp for both host and device to check if the event is safe to be executed
             double *safe_ts;
+            // a stop flag for device to check if the simulation is finished
             int *d_stop;
             int* eventCounter;
             uint32_t m_test;
 
             uint32_t m_uid;
             uint32_t m_currentUid;
+            // the unit is in nanoseconds
             uint64_t m_currentTs;
             uint32_t m_currentContext;
             uint64_t m_eventCount;

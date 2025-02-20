@@ -126,15 +126,16 @@ int main(int argc, char* argv[]) {
   InitCudaSim();
 
   ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
-  printf("cudaSim: %p\n", cudaSim);
+  // printf("cudaSim: %p\n", cudaSim);
   cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
-  printf("cudaSim main: %p\n", cudaSim);
-  cudaSim->print_test();
+  // printf("cudaSim main: %p\n", cudaSim);
+  // cudaSim->print_test();
   // Simulator::GetSystemId();
   Simulator::Run();
 
   cudaSim->test(GetPointer(app));
-  ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->test(GetPointer(app));
+  // printf("Current time: %f\n", Simulator::Now().GetSeconds());
+  // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->test(GetPointer(app));
 
   Simulator::Destroy();
 

@@ -31,6 +31,7 @@ namespace ns3{
             void RecvTest(Time sendTime);
 
             __device__ void test();
+            __device__ void ELP_Send();
 
         protected:
             __host__ virtual void Send(); // Override the Send method.
