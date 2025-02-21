@@ -95,6 +95,9 @@ namespace ns3 {
                 ev->Invoke();
             }
         }
+
+        // Free the allocated memory
+        ELP_Cleanup();
     }
 
     void CudaELPSimulator::SetScheduler(ObjectFactory schedulerFactory)
@@ -174,6 +177,67 @@ namespace ns3 {
         }
     }
 
+    __host__ void CudaELPSimulator::componentMethod() {
+        // This method is called from the main ns-3 simulation thread.
+        // It can be used to launch the CUDA kernel or perform other operations.
+        // For example, you might launch the kernel with a specific block size and grid size.
+        // PersistentEventKernel<<<1, 32>>>(d_eventCount, eventCounter, 100);
+        elpComponent.mymethod();
+    }
+
+    __host__ void CudaELPSimulator::ELP_Init(){
+        cudaStreamCreate(&streamK);
+        cudaStreamCreate(&streamC);
+        cudaCheckErrors("stream creation failed");
+        // Allocate and initialize the stop flag on the device
+        cudaMallocManaged(&d_stop, sizeof(int));
+        cudaMallocManaged(&safe_ts, sizeof(double));
+        cudaMemset(safe_ts, 1, sizeof(double));
+        cudaCheckErrors("stop and safe_ts cudaMallocManaged failed");
+        // Allocate and initialize the event queue on the UMA
+        cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
+        cudaMallocManaged(&h_safeEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
+        // cudaMallocManaged(&d_eventQueue, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
+        cudaMallocManaged(&d_nextEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
+        cudaMallocManaged(&d_nextEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
+        // cudaMemset(d_eventQueue, 0, 100 * sizeof(DeviceEvent));
+        cudaCheckErrors("queue cudaMallocManaged failed");
+        cudaMallocManaged(&h_bufrdy1, sizeof(int));
+        cudaMallocManaged(&h_bufrdy2, sizeof(int));
+        cudaMallocManaged(&d_bufrdy1, sizeof(int));
+        cudaMallocManaged(&d_bufrdy2, sizeof(int));
+        cudaCheckErrors("ready flags cudaMallocManaged failed");
+        
+        cudaMemset((void*)h_bufrdy1, 0, sizeof(int));
+        cudaMemset((void*)h_bufrdy2, 0, sizeof(int));
+        cudaMemset((void*)d_bufrdy1, 0, sizeof(int));
+        cudaMemset((void*)d_bufrdy2, 0, sizeof(int));
+        cudaCheckErrors("ready flags cudaMemset failed");
+
+        // Allocate and initialize the event counter on the device
+        cudaMallocManaged(&eventCounter, sizeof(int));
+        cudaCheckErrors("counter cudaMallocManaged failed");
+
+        // Initialize the event buffer
+        h_eventQueue = h_safeEventQueue1;
+        d_eventQueue = d_nextEventQueue1;
+        h_bufrdy = h_bufrdy1;
+        d_bufrdy = d_bufrdy1;
+    }
+
+    __host__ void CudaELPSimulator::ELP_Cleanup(){
+        // Free the allocated memory
+        cudaFree(h_safeEventQueue1);
+        cudaFree(h_safeEventQueue2);
+        // cudaFree(d_eventQueue);
+        cudaFree(d_nextEventQueue1);
+        cudaFree(d_nextEventQueue2);
+        cudaFree(eventCounter);
+        cudaFree(safe_ts);
+        cudaFree(d_stop);
+        cudaCheckErrors("cleanup cudaFree failed");
+    }
+
     // Device functions to process different event types
     __device__ void ProcessType0(DeviceEvent* ev) {
         // Insert logic analogous to what your C++ ns-3 event might do
@@ -194,7 +258,6 @@ namespace ns3 {
         printf("Processing Type 2 event\n");
         ((CudaUdpClient*)(ev->impl))->test();
     }
-
     // General device function that processes an event based on its type.
     __device__ void ProcessOneEvent(DeviceEvent* ev) {
         // You might include pre-event hooks here if needed.
@@ -227,8 +290,13 @@ namespace ns3 {
         // Post-event processing can be added here as well.
     }
 
-   // A persistent kernel that polls the device queue and executes events when their time is reached.
-    __global__ void PersistentEventKernel(DeviceEvent* d_eventQueue, int* d_eventCount, double* d_safe_ts, int* d_stop) {
+    // A persistent kernel that polls the device queue and executes events when their time is reached.
+    __global__ void PersistentEventKernel(DeviceEvent* h_safeEventQueue1, DeviceEvent* h_safeEventQueue2, 
+                                        DeviceEvent* d_nextEventQueue1, DeviceEvent* d_nextEventQueue2, 
+                                        volatile int *h_bufrdy1, volatile int *h_bufrdy2,
+                                        volatile int *d_bufrdy1, volatile int *d_bufrdy2,
+                                        int* d_eventCount, double* d_safe_ts, int* d_stop) {
+
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
         const int totalThreads = gridDim.x * blockDim.x;
 
@@ -237,14 +305,31 @@ namespace ns3 {
             *d_eventCount = 100;
         }
 
+        DeviceEvent* eventQueue;
+        volatile int* h_bufrdy;
+        volatile int* d_bufrdy;
+        bool pos = 0;
+
         __syncthreads();
         
         // Loop forever or until a termination condition is met.
         while (!*d_stop) {
             // Each thread polls for an event to process.
             int index = tid;
+
+            eventQueue = (!pos) ? h_safeEventQueue1 : h_safeEventQueue2;
+            h_bufrdy = (!pos) ? h_bufrdy1 : h_bufrdy2;
+            d_bufrdy = (!pos) ? d_bufrdy1 : d_bufrdy2;
+            
+            // Poll the buffer ready flag to check if the buffer is ready for reading.
+            if(!(*h_bufrdy) ){
+                // check if the other buffer is ready
+                pos = !pos;
+                continue;
+            }
+
             if (index < *d_eventCount && index < DEVICE_QUEUE_LENGTH) {
-                DeviceEvent* ev = &d_eventQueue[index];
+                DeviceEvent* ev = &eventQueue[index];
                 
                 // (*d_safe_ts)++;
                 // Process the event based on its type.
@@ -263,79 +348,49 @@ namespace ns3 {
             // else{
             //     cudaStreamWaitEvent(0, event);
             // }
+            // check if the other buffer is ready
+            pos = !pos;
             // Optionally, add a delay or yield to avoid busy waiting.
+            if(tid == 0){
+                // printf("pos: %d\n", pos);
+                *h_bufrdy = 0;
+                *d_bufrdy = 0;
+            }
             __syncthreads();
         }
     }
 
-    __host__ void CudaELPSimulator::componentMethod() {
-        // This method is called from the main ns-3 simulation thread.
-        // It can be used to launch the CUDA kernel or perform other operations.
-        // For example, you might launch the kernel with a specific block size and grid size.
-        // PersistentEventKernel<<<1, 32>>>(d_eventCount, eventCounter, 100);
-        elpComponent.mymethod();
-    }
-
-    __host__ void CudaELPSimulator::ELP_Init(){
-        // Allocate and initialize the stop flag on the device
-        cudaMallocManaged(&d_stop, sizeof(int));
-        cudaMallocManaged(&safe_ts, sizeof(double));
-        cudaMemset(safe_ts, 1, sizeof(double));
-        cudaCheckErrors("stop and safe_ts cudaMallocManaged failed");
-        // Allocate and initialize the event queue on the UMA
-        cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        cudaMallocManaged(&h_safeEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        cudaMallocManaged(&d_eventQueue, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        cudaMallocManaged(&d_nextEventQueue, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        // cudaMemset(d_eventQueue, 0, 100 * sizeof(DeviceEvent));
-        cudaCheckErrors("queue cudaMallocManaged failed");
-
-        // Allocate and initialize the event counter on the device
-        cudaMallocManaged(&eventCounter, sizeof(int));
-        cudaCheckErrors("counter cudaMallocManaged failed");
-    }
+    
 
     void CudaELPSimulator::test(void *obj){
-        cudaStream_t streamK;
-        cudaStream_t streamC;
-        cudaStreamCreate(&streamK);
-        cudaStreamCreate(&streamC);
-
-        printf("Current ts: %lu\n", m_currentTs);
+        // printf("Current ts: %lu\n", m_currentTs);
         // cudaSim = this;
         // printf("This: %p\n", this);
-        printf("test: %d\n", m_test);
+        // printf("test: %d\n", m_test);
 
         // cudaEventCreate(&event);
-        int *h_buf1, *d_buf1, *h_buf2, *d_buf2;
-        volatile int *m_bufrdy1, *m_bufrdy2;
-        // Allocate the ready flags on the device
-        // cudaMallocManaged(&h_buf1, sizeof(int));
-        // cudaMallocManaged(&h_buf2, sizeof(int));
-        cudaMallocManaged(&m_bufrdy1, sizeof(int));
-        cudaMallocManaged(&m_bufrdy2, sizeof(int));
-        cudaCheckErrors("ready flag cudaMallocManaged failed");
-        // Allocate the buffers on the device
-        // cudaMalloc(&d_buf1, 1024 * sizeof(int));
-        // cudaMalloc(&d_buf2, 1024 * sizeof(int));
-        // checkCudaErr();
+        
         // ELP_Init();
-        // Allocate and initialize the simulation time on the device
-        // cudaMallocManaged(&d_simulationTime, sizeof(double));
-        // cudaMemcpy(d_simulationTime, &m_currentTs, sizeof(double), cudaMemcpyHostToDevice);
-        // checkCudaErr();
+        
+        bool pos = 0;
+        
         // Launch the persistent event processing kernel
-        PersistentEventKernel<<<1, 32, 0, streamK>>>(d_eventQueue, eventCounter, safe_ts, d_stop);
+        PersistentEventKernel<<<1, 32, 0, streamK>>>(h_safeEventQueue1, h_safeEventQueue2,  
+                                                    d_nextEventQueue1, d_nextEventQueue2, 
+                                                    h_bufrdy1, h_bufrdy2, 
+                                                    d_bufrdy1, d_bufrdy2,
+                                                    eventCounter, safe_ts, d_stop);
         printf("Kernel launched\n");
         cudaCheckErrors("kernel launch failed");
 
-        double currentSimTime = 0.0;
         bool simulationFinished = false;
-
-        // cudaMemcpyToSymbolAsync(d_simulationTime, &currentSimTime, sizeof(double), 0, cudaMemcpyHostToDevice);
-        printf("Simulation time: %f\n", currentSimTime);
+        // int count = 0;
 
         while(!simulationFinished){
+            h_eventQueue = (!pos) ? h_safeEventQueue1 : h_safeEventQueue2;
+            h_bufrdy = (!pos) ? h_bufrdy1 : h_bufrdy2;
+            d_bufrdy = (!pos) ? d_bufrdy1 : d_bufrdy2;
+
             // insert event
             DeviceEvent ev;
             ev.type = 1;
@@ -346,32 +401,35 @@ namespace ns3 {
             ev.valid = true;
 
             printf("Inserting event\n");
-            cudaMemcpyAsync(&d_eventQueue[3], &ev, sizeof(DeviceEvent), cudaMemcpyHostToDevice, streamC);
+            // wait for the buffer to be ready(still processing by the kernel)
+            while(*h_bufrdy);
+
+            cudaMemcpyAsync(&h_eventQueue[3], &ev, sizeof(DeviceEvent), cudaMemcpyHostToDevice, streamC);
             cudaCheckErrors("queue cudaMemcpyAsync failed");
+            
             ev.type = 2;
-            ev.valid = true;
-            cudaMemcpyAsync(&d_eventQueue[1], &ev, sizeof(DeviceEvent), cudaMemcpyHostToDevice, streamC);
+            cudaMemcpyAsync(&h_eventQueue[1], &ev, sizeof(DeviceEvent), cudaMemcpyHostToDevice, streamC);
             cudaCheckErrors("queue cudaMemcpyAsync failed");
+            /****************************************************************************** */
+            // if this line is faster than the memcpy, the kernel will not see the new event
+            /****************************************************************************** */
+            cudaStreamSynchronize(streamC);
+            *h_bufrdy = 1;
+
             printf("Events inserted\n");
 
-            // cudaMemset(eventCounter, 2, sizeof(int));
-            // cudaMemcpyAsync(eventCounter, &(ev.type), sizeof(int), cudaMemcpyHostToDevice, streamC);
-            // checkCudaErr();
-
+            pos = !pos;
             // cudaEventRecord(event, stream);
             // insert(d_eventQueue, ev.impl, eventCounter, 100, ev.ts, ev.context, ev.uid, ev.type);
+            // if(count++ == 2)
             simulationFinished = true;
         }
-
-        // cudaMemset(d_stop, true, sizeof(bool));
-        // cudaMemset(d_stop, 1, sizeof(int));
         
         sleep(1);
 
         int stop = 1;
         cudaMemcpyAsync(d_stop, &stop, sizeof(int), cudaMemcpyHostToDevice, streamC);
         cudaCheckErrors("stop cudaMemcpyAsync failed");
-        printf("Simulation finished\n");
 
         // Wait for the kernel to finish
         cudaStreamSynchronize(streamK);
@@ -379,17 +437,10 @@ namespace ns3 {
         cudaStreamSynchronize(streamC);
         printf("Stream finished\n");
         // printf("safe_ts: %f\n", *safe_ts);
-        printf("next event: %d\n", d_nextEventQueue[0].type);
+        printf("next event: %d\n", d_nextEventQueue1[0].type);
         // Free the streams
         cudaStreamDestroy(streamK);
         cudaStreamDestroy(streamC);
-        // Free the allocated memory
-        cudaFree(h_safeEventQueue1);
-        cudaFree(h_safeEventQueue2);
-        cudaFree(d_eventQueue);
-        cudaFree(eventCounter);
-        cudaFree(safe_ts);
-        cudaFree(d_stop);
     }
 
     __host__ __device__ void CudaELPSimulator::print_test() const{
@@ -404,20 +455,54 @@ namespace ns3 {
     }
 
     __host__ void CudaELPSimulator::h_insert(void* impl, double delay, int context, int type, int nodeID){
-        int tid = nodeID;
-        // we can't access variables of class object if member function is called by non-member __device__ function?
-        // printf("tid: %d\n", tid);                    // Debugging
-        d_eventQueue[tid] = DeviceEvent{impl, delay, context, 0, type, true};
-        d_nextEventQueue[tid] = DeviceEvent{nullptr, 0, 0, 0, -1, true};
+        while(*h_bufrdy);
+        h_eventQueue[nodeID] = DeviceEvent{impl, delay, context, 0, type, true};
+        *h_bufrdy = 1;
     }
 
-    __device__ void CudaELPSimulator::insert(void* impl, double delay, int context, int type){
+    __device__ void CudaELPSimulator::d_insert(void* impl, double delay, int context, int type, void *payload){
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         printf("insert: %d\n", m_test);
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
-        d_eventQueue[tid] = DeviceEvent{impl, delay, context, 0, type, true, nullptr};
-        d_nextEventQueue[tid] = DeviceEvent{nullptr, 0, 0, 0, -1};
+        d_eventQueue[tid] = DeviceEvent{impl, delay, context, 0, type, true, payload};
+    }
+
+    bool CudaELPSimulator::is_safe(uint64_t ts){
+        return ts < *safe_ts;
+    }
+
+    void CudaELPSimulator::ELP_ProcessOneEvent(){
+        Scheduler::Event next = m_events->RemoveNext();
+
+        h_insert(next.impl, next.key.m_ts, next.key.m_context, next.key.m_uid, 0);
+    }
+
+    void CudaELPSimulator::ELP_Run(){
+        NS_LOG_FUNCTION(this);
+        // Set the current threadId as the main threadId
+        m_mainThreadId = std::this_thread::get_id();
+        ProcessEventsWithContext();
+        m_stop = false;
+
+        while (!m_events->IsEmpty() && !m_stop){
+            Scheduler::Event next = m_events->PeekNext();
+
+            if(!is_safe(next.key.m_ts)){
+                // synchronize with the device
+                cudaStreamSynchronize(streamC);
+            }
+
+            if(__glibc_likely(next.key.m_uid == EventId::UID::RESERVED)){
+                ELP_ProcessOneEvent();
+            }
+            else
+                ProcessOneEvent();
+        }
+
+        // If the simulator stopped naturally by lack of events, make a
+        // consistency test to check that we didn't lose any events along the way.
+        NS_ASSERT(!m_events->IsEmpty() || m_unscheduledEvents == 0);
     }
 
     void CudaELPSimulator::Run()

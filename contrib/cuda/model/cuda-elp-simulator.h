@@ -56,14 +56,20 @@ namespace ns3
             void Remove(const EventId &id) override;
             void Cancel(const EventId &id) override;
             bool IsExpired(const EventId &id) const override;
+            
             __host__ void componentMethod();
-            __host__ bool is_safe();
+            __host__ bool is_safe(uint64_t ts);
             __host__ void ELP_Init();
+            __host__ void ELP_Cleanup();
+            __host__ void ELP_Run();
             void test(void *obj);
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
+            // for host to insert an event
             __host__ void h_insert(void* impl, double delay, int context, int type, int nodeID);
-            __device__ void insert(void* impl, double delay, int context, int type);
+            // for device to insert an event
+            __device__ void d_insert(void* impl, double delay, int context, int type, void* payload);
+            
             void Run() override;
             Time Now() const override;
             Time GetDelayLeft(const EventId &id) const override;
@@ -78,6 +84,8 @@ namespace ns3
 
             void ProcessOneEvent();
             void ProcessEventsWithContext();
+
+            __host__ void ELP_ProcessOneEvent();
 
             struct EventWithContext
             {
@@ -99,14 +107,29 @@ namespace ns3
             bool m_stop;
             Ptr<Scheduler> m_events;
 
+            // CUDA specific members
+            cudaStream_t streamK;
+            cudaStream_t streamC;
+
             CudaELPComponent elpComponent;
             // these are ping-pong buffers for host to save the events and device to fetch
             DeviceEvent* h_safeEventQueue1;
             DeviceEvent* h_safeEventQueue2;
             // this is a array for device-side to check if there is any event to be executed
+            // DeviceEvent* d_eventQueue;
+            // these are ping-pong buffers for device-side to store the next event to be scheduled on host
+            DeviceEvent* d_nextEventQueue1;
+            DeviceEvent* d_nextEventQueue2;
+            // flags fot ping-pong buffers to indicate if the buffer is ready to be read
+            volatile int *h_bufrdy1;
+            volatile int *h_bufrdy2;
+            volatile int *d_bufrdy1;
+            volatile int *d_bufrdy2;
+            // to save current chosen buffer
+            DeviceEvent* h_eventQueue;
             DeviceEvent* d_eventQueue;
-            // this is a array for device-side to store the next event to be scheduled on host
-            DeviceEvent* d_nextEventQueue;
+            volatile int* h_bufrdy;
+            volatile int* d_bufrdy;
             // safe timestamp for both host and device to check if the event is safe to be executed
             double *safe_ts;
             // a stop flag for device to check if the simulation is finished
