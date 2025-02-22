@@ -65,13 +65,13 @@ namespace ns3
         return true;
     }
 
-    int debug_printf(int output_flag, const char *format, ...) {
+    int debug_printf(const char *format, ...) {
         va_list args;
         int chars_printed = 0;
 
         va_start(args, format);
 
-        if (output_flag) {  // Check the flag before printing
+        if (debug_print) {  // Check the flag before printing
             chars_printed = vprintf(format, args); // Use vprintf for variable arguments
         }
 

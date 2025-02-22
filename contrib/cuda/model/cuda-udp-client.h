@@ -17,6 +17,7 @@ namespace ns3{
     class CudaSocket;
 
     class CUDA_cb_data;
+    class CudaELPSimulator;
 
     class CudaUdpClient : public Application, public Managed{
         public:
@@ -54,13 +55,16 @@ namespace ns3{
             uint32_t *m_sent;       //!< Counter for sent packets
             uint64_cu *m_totalTx;    //!< Total bytes sent
             Ptr<Socket> m_socket;  //!< Socket
-            CudaSocket* m_cudaSocket; //!< CUDA socket
+            
             Address m_peerAddress; //!< Remote peer address
             uint16_t m_peerPort;   //!< Remote peer port
             EventId m_sendEvent;   //!< Event to send the next packet
             bool m_running;        //!< Flag to indicate if the application is running
 
             // GPU resources
+            CudaELPSimulator* m_cudaSim; //!< CUDA simulator
+            double d_interval; //!< Packet inter-send time in seconds
+            CudaSocket* m_cudaSocket; //!< CUDA socket
             uint8_t* d_packetBuffer;      // Device memory for packet data
             cudaStream_t m_cudaStream;   // CUDA stream for async processing
     };

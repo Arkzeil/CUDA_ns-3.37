@@ -32,6 +32,12 @@ namespace ns3
         // For example, a union of data for different event types.
     };
 
+    struct HostEvent{
+        void *obj;
+        int type;
+        void *payload;
+    };
+
     class CudaELPComponent {
         public:
             void mymethod();
@@ -62,12 +68,13 @@ namespace ns3
             __host__ void ELP_Init();
             __host__ void ELP_Cleanup();
             __host__ void ELP_Run();
+            __host__ void ELP_Schedule(const Time &delay, void *obj, int type, void *payload);
             void test(void *obj);
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
-            // for host to insert an event
+            // for host to insert an safe event for device to execute
             __host__ void h_insert(void* impl, double delay, int context, int type, int nodeID);
-            // for device to insert an event
+            // for device to insert an event for host to schedule
             __device__ void d_insert(void* impl, double delay, int context, int type, void* payload);
             
             void Run() override;
@@ -136,6 +143,7 @@ namespace ns3
             int *d_stop;
             int* eventCounter;
             uint32_t m_test;
+            uint32_t d_uid;
 
             uint32_t m_uid;
             uint32_t m_currentUid;

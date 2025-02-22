@@ -105,6 +105,7 @@ namespace ns3 {
     {
         // NS_LOG_FUNCTION(this << interval);
         m_interval = interval;
+        d_interval = m_interval.GetSeconds();
     }
 
     void CudaUdpClient::RecvTest(Time sendTime) {
@@ -149,10 +150,14 @@ namespace ns3 {
         }
         // cudaMallocManaged((void**)&(d_data->packetBuffer), m_size);
         // m_socket->SetRecvCallback(MakeCallback(&CudaUdpClient::Receive, this));
-        m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
+        m_cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
+        d_interval = m_interval.GetSeconds();
 
-        ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
-        ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
+        // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
+        m_cudaSim->ELP_Schedule(Seconds(0.0), this, 0, nullptr);
+
+        // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
+        // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
     }
 
     void
@@ -169,7 +174,7 @@ namespace ns3 {
         }
         else if(m_cudaSocket){
             // EventDispatcher::GetInstance().StopWorker();
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
             m_cudaSocket->Close();
             // checkCudaErr();
             // printf("Deleting m_cudaSocket: %p\n", m_cudaSocket);
@@ -283,6 +288,9 @@ namespace ns3 {
         cuda_packet->Allocate(m_size);
 
         m_cudaSocket->Send(cuda_packet, nullptr);
+
+        // Schedule the next send event 
+        m_cudaSim->d_insert(this, d_interval, 0, 0, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {
@@ -366,7 +374,7 @@ namespace ns3 {
         // d_data->client = (void*)this;
         // d_data->packetSize = 123;
         d_data->sendTime = Simulator::Now();
-        cudaDeviceSynchronize();
+        // cudaDeviceSynchronize();
         // printf("cb_data: %p\n", d_data);
         
         // cudaEventCreate(&startEvent);
@@ -376,7 +384,7 @@ namespace ns3 {
         new(cuda_packet) CudaPacket();
         cuda_packet->Allocate(m_size);
 
-        GeneratePacketKernel<<<gridSize, blockSize, 0, m_cudaStream>>>(cuda_packet, m_cudaSocket, m_size, m_sent, m_totalTx, d_data);
+        GeneratePacketKernel<<<1, 1, 0, m_cudaStream>>>(cuda_packet, m_cudaSocket, m_size, m_sent, m_totalTx, d_data);
         // cudaEventCreate(&stopEvent);
         
         // cudaStreamSynchronize(m_cudaStream);

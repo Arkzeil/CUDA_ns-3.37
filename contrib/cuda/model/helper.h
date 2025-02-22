@@ -16,7 +16,7 @@ public:
       printf("cudaMallocManaged failed\n");
     }
     
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
 
     printf("Allocated Unified Memory at %p\n", ptr);  
     
@@ -33,7 +33,7 @@ public:
         cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
         if (err == cudaSuccess && attributes.type == cudaMemoryTypeManaged) {
             printf("Freeing Unified Memory at %p\n", ptr);
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
             cudaFree(ptr);
         } else {
             printf("Warning: Trying to free invalid/unmanaged pointer %p\n", ptr);
@@ -53,7 +53,7 @@ public:
       printf("cudaMallocManaged failed\n");
     }
     
-    cudaDeviceSynchronize();
+    // cudaDeviceSynchronize();
 
     printf("Allocated Unified Memory for array at %p\n", ptr);  
     
@@ -69,7 +69,7 @@ public:
         cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
         if (err == cudaSuccess && attributes.type == cudaMemoryTypeManaged) {
             printf("Freeing Unified Memory for array at %p\n", ptr);
-            cudaDeviceSynchronize();
+            // cudaDeviceSynchronize();
             cudaFree(ptr);
         } else {
             printf("Warning: Trying to free invalid/unmanaged pointer %p\n", ptr);

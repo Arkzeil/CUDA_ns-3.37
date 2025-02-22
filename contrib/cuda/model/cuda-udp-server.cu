@@ -66,6 +66,7 @@ namespace ns3 {
             if(!m_cudaSocket){
                 printf("Creating new socket at node %d\n", node->GetId());
                 m_cudaSocket = CudaSocket::CreateSocket(node);
+                printf("Completed\n");
                 // m_cudaSocket->SetNode(node);
                 // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
                 // m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
@@ -74,6 +75,7 @@ namespace ns3 {
                     NS_LOG_ERROR("Failed to bind socket");
                     return;
                 }
+                printf("CudaUdpServer bound to port %d\n", m_port);
             }
             m_cudaSocket->SetRecv(this);
             printf("CudaUdpServer started: %p\n", m_cudaSocket);
@@ -87,7 +89,7 @@ namespace ns3 {
         //     delete m_cudaSocket;
         //     m_cudaSocket = nullptr;
         // }
-        cudaDeviceSynchronize();
+        // cudaDeviceSynchronize();
         // cudaStreamSynchronize(0);
         printf("Node %d: Total packets received: %ld\n", GetNode()->GetId(), m_received);
         // Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object

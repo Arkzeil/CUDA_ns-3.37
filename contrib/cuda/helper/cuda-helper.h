@@ -35,7 +35,7 @@ namespace ns3
 /* ... */
     bool InitCUDA(cudaDeviceProp &prop);
     // Alternative function to printf with a conditional output flag
-    int debug_printf(int output_flag, const char *format, ...);
+    int debug_printf(const char *format, ...);
     void checkCudaErr();
     __host__ __device__ uint16_t ones_complement_sum(uint32_t sum);
     __host__ void InitCudaSim();
