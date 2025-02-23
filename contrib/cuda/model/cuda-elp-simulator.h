@@ -68,14 +68,14 @@ namespace ns3
             __host__ void ELP_Init();
             __host__ void ELP_Cleanup();
             __host__ void ELP_Run();
-            __host__ void ELP_Schedule(const Time &delay, void *obj, int type, void *payload);
-            void test(void *obj);
+            __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, void *payload);
+            // void test(void *obj);
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
             // for host to insert an safe event for device to execute
-            __host__ void h_insert(void* impl, double delay, int context, int type, int nodeID);
+            __host__ int h_insert(void* impl, double delay, int context, int type, int nodeID, void* payload);
             // for device to insert an event for host to schedule
-            __device__ void d_insert(void* impl, double delay, int context, int type, void* payload);
+            __device__ int d_insert(void* impl, double delay, int context, int type, void* payload);
             
             void Run() override;
             Time Now() const override;
@@ -92,7 +92,10 @@ namespace ns3
             void ProcessOneEvent();
             void ProcessEventsWithContext();
 
+            __device__ void ChangeDevQueue();
+            __host__ void ChangeHostQueue();
             __host__ void ELP_ProcessOneEvent();
+            __host__ void ELP_ScheduleDevEvent();
 
             struct EventWithContext
             {
@@ -132,11 +135,15 @@ namespace ns3
             volatile int *h_bufrdy2;
             volatile int *d_bufrdy1;
             volatile int *d_bufrdy2;
-            // to save current chosen buffer
-            DeviceEvent* h_eventQueue;
-            DeviceEvent* d_eventQueue;
-            volatile int* h_bufrdy;
-            volatile int* d_bufrdy;
+            // to save current buffer that host and device are using
+            DeviceEvent* h_curHostBuf;
+            DeviceEvent* d_curHostBuf;
+            DeviceEvent* h_curDevBuf;
+            DeviceEvent* d_curDevBuf;
+            volatile int* h_curHostBufRdy;
+            volatile int* d_curHostBufRdy;
+            volatile int* h_curDevBufRdy;
+            volatile int* d_curDevBufRdy;
             // safe timestamp for both host and device to check if the event is safe to be executed
             double *safe_ts;
             // a stop flag for device to check if the simulation is finished

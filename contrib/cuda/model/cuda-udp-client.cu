@@ -154,7 +154,7 @@ namespace ns3 {
         d_interval = m_interval.GetSeconds();
 
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
-        m_cudaSim->ELP_Schedule(Seconds(0.0), this, 0, nullptr);
+        m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, nullptr);
 
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
@@ -168,20 +168,7 @@ namespace ns3 {
         //     Simulator::Cancel(m_sendEvent);
         // }
         // cudaStreamSynchronize(m_cudaStream);
-        if (m_socket) {
-            m_socket->Close();
-            m_socket = nullptr;
-        }
-        else if(m_cudaSocket){
-            // EventDispatcher::GetInstance().StopWorker();
-            // cudaDeviceSynchronize();
-            m_cudaSocket->Close();
-            // checkCudaErr();
-            // printf("Deleting m_cudaSocket: %p\n", m_cudaSocket);
-            delete m_cudaSocket;
-            // checkCudaErr();
-            m_cudaSocket = nullptr;
-        }
+        
         
         Simulator::Cancel(m_sendEvent);
 
@@ -213,6 +200,23 @@ namespace ns3 {
         checkCudaErr();
         cudaStreamDestroy(m_cudaStream);
         checkCudaErr(); 
+
+        if (m_socket) {
+            m_socket->Close();
+            m_socket = nullptr;
+        }
+        else if(m_cudaSocket){
+            // EventDispatcher::GetInstance().StopWorker();
+            // cudaDeviceSynchronize();
+            m_cudaSocket->Close();
+            // checkCudaErr();
+            // printf("Deleting m_cudaSocket: %p\n", m_cudaSocket);
+            // cudaStreamSynchronize(0);
+            delete m_cudaSocket;
+            // cudaFreeAsync(m_cudaSocket, 0);
+            // checkCudaErr();
+            m_cudaSocket = nullptr;
+        }
     }
 
     void CUDART_CB CudaUdpClient::Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data) {
@@ -287,10 +291,14 @@ namespace ns3 {
         new(cuda_packet) CudaPacket();
         cuda_packet->Allocate(m_size);
 
-        m_cudaSocket->Send(cuda_packet, nullptr);
+        if(m_cudaSocket->Send(cuda_packet, nullptr) >= 0){
+            atomicAdd(m_sent, 1);
+            atomicAdd(m_totalTx, cuda_packet->GetSize());
+        }
 
-        // Schedule the next send event 
-        m_cudaSim->d_insert(this, d_interval, 0, 0, nullptr);
+        // Schedule the next send event
+        if(*m_sent < 2)    
+            m_cudaSim->d_insert(this, d_interval, 0, 0, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

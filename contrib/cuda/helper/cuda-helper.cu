@@ -46,6 +46,9 @@ namespace ns3
                 printf("Ver: %d.%d\n", prop.major, prop.minor );
                 printf("Clock: %d\n", prop.clockRate );
                 printf("textureAlignment: %ld\n", prop.textureAlignment );
+
+                printf("device supports memory pools: %d\n", prop.memoryPoolsSupported);
+                printf("device supports memory pool handle types: %d\n", prop.memoryPoolSupportedHandleTypes);
         
                 if(prop.major >= 1) {
                     break;
@@ -57,6 +60,26 @@ namespace ns3
             fprintf(stderr, "There is no device supporting CUDA 1.x.\n");
             return false;
         }
+
+        // int driverVersion = 0;  
+        // int deviceSupportsMemoryPools = 0;  
+        // int poolSupportedHandleTypes = 0;  
+        // cudaDriverGetVersion(&driverVersion);  
+        // if (driverVersion >= 11020) {  
+        //     cudaDeviceGetAttribute(&deviceSupportsMemoryPools,  
+        //                             cudaDevAttrMemoryPoolsSupported, device);  
+        // }  
+        // if (deviceSupportsMemoryPools != 0) {  
+        //     // `device` supports the Stream Ordered Memory Allocator  
+        // }  
+        
+        // if (driverVersion >= 11030) {  
+        //     cudaDeviceGetAttribute(&poolSupportedHandleTypes,  
+        //             cudaDevAttrMemoryPoolSupportedHandleTypes, device);  
+        // }  
+        // if (poolSupportedHandleTypes & cudaMemHandleTypePosixFileDescriptor) {  
+        //     // Pools on the specified device can be created with posix file descriptor-based IPC  
+        // }  
         /* 在找到支援 CUDA 1.0 以上的裝置之後，就可以呼叫 cudaSetDevice 函式，把它設為目前要使用的裝置。 */
         cudaSetDevice(i);
 
