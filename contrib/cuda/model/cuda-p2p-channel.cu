@@ -126,9 +126,9 @@ namespace ns3 {
                 cb_data->next->func_id = 0;
                 cb_data->next->packetBuffer[0] = d_packet->m_data[0];
                 cb_data->next->packet = d_packet;
-                // printf("d_packet: %p\n", packet);
             }
         }
+        // printf("delay: %f\n", txTime + d_delay);
         // cudaSim_d->deviceMethod(this, 0);
 
         return true;

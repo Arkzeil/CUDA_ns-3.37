@@ -117,7 +117,8 @@ namespace ns3 {
 
     void 
     CudaUdpClient::StartApplication(){
-        printf("Initial thread: %ld\n", std::this_thread::get_id());
+        printf("---------------------Starting application----------------------\n");
+        // printf("Initial thread: %ld\n", std::this_thread::get_id());
         // EventDispatcher::GetInstance().StartWorker();
         // NS_LOG_FUNCTION(this);
         // if (!m_socket) {
@@ -154,7 +155,7 @@ namespace ns3 {
         d_interval = m_interval.GetSeconds();
 
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
-        m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, nullptr);
+        m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, 0.25, nullptr);
 
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
@@ -298,7 +299,7 @@ namespace ns3 {
 
         // Schedule the next send event
         if(*m_sent < 2)    
-            m_cudaSim->d_insert(this, d_interval, 0, 0, nullptr);
+            m_cudaSim->d_insert(this, d_interval, 0, 0, 0.15, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

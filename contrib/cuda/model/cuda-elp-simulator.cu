@@ -192,8 +192,12 @@ namespace ns3 {
         cudaCheckErrors("stream creation failed");
         // Allocate and initialize the stop flag on the device
         cudaMallocManaged(&d_stop, sizeof(int));
-        cudaMallocManaged(&safe_ts, sizeof(double));
-        cudaMemset(safe_ts, 0, sizeof(double));
+        cudaMallocManaged(&safe_ts, sizeof(uint64_t));
+        cudaMallocManaged(&d_safe_ts1, sizeof(uint64_t));
+        cudaMallocManaged(&d_safe_ts2, sizeof(uint64_t));
+        *safe_ts = UINT64_MAX;
+        *d_safe_ts1 = UINT64_MAX;
+        *d_safe_ts2 = UINT64_MAX;
         cudaCheckErrors("stop and safe_ts cudaMallocManaged failed");
         // Allocate and initialize the event queue on the UMA
         cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
@@ -228,6 +232,8 @@ namespace ns3 {
         d_curHostBufRdy = h_bufrdy1;
         h_curDevBufRdy = d_bufrdy1;
         d_curDevBufRdy = d_bufrdy1;
+
+        h_safe_ts = d_safe_ts1;
     }
 
     __host__ void CudaELPSimulator::ELP_Cleanup(){
@@ -306,19 +312,26 @@ namespace ns3 {
                                         DeviceEvent* d_nextEventQueue1, DeviceEvent* d_nextEventQueue2, 
                                         volatile int *h_bufrdy1, volatile int *h_bufrdy2,
                                         volatile int *d_bufrdy1, volatile int *d_bufrdy2,
-                                        int* d_eventCount, double* d_safe_ts, int* d_stop) {
+                                        int* d_eventCount, uint64_t* d_safe_ts1, uint64_t* d_safe_ts2, int* d_stop) {
 
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
         const int totalThreads = gridDim.x * blockDim.x;
+        const int localThreadId = threadIdx.x;
 
+        __shared__ uint64_t blockMin;
+
+        // kernel initialization
         if(tid == 0) {
             *d_stop = false;
+            // *d_safe_ts1 = UINT64_MAX;
+            // *d_safe_ts2 = UINT64_MAX;
             *d_eventCount = 100;
         }
 
         DeviceEvent* eventQueue;
         volatile int* h_bufrdy;
         volatile int* d_bufrdy;
+        uint64_t* d_safe_ts;
         bool pos = 0;
 
         __syncthreads();
@@ -331,7 +344,10 @@ namespace ns3 {
             eventQueue = (!pos) ? h_safeEventQueue1 : h_safeEventQueue2;
             h_bufrdy = (!pos) ? h_bufrdy1 : h_bufrdy2;
             d_bufrdy = (!pos) ? d_bufrdy1 : d_bufrdy2;
-            
+            d_safe_ts = (!pos) ? d_safe_ts1 : d_safe_ts2;
+
+            uint64_t localMin = *d_safe_ts; // Initialize to maximum double
+
             // Poll the buffer ready flag to check if the buffer is ready for reading.
             if(!(*h_bufrdy) ){
                 // check if the other buffer is ready
@@ -350,15 +366,37 @@ namespace ns3 {
                     ProcessOneEvent(ev);
                 }
                 // Mark the event as processed (or remove it from the queue).
-                // For simplicity, we assume the host will later clean up processed events.
-                if(ev->ts < *d_safe_ts)
-                    *d_safe_ts = ev->ts;
+                // if(ev->ts < *d_safe_ts)
+                //     *d_safe_ts = ev->ts;
                 
                 index += totalThreads;
             }
-            // else{
-            //     cudaStreamWaitEvent(0, event);
+
+            // find the minimum ts among all threads
+
+            // Block-level reduction
+            // if (localThreadId == 0) {
+            //     blockMin = localMin;
             // }
+            // __syncthreads();
+
+            // for (int offset = blockDim.x / 2; offset > 0; offset /= 2) {
+            //     if (localThreadId < offset) {
+            //         if (blockMin > blockMin + offset) {
+            //             blockMin = blockMin + offset;
+            //         }
+            //     }
+            //     __syncthreads();
+            // }
+
+            // // Update global minimum (d_safe_ts)
+            // if (localThreadId == 0) {
+            //     atomicMin(reinterpret_cast<unsigned long long*>(d_safe_ts), blockMin);
+            // }
+
+            // all events in current queue are processed 
+            *d_safe_ts = UINT64_MAX;
+
             // check if the other buffer is ready
             pos = !pos;
             // Optionally, add a delay or yield to avoid busy waiting.
@@ -466,13 +504,16 @@ namespace ns3 {
         // the queue is still used by the kernel
         while(*h_curHostBufRdy);
 
-        h_curHostBuf[nodeID] = DeviceEvent{impl, delay, context, 0, type, true};
+        h_curHostBuf[nodeID] = DeviceEvent{impl, delay, context, 0, type,0, true, payload};
+        
+        if(*safe_ts < *h_safe_ts)
+            *h_safe_ts = *safe_ts;
         *h_curHostBufRdy = 1;
         // ChangeHostQueue();
         return 0;
     }
 
-    __device__ int CudaELPSimulator::d_insert(void* impl, double delay, int context, int type, void *payload){
+    __device__ int CudaELPSimulator::d_insert(void* impl, double delay, int context, int type, double lookahead, void *payload){
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
@@ -481,16 +522,26 @@ namespace ns3 {
         while(*d_curDevBufRdy);
         
         printf("insert: %d\n", m_test);
-        d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 0, type, true, payload};
+        // printf("lookahead: %lf\n", lookahead);
+        d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 0, type, lookahead, true, payload};
         *d_curDevBufRdy = 1;
         // ChangeDevQueue();
         return 0;
     }
 
-    bool CudaELPSimulator::is_safe(uint64_t ts){
-        // return ts < *safe_ts;
-
-        return true;
+    bool CudaELPSimulator::is_safe(Scheduler::Event *ev){
+        // safe
+        uint64_t ts = ev->key.m_ts;
+        uint64_t lookahead = (ev->key.m_uid == EventId::UID::RESERVED) ? ((HostEvent*)ev)->lookahead : UINT64_MAX;
+        if(ts < *safe_ts){
+            // what happen if ts + lookahead overflow?
+            // add a condition to prevent it
+            if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
+                *safe_ts = ts + lookahead;
+            return true;
+        }
+        return false;
+        // return true;
     }
 
     void CudaELPSimulator::ELP_ProcessOneEvent(){
@@ -530,14 +581,14 @@ namespace ns3 {
         h_curDevBufRdy = (*d_bufrdy1 == 1) ? d_bufrdy1 : d_bufrdy2;
         h_curDevBuf = (*d_bufrdy1 == 1) ? d_nextEventQueue1 : d_nextEventQueue2;
         // while(!(*h_curDevBufRdy));
-        printf("Inserting event\n");
+        // printf("Inserting event\n");
 
         // insert valid event(generated by device)
         for(int i = 0; i < DEVICE_QUEUE_LENGTH; i++){
             DeviceEvent *ev = &h_curDevBuf[i];
-            if(ev->valid){
+            if(__glibc_unlikely(ev->valid)){
                 printf("true\n");
-                ELP_Schedule(ev->context, Time(Seconds(ev->ts)), ev->impl, ev->type, ev->payload);
+                ELP_Schedule(ev->context, Time(Seconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                 ev->valid = false;
             }
         }
@@ -552,12 +603,15 @@ namespace ns3 {
         m_mainThreadId = std::this_thread::get_id();
         ProcessEventsWithContext();
         m_stop = false;
+        volatile uint64_t lookahead;
+        volatile uint64_t safe_ts1;
+        volatile uint64_t safe_ts2;
         // Launch the persistent event processing kernel
         PersistentEventKernel<<<1, 32, 0, streamK>>>(h_safeEventQueue1, h_safeEventQueue2,  
                                                     d_nextEventQueue1, d_nextEventQueue2, 
                                                     h_bufrdy1, h_bufrdy2, 
                                                     d_bufrdy1, d_bufrdy2,
-                                                    eventCounter, safe_ts, d_stop);
+                                                    eventCounter, d_safe_ts1, d_safe_ts2, d_stop);
         printf("Kernel launched\n");
         cudaCheckErrors("kernel launch failed");
 
@@ -568,9 +622,26 @@ namespace ns3 {
             Scheduler::Event next = m_events->PeekNext();
             // printf("Next event: %lu\n", next.key.m_ts);
 
-            if(!is_safe(next.key.m_ts)){
-                // synchronize with the device
-                // cudaStreamSynchronize(streamC);
+            if(!is_safe(&next)){
+                // synchronize with the device safe_ts
+                // should I use async?
+                cudaMemcpyAsync((void*)&safe_ts1, d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
+                cudaMemcpyAsync((void*)&safe_ts2, d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
+                cudaStreamSynchronize(streamC);
+                cudaCheckErrors("safe_ts cudaMemcpyAsync failed");
+                // get the smaller buffer time stamp of 2 buffers, but larger than host safe_ts as the new safe_ts
+                // to ensure that the scenario that one buffer is empty but kernel is executing another buffer
+                // will there be a race condition between host and kernel?
+                // so we just check those with the buffer ready flag?
+                if(safe_ts1 > *safe_ts || safe_ts2 > *safe_ts)
+                    *safe_ts = (safe_ts1 < safe_ts2) ? safe_ts1 : safe_ts2;
+                // if(h_bufrdy1 == 0)
+                //     if(safe_ts1 > *safe_ts)
+                //         *safe_ts = safe_ts1;
+                // if(h_bufrdy2 == 0)
+                //     if(safe_ts2 > *safe_ts)
+                //         *safe_ts = safe_ts2;
+                
                 continue;
                 // swap the event queues to insert the next event generated by the kernel
             }
@@ -583,6 +654,8 @@ namespace ns3 {
             }
             else
                 ProcessOneEvent();
+
+            printf("safe ts: %lf\n", *safe_ts);
         }
 
         // If the simulator stopped naturally by lack of events, make a
@@ -604,7 +677,7 @@ namespace ns3 {
     }
 
     // take a event from the device event queue and insert it into the host queue
-    __host__ void CudaELPSimulator::ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, void *payload){
+    __host__ void CudaELPSimulator::ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, double lookahead, void *payload){
         NS_LOG_FUNCTION(this << delay.GetTimeStep());
         NS_ASSERT_MSG(m_mainThreadId == std::this_thread::get_id(),
                     "Simulator::Schedule Thread-unsafe invocation!");
@@ -619,7 +692,9 @@ namespace ns3 {
         // printf("h_ev address: %p\n", h_ev);
         h_ev->obj = obj;
         h_ev->type = type;
+        h_ev->lookahead = lookahead;
         h_ev->payload = nullptr;
+        // printf("lookahead: %lf\n", lookahead);
         // printf("type: %d\n", h_ev.type);
 
         // make ev.impl point to the host event(which carry the information of the device event)

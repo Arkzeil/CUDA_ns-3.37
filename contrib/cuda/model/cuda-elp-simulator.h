@@ -26,6 +26,7 @@ namespace ns3
         int context;  // event context
         uint32_t uid;      // unique id
         int type;     // event type identifier
+        double lookahead; // lookahead time
         bool valid;  // a flag to indicate if the event is valid
         void *payload; // event-specific payload(usually a pointer to a packet)
         // Add any additional event-specific payload here.
@@ -35,6 +36,7 @@ namespace ns3
     struct HostEvent{
         void *obj;
         int type;
+        double lookahead;
         void *payload;
     };
 
@@ -64,18 +66,17 @@ namespace ns3
             bool IsExpired(const EventId &id) const override;
             
             __host__ void componentMethod();
-            __host__ bool is_safe(uint64_t ts);
             __host__ void ELP_Init();
             __host__ void ELP_Cleanup();
             __host__ void ELP_Run();
-            __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, void *payload);
+            __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, double lookahead, void *payload);
             // void test(void *obj);
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
             // for host to insert an safe event for device to execute
             __host__ int h_insert(void* impl, double delay, int context, int type, int nodeID, void* payload);
             // for device to insert an event for host to schedule
-            __device__ int d_insert(void* impl, double delay, int context, int type, void* payload);
+            __device__ int d_insert(void* impl, double delay, int context, int type, double lookahead, void* payload);
             
             void Run() override;
             Time Now() const override;
@@ -91,6 +92,8 @@ namespace ns3
 
             void ProcessOneEvent();
             void ProcessEventsWithContext();
+
+            __host__ bool is_safe(Scheduler::Event *ev);
 
             __device__ void ChangeDevQueue();
             __host__ void ChangeHostQueue();
@@ -145,7 +148,11 @@ namespace ns3
             volatile int* h_curDevBufRdy;
             volatile int* d_curDevBufRdy;
             // safe timestamp for both host and device to check if the event is safe to be executed
-            double *safe_ts;
+            uint64_t *safe_ts;
+            uint64_t *d_safe_ts1;
+            uint64_t *d_safe_ts2;
+            // used for host to update the safe timestamp for h_safeEventQueue
+            uint64_t *h_safe_ts;
             // a stop flag for device to check if the simulation is finished
             int *d_stop;
             int* eventCounter;
