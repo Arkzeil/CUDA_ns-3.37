@@ -25,6 +25,8 @@ namespace ns3 {
     NS_OBJECT_ENSURE_REGISTERED(CudaELPSimulator);
 
     // __managed__ cudaEvent_t event;
+
+    LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
     __device__ volatile int blkcnt1 = 0;
     __device__ volatile int blkcnt2 = 0;
@@ -198,6 +200,7 @@ namespace ns3 {
         *safe_ts = UINT64_MAX;
         *d_safe_ts1 = UINT64_MAX;
         *d_safe_ts2 = UINT64_MAX;
+        cur_buffer_safe_ts = UINT64_MAX;
         cudaCheckErrors("stop and safe_ts cudaMallocManaged failed");
         // Allocate and initialize the event queue on the UMA
         cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
@@ -536,8 +539,10 @@ namespace ns3 {
         if(ts < *safe_ts){
             // what happen if ts + lookahead overflow?
             // add a condition to prevent it
-            if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
+            if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts){
                 *safe_ts = ts + lookahead;
+                cur_buffer_safe_ts = ts + lookahead;
+            }
             return true;
         }
         return false;
@@ -650,7 +655,7 @@ namespace ns3 {
                 ELP_ProcessOneEvent();
                 // m_events->RemoveNext();
                 printf("CUDA event\n");
-                sleep(1);
+                // sleep(1);
             }
             else
                 ProcessOneEvent();

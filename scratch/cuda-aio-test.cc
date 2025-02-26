@@ -60,6 +60,7 @@ int main(int argc, char* argv[]) {
   cudaP2P.SetDelay(MilliSeconds(2.0));
   cudaP2P.SetBandwidth(DataRate("10Mbps"));
   NetDeviceContainer cudaDevices = cudaP2P.Install(node0, node1);
+  cudaP2P.SetDelay(MilliSeconds(3.0));
   NetDeviceContainer cudaDevices1 = cudaP2P.Install(node2, node3);
   // NetDeviceContainer cudaDevices = p2p.Install(cudaNode0, cudaNode1);
 

@@ -1,6 +1,7 @@
 #include "cuda-p2p-helper.h"
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-p2p-channel.h"
+#include "ns3/cuda-elp-simulator.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaPointToPointHelper");
@@ -59,6 +60,10 @@ namespace ns3 {
         
         container.Add(deviceA);
         container.Add(deviceB);
+
+        lookaheadTable.addValue(a->GetId(), b->GetId(), delay.GetNanoSeconds());
+        lookaheadTable.addValue(b->GetId(), a->GetId(), delay.GetNanoSeconds());
+        printf("Lookahead table: %d\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
         
         return container;
     }

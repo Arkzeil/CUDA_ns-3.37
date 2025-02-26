@@ -12,12 +12,115 @@
 #include <thread>
 #include <cuda_runtime.h>
 
+#include <vector>
+#include <unordered_map>
+
 #define DEVICE_QUEUE_LENGTH 2048
 
 namespace ns3
 {
     // Forward
     class Scheduler;
+    // a 2d table to store the lookahead time for each pair of node number
+    template <typename T>
+    class LookaheadTable {
+        public:
+            LookaheadTable() = default;
+            
+            // Add a value for a specific source-destination pair
+            void addValue(uint32_t source, uint32_t destination, const T& value) {
+                uint32_t key = makeKey(source, destination);
+                nodeValues[key][destination].push_back(value);
+            }
+            
+            // Get all values for a specific source-destination pair
+            const std::vector<T>& getValues(uint32_t source, uint32_t destination) const {
+                uint32_t key = makeKey(source, destination);
+                
+                // Check if source exists
+                auto srcIt = nodeValues.find(key);
+                if (srcIt == nodeValues.end()) {
+                    static const std::vector<T> empty;
+                    return empty;
+                }
+                
+                // Check if destination exists
+                auto destIt = srcIt->second.find(destination);
+                if (destIt == srcIt->second.end()) {
+                    static const std::vector<T> empty;
+                    return empty;
+                }
+                
+                return destIt->second;
+            }
+            
+            // Get a specific value at an index for a source-destination pair
+            T getValue(uint32_t source, uint32_t destination, uint32_t index = 0) const {
+                const auto& values = getValues(source, destination);
+                
+                if (index >= values.size()) {
+                    throw std::out_of_range("Index out of range for source-destination pair");
+                }
+                
+                return values[index];
+            }
+            
+            // Check if a source-destination pair exists
+            bool hasConnection(uint32_t source, uint32_t destination) const {
+                uint32_t key = makeKey(source, destination);
+                
+                auto srcIt = nodeValues.find(key);
+                if (srcIt == nodeValues.end()) {
+                    return false;
+                }
+                
+                return srcIt->second.find(destination) != srcIt->second.end();
+            }
+            
+            // Get the number of values for a source-destination pair
+            uint32_t countValues(uint32_t source, uint32_t destination) const {
+                return getValues(source, destination).size();
+            }
+            
+            // Clear all values
+            void clear() {
+                nodeValues.clear();
+            }
+            
+            // Get all source nodes
+            std::vector<uint32_t> getAllSourceNodes() const {
+                std::vector<uint32_t> sources;
+                for (const auto& pair : nodeValues) {
+                    sources.push_back(pair.first);
+                }
+                return sources;
+            }
+            
+            // Get all destination nodes for a given source
+            std::vector<uint32_t> getDestinationsForSource(uint32_t source) const {
+                std::vector<uint32_t> destinations;
+                uint32_t key = makeKey(source, 0);
+                
+                auto srcIt = nodeValues.find(key);
+                if (srcIt != nodeValues.end()) {
+                    for (const auto& destPair : srcIt->second) {
+                        destinations.push_back(destPair.first);
+                    }
+                }
+                return destinations;
+            }
+        private:
+            // Use a hash map to store values indexed by source-destination pairs
+            std::unordered_map<uint32_t, std::unordered_map<uint32_t, std::vector<T>>> nodeValues;
+            
+            // Helper function to create a key for the hash map
+            uint32_t makeKey(uint32_t source, uint32_t destination) const {
+                // Simple hash combining function
+                return source;
+            }
+    };
+
+    extern LookaheadTable<uint64_t> lookaheadTable;
 
     // A simplified device-side event structure
     struct DeviceEvent {
@@ -138,7 +241,7 @@ namespace ns3
             volatile int *h_bufrdy2;
             volatile int *d_bufrdy1;
             volatile int *d_bufrdy2;
-            // to save current buffer that host and device are using
+            // to save current buffer that host and device are using, containing the pointer to the buffer and the flag
             DeviceEvent* h_curHostBuf;
             DeviceEvent* d_curHostBuf;
             DeviceEvent* h_curDevBuf;
@@ -151,7 +254,9 @@ namespace ns3
             uint64_t *safe_ts;
             uint64_t *d_safe_ts1;
             uint64_t *d_safe_ts2;
-            // used for host to update the safe timestamp for h_safeEventQueue
+            // to store the safe stamp of CPU current writing buffer
+            uint64_t cur_buffer_safe_ts;
+            // used for host to update the safe timestamp for h_safeEventQueue, containing the pointer to the ts
             uint64_t *h_safe_ts;
             // a stop flag for device to check if the simulation is finished
             int *d_stop;
