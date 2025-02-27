@@ -11,6 +11,7 @@ namespace ns3{
     class CUDA_cb_data;
     class CudaPacket;
     class CudaUdpL4Protocol;
+    class CudaIpv4StaticRouting;
 
     class CudaIpv4L3Protocol : public Ipv4L3Protocol, public Managed{
         public:
@@ -28,6 +29,7 @@ namespace ns3{
             uint32_t AddIpv4Interface(CudaIpv4Interface* interface);
             __host__ __device__ int32_t GetInterfaceForDevice(CudaNetDevice* device);
             __host__ __device__ CudaIpv4Interface* GetInterface(uint32_t interfaceIndex) const;
+
             bool AddAddress(uint32_t interfaceIndex, Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress(uint32_t interfaceIndex, uint32_t addressIndex) const;
             void SetMetric(uint32_t i, uint16_t metric);
@@ -40,6 +42,8 @@ namespace ns3{
             __device__ void Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);
         
+            // simple routing, uint32_t address with corresponding interface index, only one hop is supported
+            CudaIpv4StaticRouting* m_routing;
         protected:
             void DoDispose() override;
             void NotifyNewAggregate() override;

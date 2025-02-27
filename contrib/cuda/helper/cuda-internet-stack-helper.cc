@@ -153,10 +153,10 @@ namespace ns3{
                 arp->SetAttribute("RequestJitter",
                                 StringValue("ns3::ConstantRandomVariable[Constant=0.0]"));
             }
-            // Set routing
-            Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
-            Ptr<Ipv4RoutingProtocol> ipv4Routing = m_routing->Create(node);
-            ipv4->SetRoutingProtocol(ipv4Routing);
+            // Set routing, but we use our own simple static routing table in CudaIpv4L3Protocol for simplicity 
+            // Ptr<Ipv4> ipv4 = node->GetObject<Ipv4>();
+            // Ptr<Ipv4RoutingProtocol> ipv4Routing = m_routing->Create(node);
+            // ipv4->SetRoutingProtocol(ipv4Routing);
         }
 
         if (m_ipv6Enabled)

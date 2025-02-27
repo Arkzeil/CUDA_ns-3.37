@@ -5,6 +5,7 @@
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-packet.h"
 #include "ns3/cuda-udp-l4-protocol.h"
+#include "ns3/cuda-ipv4-static-routing.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaIpv4L3Protocol");
@@ -22,11 +23,14 @@ namespace ns3 {
         // Constructor
         printf("CudaIpv4L3Protocol initialized\n");
         cudaMallocManaged(&m_ipv4Interface, m_maxInterfaceCount * sizeof(CudaIpv4Interface*));
+        m_routing = new CudaIpv4StaticRouting();
         checkCudaErr();
     }
 
     CudaIpv4L3Protocol::~CudaIpv4L3Protocol() {
         // Destructor
+        cudaFree(m_ipv4Interface);
+        delete m_routing;
     }
 
     void CudaIpv4L3Protocol::Insert(Ptr<IpL4Protocol> protocol) {
@@ -302,6 +306,12 @@ namespace ns3 {
         *(ipHeader + 11) = checksum & 0xFF;
 
         // assuming only one interface
+        uint32_t outInterfaceIndex;
+        if(m_routing->LookupRoute(destination, &outInterfaceIndex) == false){
+            printf("No route found\n");
+            return;
+        }
+
         CudaIpv4Interface *outInterface = GetInterface(0);
 
         if(outInterface == nullptr){

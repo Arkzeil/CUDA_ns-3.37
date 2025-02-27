@@ -12,6 +12,7 @@
 #include "ns3/cuda-internet-stack-helper.h"
 #include "ns3/cuda-ipv4-address-helper.h"
 #include "ns3/cuda-udp-server.h"
+#include "ns3/cuda-ipv4-static-routing.h"
 #include "ns3/cuda-elp-simulator.h"
 
 using namespace ns3;
@@ -70,6 +71,8 @@ int main(int argc, char* argv[]) {
   ipv4.SetBase("10.1.1.0", "255.255.255.0");
   // Ipv4InterfaceContainer interfaces = ipv4.Assign(devices);
   Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(cudaDevices);
+  // Network 10.1.2.0/24
+  // ipv4.SetBase("10.1.2.0", "255.255.255.0");
   Ipv4InterfaceContainer cudaInterfaces1 = ipv4.Assign(cudaDevices1);
   // Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(cudaDevices);
 
@@ -79,12 +82,16 @@ int main(int argc, char* argv[]) {
   Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
   
   uint32_t ipAddress = cudaInterfaces.GetAddress(1).Get();
+  uint32_t ipAddress1 = cudaInterfaces1.GetAddress(1).Get();
   char ipAddr[16];
   snprintf(ipAddr,sizeof ipAddr,"%u.%u.%u.%u" ,(ipAddress & 0xff000000) >> 24 
                                           ,(ipAddress & 0x00ff0000) >> 16
                                           ,(ipAddress & 0x0000ff00) >> 8
                                           ,(ipAddress & 0x000000ff));
   printf("address: %s\n", ipAddr);
+
+  node0->GetObject<CudaIpv4L3Protocol>()->m_routing->AddRoute(ipAddress, 0xffffff00, cudaInterfaces.Get(1).second);
+  // node2->GetObject<CudaIpv4L3Protocol>()->m_routing->AddRoute(ipAddress1, 0xffffff00, cudaInterfaces1.Get(0).second);
 
   app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
   app->SetPacketSize(256);

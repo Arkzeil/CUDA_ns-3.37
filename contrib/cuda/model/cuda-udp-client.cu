@@ -155,7 +155,7 @@ namespace ns3 {
         d_interval = m_interval.GetSeconds();
 
         // Get destination node using socket->ipv4L3Protocol->netdevice->node in advance
-        Ptr<Node> dstNode = m_cudaSocket->
+        // Ptr<Node> dstNode = m_cudaSocket->
 
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
         m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, 0.25, nullptr);
