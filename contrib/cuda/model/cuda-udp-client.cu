@@ -4,6 +4,11 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-udp-l4-protocol.h"
+#include "ns3/cuda-ipv4-l3-protocol.h"
+#include "ns3/cuda-ipv4-interface.h"
+#include "ns3/cuda-p2p-channel.h"
+#include "ns3/cuda-ipv4-static-routing.h"
 #include "ns3/cuda-elp-simulator.h"
 // #include "cuda-packet-kernel.cuh"
 // #include "cuda-ipv4-routing.h"
@@ -115,6 +120,23 @@ namespace ns3 {
         receiveEventFlag = false;
     }
 
+    void CudaUdpClient::CalculateLookAhead(uint32_t dst){
+        CudaIpv4L3Protocol* l3 = m_cudaSocket->GetUdp()->GetIpv4();
+        uint32_t index;
+        if(l3->m_routing->LookupRoute(dst, &index)){
+            printf("Route found, index: %d\n", index);
+        }
+        else{
+            printf("Route not found\n");
+        }
+        CudaNetDevice* dev = m_cudaSocket->GetUdp()->GetIpv4()->GetInterface(index)->GetDevice();
+        CudaNetDevice* dst_dev = dev->GetChannel()->GetDstDev(dev);
+        uint32_t dst_node = dst_dev->GetNode()->GetId();
+        printf("Destination node: %d\n", dst_node);
+        lookahead = lookaheadTable.getValue(GetNode()->GetId(), dst_node);
+        printf("Lookahead: %lu\n", lookahead);
+    }
+
     void 
     CudaUdpClient::StartApplication(){
         printf("---------------------Starting application----------------------\n");
@@ -158,6 +180,7 @@ namespace ns3 {
         // Ptr<Node> dstNode = m_cudaSocket->
 
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
+        CalculateLookAhead(Ipv4Address::ConvertFrom(m_peerAddress).Get());
         m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, 0.25, nullptr);
 
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
@@ -302,7 +325,7 @@ namespace ns3 {
 
         // Schedule the next send event
         if(*m_sent < 2)    
-            m_cudaSim->d_insert(this, d_interval, 0, 0, 0.15, nullptr);
+            m_cudaSim->d_insert(this, d_interval, 0, 0, lookahead, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

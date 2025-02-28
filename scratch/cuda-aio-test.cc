@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
   Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
   
   uint32_t ipAddress = cudaInterfaces.GetAddress(1).Get();
-  uint32_t ipAddress1 = cudaInterfaces1.GetAddress(1).Get();
+  // uint32_t ipAddress1 = cudaInterfaces1.GetAddress(1).Get();
   char ipAddr[16];
   snprintf(ipAddr,sizeof ipAddr,"%u.%u.%u.%u" ,(ipAddress & 0xff000000) >> 24 
                                           ,(ipAddress & 0x00ff0000) >> 16

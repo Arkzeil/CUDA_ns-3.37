@@ -183,6 +183,7 @@ namespace ns3{
         if (InetSocketAddress::IsMatchingType(address) == true){
             InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
             *m_defaultAddress = Address(transport.GetIpv4());
+            d_defaultAddress = transport.GetIpv4().Get();
             // printf("%p\n", m_defaultPort);
             // if(m_defaultPort == nullptr){
             //     cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
@@ -248,7 +249,7 @@ namespace ns3{
         //     }
         //     printf("\n");
         // }
-        return DoSendTo(d_packet, 0, *m_defaultPort, 0, cb_data);
+        return DoSendTo(d_packet, d_defaultAddress, *m_defaultPort, 0, cb_data);
         // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
         // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
         // m_netDevice->EnqueuePacket(d_buffer, size);
@@ -401,6 +402,11 @@ namespace ns3{
         // checkCudaErr();
         d_m_udp = m_udp;
         // printf("CudaSocket: SetUdp: %p\n", m_udp);
+    }
+
+    CudaUdpL4Protocol* CudaSocket::GetUdp(){
+        // Get the associated UDP L4 protocol
+        return m_udp;
     }
 
     int CudaSocket::GetPeerName(Address& address) const{

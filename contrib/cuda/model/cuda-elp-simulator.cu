@@ -65,6 +65,7 @@ namespace ns3 {
         printf("This: %p\n", this);
         m_test = 69;
         d_uid = 0;
+        h_insertIndex = 0;
         ELP_Init();
     }
 
@@ -503,11 +504,11 @@ namespace ns3 {
         ((CudaP2PChannel*)obj)->test();
     }
 
-    __host__ int CudaELPSimulator::h_insert(void* impl, double delay, int context, int type, int nodeID, void *payload){
+    __host__ int CudaELPSimulator::h_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void *payload){
         // the queue is still used by the kernel
         while(*h_curHostBufRdy);
 
-        h_curHostBuf[nodeID] = DeviceEvent{impl, delay, context, 0, type,0, true, payload};
+        h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, delay, context, 0, type, lookahead, true, payload};
         
         if(*safe_ts < *h_safe_ts)
             *h_safe_ts = *safe_ts;
@@ -516,7 +517,7 @@ namespace ns3 {
         return 0;
     }
 
-    __device__ int CudaELPSimulator::d_insert(void* impl, double delay, int context, int type, double lookahead, void *payload){
+    __device__ int CudaELPSimulator::d_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void *payload){
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
@@ -555,7 +556,7 @@ namespace ns3 {
         m_eventCount++;
 
         HostEvent* h_ev = (HostEvent*)next.impl;
-        h_insert(h_ev->obj, next.key.m_ts, next.key.m_context, h_ev->type, next.key.m_context, h_ev->payload);
+        h_insert(h_ev->obj, next.key.m_ts, next.key.m_context, h_ev->type, h_ev->lookahead, h_ev->payload);
         // printf("h_ev type: %d\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
         // printf("h_ev address: %p\n", h_ev);
@@ -660,7 +661,7 @@ namespace ns3 {
             else
                 ProcessOneEvent();
 
-            printf("safe ts: %lf\n", *safe_ts);
+            printf("safe ts: %lu\n", *safe_ts);
         }
 
         // If the simulator stopped naturally by lack of events, make a
@@ -682,7 +683,7 @@ namespace ns3 {
     }
 
     // take a event from the device event queue and insert it into the host queue
-    __host__ void CudaELPSimulator::ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, double lookahead, void *payload){
+    __host__ void CudaELPSimulator::ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, uint64_t lookahead, void *payload){
         NS_LOG_FUNCTION(this << delay.GetTimeStep());
         NS_ASSERT_MSG(m_mainThreadId == std::this_thread::get_id(),
                     "Simulator::Schedule Thread-unsafe invocation!");

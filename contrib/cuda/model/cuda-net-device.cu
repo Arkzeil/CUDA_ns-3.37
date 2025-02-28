@@ -343,6 +343,10 @@ namespace ns3 {
     return d_packetQueue[pos];
   }
 
+  CudaP2PChannel *CudaNetDevice::GetChannel(){
+      return m_channel;
+  }
+
   void CudaNetDevice::InitializeCudaBuffers() {
       // Additional GPU memory initialization if needed
   }

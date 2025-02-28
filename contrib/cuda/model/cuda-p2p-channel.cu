@@ -103,6 +103,11 @@ namespace ns3 {
         return true;
     }
 
+    CudaNetDevice* CudaP2PChannel::GetDstDev(CudaNetDevice* src) {
+        uint32_t wire = src == m_link[0].m_src ? 0 : 1;
+        return m_link[wire].m_dst;
+    }
+
     __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
         printf("TransmitStart function in channel, packet id: %d\n", d_packet->GetUid());

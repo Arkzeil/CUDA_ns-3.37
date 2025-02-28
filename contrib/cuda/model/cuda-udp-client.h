@@ -42,6 +42,7 @@ namespace ns3{
             void StopApplication() override;
             // __host__ void CudaUdpClient::OffloadToCuda(void);
             static void CUDART_CB Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data);
+            void CalculateLookAhead(uint32_t dst);
             void GeneratePacketOnGpu();
             __host__ void OffloadToCuda(int numPackets, int packetSize);
             __host__ void OffloadPacketToCuda(Ptr<Packet> packet);
@@ -67,6 +68,7 @@ namespace ns3{
             CudaSocket* m_cudaSocket; //!< CUDA socket
             uint8_t* d_packetBuffer;      // Device memory for packet data
             cudaStream_t m_cudaStream;   // CUDA stream for async processing
+            uint64_t lookahead;         // Lookahead time in nanoseconds(for peerAddress)
     };
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);

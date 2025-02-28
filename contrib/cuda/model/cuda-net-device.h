@@ -53,6 +53,7 @@ public:
     __device__ bool EnqueuePacket(CudaPacket* packet);
     __device__ CudaPacket* DequeuePacket();
     void TransmitPackets();
+    CudaP2PChannel* GetChannel();
 
 private:
     void ProcessPacketOnCuda(Ptr<Packet> packet);

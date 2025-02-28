@@ -58,6 +58,11 @@ namespace ns3 {
         // }
     }
 
+    CudaIpv4L3Protocol* CudaUdpL4Protocol::GetIpv4() {
+        // Get the IPv4 protocol
+        return m_ipv4;
+    }
+
     CudaIpv4EndPoint* CudaUdpL4Protocol::Allocate() {
         // Allocate an IPv4 end point
         return (m_endPoints + index++);

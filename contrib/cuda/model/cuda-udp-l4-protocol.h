@@ -30,6 +30,7 @@ namespace ns3
             ~CudaUdpL4Protocol() override;
 
             void SetNode(Ptr<Node> node);
+            CudaIpv4L3Protocol* GetIpv4();
             CudaIpv4EndPoint* Allocate();
             CudaIpv4EndPoint* Allocate(Ipv4Address address);
             CudaIpv4EndPoint* Allocate(CudaNetDevice* boundNetDevice, uint16_t port);

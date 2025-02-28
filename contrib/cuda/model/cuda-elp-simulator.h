@@ -129,7 +129,7 @@ namespace ns3
         int context;  // event context
         uint32_t uid;      // unique id
         int type;     // event type identifier
-        double lookahead; // lookahead time
+        uint64_t lookahead; // lookahead time
         bool valid;  // a flag to indicate if the event is valid
         void *payload; // event-specific payload(usually a pointer to a packet)
         // Add any additional event-specific payload here.
@@ -139,7 +139,7 @@ namespace ns3
     struct HostEvent{
         void *obj;
         int type;
-        double lookahead;
+        uint64_t lookahead;
         void *payload;
     };
 
@@ -172,14 +172,14 @@ namespace ns3
             __host__ void ELP_Init();
             __host__ void ELP_Cleanup();
             __host__ void ELP_Run();
-            __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, double lookahead, void *payload);
+            __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, uint64_t lookahead, void *payload);
             // void test(void *obj);
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
             // for host to insert an safe event for device to execute
-            __host__ int h_insert(void* impl, double delay, int context, int type, int nodeID, void* payload);
+            __host__ int h_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
-            __device__ int d_insert(void* impl, double delay, int context, int type, double lookahead, void* payload);
+            __device__ int d_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void* payload);
             
             void Run() override;
             Time Now() const override;
@@ -250,6 +250,8 @@ namespace ns3
             volatile int* d_curHostBufRdy;
             volatile int* h_curDevBufRdy;
             volatile int* d_curDevBufRdy;
+            // a index for host to insert into correct location of host buffer
+            uint32_t h_insertIndex;
             // safe timestamp for both host and device to check if the event is safe to be executed
             uint64_t *safe_ts;
             uint64_t *d_safe_ts1;

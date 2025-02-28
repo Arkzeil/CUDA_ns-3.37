@@ -55,6 +55,7 @@ namespace ns3{
             enum SocketType GetSocketType() const override;
             Ptr<Node> GetNode() const override;
             void SetUdp(CudaUdpL4Protocol *udp);
+            CudaUdpL4Protocol* GetUdp();
             void SetNode(Ptr<Node> node);
             int GetPeerName(Address& address) const override;
             bool SetAllowBroadcast(bool allowBroadcast) override;
@@ -83,6 +84,7 @@ namespace ns3{
             Address *m_defaultAddress;                      //!< Default address
             uint16_t *m_defaultPort;                        //!< Default port
             // TracedCallback<Ptr<const Packet>> m_dropTrace; //!< Trace for dropped packets
+            uint32_t d_defaultAddress;                      //!< Default address on the device
 
             mutable enum SocketErrno m_errno; //!< Socket error code
             bool m_shutdownSend;              //!< Send no longer allowed

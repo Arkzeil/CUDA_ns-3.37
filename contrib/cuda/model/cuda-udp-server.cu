@@ -91,7 +91,7 @@ namespace ns3 {
         // }
         // cudaDeviceSynchronize();
         // cudaStreamSynchronize(0);
-        printf("Node %d: Total packets received: %ld\n", GetNode()->GetId(), m_received);
+        printf("Node %d: Total packets received: %lu\n", GetNode()->GetId(), m_received);
         // Ptr<SimulatorImpl> sim = Simulator::GetImplementation();// Get the global simulator object
         // CudaELPSimulator* cudaSim = dynamic_cast<ns3::CudaELPSimulator*>(GetPointer(sim));
         // cudaSim->componentMethod();

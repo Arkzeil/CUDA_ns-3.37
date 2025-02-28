@@ -305,14 +305,19 @@ namespace ns3 {
         *(ipHeader + 10) = checksum >> 8;
         *(ipHeader + 11) = checksum & 0xFF;
 
-        // assuming only one interface
+        
         uint32_t outInterfaceIndex;
         if(m_routing->LookupRoute(destination, &outInterfaceIndex) == false){
             printf("No route found\n");
-            return;
+            // return;
+            // assuming only one interface
+            outInterfaceIndex = 0;
         }
+        // else{
+        //     printf("Route found, interfaceIndex: %d\n", outInterfaceIndex);
+        // }
 
-        CudaIpv4Interface *outInterface = GetInterface(0);
+        CudaIpv4Interface *outInterface = GetInterface(outInterfaceIndex);
 
         if(outInterface == nullptr){
             printf("No interface found\n");
