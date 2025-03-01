@@ -15,7 +15,7 @@
 #include <vector>
 #include <unordered_map>
 
-#define DEVICE_QUEUE_LENGTH 2048
+#define DEVICE_QUEUE_LENGTH 1
 
 namespace ns3
 {
@@ -256,13 +256,12 @@ namespace ns3
             uint64_t *safe_ts;
             uint64_t *d_safe_ts1;
             uint64_t *d_safe_ts2;
-            // to store the safe stamp of CPU current writing buffer
+            // to store the safe stamp of CPU current writing buffer, need to be reset when the buffer is changed
             uint64_t cur_buffer_safe_ts;
             // used for host to update the safe timestamp for h_safeEventQueue, containing the pointer to the ts
             uint64_t *h_safe_ts;
             // a stop flag for device to check if the simulation is finished
             int *d_stop;
-            int* eventCounter;
             uint32_t m_test;
             uint32_t d_uid;
 

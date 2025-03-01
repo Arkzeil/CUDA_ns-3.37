@@ -324,8 +324,8 @@ namespace ns3 {
         }
 
         // Schedule the next send event
-        if(*m_sent < 2)    
-            m_cudaSim->d_insert(this, d_interval, 0, 0, lookahead, nullptr);
+        // if(*m_sent < 2)    
+        //     m_cudaSim->d_insert(this, d_interval, 0, 0, lookahead, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

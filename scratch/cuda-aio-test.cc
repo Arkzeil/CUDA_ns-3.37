@@ -140,6 +140,7 @@ int main(int argc, char* argv[]) {
   // cudaSim->print_test();
   // Simulator::GetSystemId();
   // Simulator::Run();
+  printf("------------------------Start ELP Simulator-----------------------------\n");
   cudaSim->ELP_Run();
 
   // cudaSim->test(GetPointer(app));

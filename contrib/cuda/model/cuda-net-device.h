@@ -18,6 +18,7 @@ namespace ns3 {
 
 class CUDA_cb_data;
 class CudaPacket;
+class CudaELPSimulator;
 
 class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
@@ -48,6 +49,7 @@ public:
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
     __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
+    __device__ void D_TransmitComplete();
     void TransmitComplete(cudaStream_t stream);
     // Helper functions
     __device__ bool EnqueuePacket(CudaPacket* packet);
@@ -78,6 +80,7 @@ private:
     uint32_t m_mtu;
 
     // CUDA-related members
+    CudaELPSimulator* m_cudaSim; //!< CUDA simulator
     cudaStream_t m_stream;
     cudaEvent_t m_event;        // !< CUDA event to synchronize packet enqueueing
     CudaPacket** d_packetQueue; // GPU packet queue

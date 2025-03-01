@@ -3,6 +3,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-udp-client.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-elp-simulator.h"
 
 namespace ns3 {
 
@@ -44,6 +45,7 @@ namespace ns3 {
       cudaMemcpy(d_queueFront, &zero, sizeof(uint32_t), cudaMemcpyHostToDevice);
       cudaMemcpy(d_queueRear, &zero, sizeof(uint32_t), cudaMemcpyHostToDevice);
       // *d_queueFront = *d_queueRear = 0;
+      m_cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
   }
 
   CudaNetDevice::~CudaNetDevice() {
@@ -257,6 +259,7 @@ namespace ns3 {
     m_txMachineState = BUSY;
     // assuming m_InterframeGap is 0
     float TxTime = (float)(packet->GetSize() * 8) / d_bps; // in seconds
+    uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
 
     if(cb_data != nullptr){
       cb_data->empty = false;
@@ -269,6 +272,7 @@ namespace ns3 {
     }
     // cudaEventSynchronize(m_event);
     // cudaFree(cb_data->packet->m_data);
+    m_cudaSim->d_insert(this, d_interval, 0, 1, 0, nullptr);
 
     bool result = m_channel->TransmitStart(packet, this, TxTime, cb_data);
     if(result == false) {
@@ -278,7 +282,22 @@ namespace ns3 {
     return result;
   }
 
-  
+  __device__ void CudaNetDevice::D_TransmitComplete(){
+    if(m_txMachineState != BUSY){
+      printf("Device state must be busy\n");
+      return;
+    }
+    m_txMachineState = READY;
+    printf("Reset device status on GPU\n");
+
+    CudaPacket* packet = DequeuePacket();
+    if(packet == nullptr){
+      printf("packet queue is empty\n");
+      return;
+    }
+    
+    TransmitStart(packet, nullptr);
+  }
 
   __global__ void d_TransmitComplete(CudaNetDevice* device, cudaStream_t stream, CUDA_cb_data* cb_data) {
     CudaPacket* packet = device->DequeuePacket();
