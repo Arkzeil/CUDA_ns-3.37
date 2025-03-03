@@ -143,7 +143,7 @@ namespace ns3 {
         m_currentUid = next.key.m_uid;
         next.impl->Invoke();
         next.impl->Unref();
-
+        printf("CPU current ts: %lu\n", m_currentTs);
 
         ProcessEventsWithContext();
     }
@@ -273,7 +273,7 @@ namespace ns3 {
     __device__ void ProcessType2(DeviceEvent* ev) {
         // Different event processing logic
         printf("Processing Type 2 event\n");
-        ((CudaUdpClient*)(ev->impl))->test();
+        ((CudaNetDevice*)(ev->impl))->d_Receive((CudaPacket*)(ev->payload));
     }
     // General device function that processes an event based on its type.
     __device__ void ProcessOneEvent(DeviceEvent* ev) {
@@ -408,86 +408,6 @@ namespace ns3 {
         }
     }
 
-    
-
-    // void CudaELPSimulator::test(void *obj){
-    //     // printf("Current ts: %lu\n", m_currentTs);
-    //     // cudaSim = this;
-    //     // printf("This: %p\n", this);
-    //     // printf("test: %d\n", m_test);
-
-    //     // cudaEventCreate(&event);
-        
-    //     // ELP_Init();
-        
-    //     bool pos = 0;
-        
-    //     // Launch the persistent event processing kernel
-    //     PersistentEventKernel<<<1, 32, 0, streamK>>>(h_safeEventQueue1, h_safeEventQueue2,  
-    //                                                 d_nextEventQueue1, d_nextEventQueue2, 
-    //                                                 h_bufrdy1, h_bufrdy2, 
-    //                                                 d_bufrdy1, d_bufrdy2,
-    //                                                 eventCounter, safe_ts, d_stop);
-    //     printf("Kernel launched\n");
-    //     cudaCheckErrors("kernel launch failed");
-
-    //     bool simulationFinished = false;
-    //     // int count = 0;
-
-    //     while(!simulationFinished){
-    //         h_eventQueue = (!pos) ? h_safeEventQueue1 : h_safeEventQueue2;
-    //         h_bufrdy = (!pos) ? h_bufrdy1 : h_bufrdy2;
-    //         d_bufrdy = (!pos) ? d_bufrdy1 : d_bufrdy2;
-
-    //         // insert event
-    //         DeviceEvent ev;
-    //         ev.type = 1;
-    //         ev.ts = 0.0;
-    //         ev.context = 0;
-    //         ev.uid = 0;
-    //         ev.impl = obj;
-    //         ev.valid = true;
-
-    //         printf("Inserting event\n");
-    //         // wait for the buffer to be ready(still processing by the kernel)
-    //         while(*h_bufrdy);
-
-    //         cudaMemcpyAsync(&h_eventQueue[3], &ev, sizeof(DeviceEvent), cudaMemcpyHostToDevice, streamC);
-    //         cudaCheckErrors("queue cudaMemcpyAsync failed");
-            
-    //         ev.type = 2;
-    //         cudaMemcpyAsync(&h_eventQueue[1], &ev, sizeof(DeviceEvent), cudaMemcpyHostToDevice, streamC);
-    //         cudaCheckErrors("queue cudaMemcpyAsync failed");
-    //         /****************************************************************************** */
-    //         // if this line is faster than the memcpy, the kernel will not see the new event
-    //         /****************************************************************************** */
-    //         cudaStreamSynchronize(streamC);
-    //         *h_bufrdy = 1;
-
-    //         printf("Events inserted\n");
-
-    //         pos = !pos;
-    //         // cudaEventRecord(event, stream);
-    //         // insert(d_eventQueue, ev.impl, eventCounter, 100, ev.ts, ev.context, ev.uid, ev.type);
-    //         // if(count++ == 2)
-    //         simulationFinished = true;
-    //     }
-        
-    //     sleep(1);
-
-    //     int stop = 1;
-    //     cudaMemcpyAsync(d_stop, &stop, sizeof(int), cudaMemcpyHostToDevice, streamC);
-    //     cudaCheckErrors("stop cudaMemcpyAsync failed");
-
-    //     // Wait for the kernel to finish
-    //     cudaStreamSynchronize(streamK);
-    //     printf("Kernel finished\n");
-    //     cudaStreamSynchronize(streamC);
-    //     printf("Stream finished\n");
-    //     // printf("safe_ts: %f\n", *safe_ts);
-    //     printf("next event: %d\n", d_nextEventQueue1[0].type);
-    // }
-
     __host__ __device__ void CudaELPSimulator::print_test() const{
         printf("cuda_sim: %p\n", cudaSim);
         printf("print_test: %p\n", this);
@@ -525,20 +445,23 @@ namespace ns3 {
         // printf("lookahead: %lf\n", lookahead);
         d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 0, type, lookahead, true, payload};
         *d_curDevBufRdy = 1;
-        // ChangeDevQueue();
+        // how can we change the queue if index are determine by the kernel?
+        ChangeDevQueue();
         return 0;
     }
 
     bool CudaELPSimulator::is_safe(Scheduler::Event *ev){
         // safe
         uint64_t ts = ev->key.m_ts;
-        uint64_t lookahead = (ev->key.m_uid == EventId::UID::RESERVED) ? ((HostEvent*)ev)->lookahead : UINT64_MAX;
+        uint64_t lookahead = (ev->key.m_uid == EventId::UID::RESERVED) ? ((HostEvent*)(ev->impl))->lookahead : UINT64_MAX;
+        printf("ts: %lu\n", ts);
+        printf("lookahead: %lu\n", lookahead);
 
         if(ts < *safe_ts){
             // cur_buffer_safe_ts is specific to the current buffer, so it should be determined independently
             // but it still can only be updated if current event is safe, because if current event is not safe
             // the value it store might be invalid(as next time this function is called, it might not be same event)
-            if(ts + lookahead < cur_buffer_safe_ts)
+            if(lookahead != UINT64_MAX && ts + lookahead < cur_buffer_safe_ts)
                 cur_buffer_safe_ts = ts + lookahead;
             // what happen if ts + lookahead overflow?
             // add a condition to prevent it
@@ -585,7 +508,7 @@ namespace ns3 {
 
     __host__ void CudaELPSimulator::ELP_ScheduleDevEvent(){
         bool pos = 0;
-        // DeviceEvent* eventQueue = (!pos) ? d_nextEventQueue1 : d_nextEventQueue2;
+        // DeviceEvent* eventQueue =2002000000 (!pos) ? d_nextEventQueue1 : d_nextEventQueue2;
         // volatile int* h_bufrdy = (!pos) ? h_bufrdy1 : h_bufrdy2;
         // volatile int* d_bufrdy = (!pos) ? d_bufrdy1 : d_bufrdy2;
         // the queue is still used by the kernel
@@ -713,6 +636,7 @@ namespace ns3 {
 
         NS_ASSERT_MSG(delay.IsPositive(), "CudaELPSimulator::Schedule(): Negative delay");
         Time tAbsolute = delay + TimeStep(m_currentTs);
+        printf("current ts: %lu\n", m_currentTs);
 
         Scheduler::Event ev;
         HostEvent *h_ev;
@@ -722,7 +646,7 @@ namespace ns3 {
         h_ev->obj = obj;
         h_ev->type = type;
         h_ev->lookahead = lookahead;
-        h_ev->payload = nullptr;
+        h_ev->payload = payload;
         // printf("lookahead: %lf\n", lookahead);
         // printf("type: %d\n", h_ev.type);
 

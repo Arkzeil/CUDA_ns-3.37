@@ -22,6 +22,7 @@ namespace ns3
     // Forward
     class Scheduler;
     // a 2d table to store the lookahead time for each pair of node number
+    // the value is actually the delay between the two nodes, need to add the packet transmission time
     template <typename T>
     class LookaheadTable {
         public:

@@ -12,6 +12,7 @@ namespace ns3
     class CudaNetDevice;
     class CUDA_cb_data;
     class CudaPacket;
+    class CudaELPSimulator;
     
     class CudaP2PChannel: public PointToPointChannel, public Managed{
         public:
@@ -29,7 +30,7 @@ namespace ns3
             __device__ void test();
             __device__ bool test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data);
             __device__ bool TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data);
-            __device__ void ReceivePacket(const uint8_t* packet, uint32_t size);
+            // __device__ void ReceivePacket(const uint8_t* packet, uint32_t size);
         private:
             static const uint32_t N_DEVICES = 2;    // Number of devices in the channel
             uint32_t m_nDevices;    // Number of devices attached to the channel
@@ -37,40 +38,42 @@ namespace ns3
             uint32_t d_delay;   // Delay in device memory
             cudaStream_t m_stream;  // CUDA stream for async processing
 
-        enum WireState
-        {
-            /** Initializing state */
-            INITIALIZING,
-            /** Idle state (no transmission from NetDevice) */
-            IDLE,
-            /** Transmitting state (data being transmitted from NetDevice. */
-            TRANSMITTING,
-            /** Propagating state (data is being propagated in the channel. */
-            PROPAGATING
-        };
+            enum WireState
+            {
+                /** Initializing state */
+                INITIALIZING,
+                /** Idle state (no transmission from NetDevice) */
+                IDLE,
+                /** Transmitting state (data being transmitted from NetDevice. */
+                TRANSMITTING,
+                /** Propagating state (data is being propagated in the channel. */
+                PROPAGATING
+            };
 
-        /**
-         * \brief Wire model for the PointToPointChannel
-         */
-        class Link
-        {
-            public:
-                /** \brief Create the link, it will be in INITIALIZING state
-                 *
-                 */
-                Link()
-                    : m_state(INITIALIZING),
-                    m_src(nullptr),
-                    m_dst(nullptr)
-                {
-                }
+            /**
+             * \brief Wire model for the PointToPointChannel
+             */
+            class Link
+            {
+                public:
+                    /** \brief Create the link, it will be in INITIALIZING state
+                     *
+                     */
+                    Link()
+                        : m_state(INITIALIZING),
+                        m_src(nullptr),
+                        m_dst(nullptr)
+                    {
+                    }
 
-                WireState m_state;                //!< State of the link
-                CudaNetDevice *m_src; //!< First NetDevice
-                CudaNetDevice *m_dst; //!< Second NetDevice
-        };
+                    WireState m_state;                //!< State of the link
+                    CudaNetDevice *m_src; //!< First NetDevice
+                    CudaNetDevice *m_dst; //!< Second NetDevice
+            };
 
-        Link m_link[N_DEVICES]; //!< Link model
+            Link m_link[N_DEVICES]; //!< Link model
+
+            CudaELPSimulator* m_cudaSim; //!< CUDA simulator
     };
 } // namespace ns3
 

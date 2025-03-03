@@ -132,8 +132,13 @@ namespace ns3 {
         CudaNetDevice* dev = m_cudaSocket->GetUdp()->GetIpv4()->GetInterface(index)->GetDevice();
         CudaNetDevice* dst_dev = dev->GetChannel()->GetDstDev(dev);
         uint32_t dst_node = dst_dev->GetNode()->GetId();
+        uint64_t bandwidth = dev->GetBandwidth(); // bps
         printf("Destination node: %d\n", dst_node);
         lookahead = lookaheadTable.getValue(GetNode()->GetId(), dst_node);
+        
+        lookahead += ((float)(m_size * 8) / bandwidth) * 1e9;
+        dev->lookahead = lookahead;
+        
         printf("Lookahead: %lu\n", lookahead);
     }
 
@@ -181,7 +186,7 @@ namespace ns3 {
 
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
         CalculateLookAhead(Ipv4Address::ConvertFrom(m_peerAddress).Get());
-        m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, 0.25, nullptr);
+        m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, lookahead, nullptr);
 
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
@@ -318,14 +323,16 @@ namespace ns3 {
         new(cuda_packet) CudaPacket();
         cuda_packet->Allocate(m_size);
 
+        // cuda_packet->m_data[0] = 69;
+
         if(m_cudaSocket->Send(cuda_packet, nullptr) >= 0){
             atomicAdd(m_sent, 1);
             atomicAdd(m_totalTx, cuda_packet->GetSize());
         }
 
         // Schedule the next send event
-        // if(*m_sent < 2)    
-        //     m_cudaSim->d_insert(this, d_interval, 0, 0, lookahead, nullptr);
+        if(*m_sent < 2)    
+            m_cudaSim->d_insert(this, d_interval, 0, 0, lookahead, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

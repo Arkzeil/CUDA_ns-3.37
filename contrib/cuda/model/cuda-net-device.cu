@@ -3,7 +3,9 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-udp-client.h"
 #include "ns3/cuda-packet.h"
+#include "ns3/cuda-ipv4-l3-protocol.h"
 #include "ns3/cuda-elp-simulator.h"
+
 
 namespace ns3 {
 
@@ -190,6 +192,11 @@ namespace ns3 {
 
   void CudaNetDevice::SetNode(Ptr<Node> node) {
       m_node = node;
+      m_ipv4 = (CudaIpv4L3Protocol*)GetPointer(node->GetObject<Ipv4>());
+  }
+
+  __host__ __device__ uint64_t CudaNetDevice::GetBandwidth(){
+      return d_bps;
   }
 
   void CudaNetDevice::Receive(CudaPacket* packet) {
@@ -199,6 +206,13 @@ namespace ns3 {
       m_rxCallback(this, (ns3::Packet*)packet, 69, Address());
       // ProcessPacketOnCuda(packet);
   } 
+
+  __device__ void CudaNetDevice::d_Receive(CudaPacket* packet) {
+      // Process received packet
+      printf("Received packet on GPU, packet id: %d, data0: %d\n", packet->GetUid(), packet->m_data[0]);
+      m_ipv4->d_Receive(this, packet);
+      // ProcessPacketOnCuda(packet);
+  }
 
   __device__ void CudaNetDevice::test(const uint8_t *data, CUDA_cb_data* cb_data) {
       printf("CudaNetDevice: Test function, packet0: %d\n", data[0]);
@@ -272,7 +286,8 @@ namespace ns3 {
     }
     // cudaEventSynchronize(m_event);
     // cudaFree(cb_data->packet->m_data);
-    m_cudaSim->d_insert(this, d_interval, 0, 1, 0, nullptr);
+    m_cudaSim->d_insert(this, d_interval, 0, 1, lookahead, nullptr);
+    // m_cudaSim->d_insert(this, 1, 0, 2, 0, (void*)packet);
 
     bool result = m_channel->TransmitStart(packet, this, TxTime, cb_data);
     if(result == false) {

@@ -19,6 +19,7 @@ namespace ns3 {
 class CUDA_cb_data;
 class CudaPacket;
 class CudaELPSimulator;
+class CudaIpv4L3Protocol;
 
 class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
@@ -42,10 +43,12 @@ public:
     Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
     void Receive(CudaPacket *packet);
+    __device__ void d_Receive(CudaPacket *packet);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
+    __host__ __device__ uint64_t GetBandwidth();
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
     __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
@@ -57,6 +60,7 @@ public:
     void TransmitPackets();
     CudaP2PChannel* GetChannel();
 
+    uint64_t lookahead;
 private:
     void ProcessPacketOnCuda(Ptr<Packet> packet);
 
@@ -81,6 +85,7 @@ private:
 
     // CUDA-related members
     CudaELPSimulator* m_cudaSim; //!< CUDA simulator
+    CudaIpv4L3Protocol* m_ipv4; //!< Pointer to the IPv4 L3 protocol, used for packet receive as we currently do not adopting callback mechanism
     cudaStream_t m_stream;
     cudaEvent_t m_event;        // !< CUDA event to synchronize packet enqueueing
     CudaPacket** d_packetQueue; // GPU packet queue

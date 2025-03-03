@@ -37,7 +37,9 @@ namespace ns3{
             void SetDown(uint32_t interfaceIndex);
             void SetForwarding(uint32_t interfaceIndex, bool enable);
             // void Send(const uint8_t *packet, Ipv4Address source, Ipv4Address destination, uint8_t protocol, Ptr<Ipv4Route> route);
+            __device__ void d_LocalDeliver(CudaPacket *packet, CudaIpv4Interface *interface);
             void Receive(Ptr<NetDevice> device, CudaPacket *packet, uint16_t protocol, const Address& from, const Address& to, NetDevice::PacketType packetType);
+            __device__ void d_Receive(CudaNetDevice* device, CudaPacket *packet);
             __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
             __device__ void Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);

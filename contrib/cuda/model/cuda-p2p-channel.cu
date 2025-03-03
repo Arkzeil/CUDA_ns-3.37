@@ -24,6 +24,7 @@ namespace ns3 {
 
     CudaP2PChannel::CudaP2PChannel(): m_delay(Seconds(0.0)), m_stream(nullptr), m_nDevices(0) {
         // cudaStreamCreate(&m_stream);
+        m_cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
     }
 
     CudaP2PChannel::CudaP2PChannel(Time delay): m_delay(delay), m_stream(nullptr), m_nDevices(0) {
@@ -110,7 +111,7 @@ namespace ns3 {
 
     __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
-        printf("TransmitStart function in channel, packet id: %d\n", d_packet->GetUid());
+        printf("TransmitStart function in channel, packet id: %d, data0: %d\n", d_packet->GetUid(), d_packet->m_data[0]);
         // printf("Device address: %p\n", src);
         // printf("Transmission time: %f\n", txTime);
         if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
@@ -135,6 +136,7 @@ namespace ns3 {
         }
         // printf("delay: %f\n", txTime + d_delay);
         // cudaSim_d->deviceMethod(this, 0);
+        m_cudaSim->d_insert(m_link[wire].m_src, txTime + d_delay, 0, 2, 0, (void*)d_packet);
 
         return true;
         // uint8_t* d_packet;
