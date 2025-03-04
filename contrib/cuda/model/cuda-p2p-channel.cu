@@ -46,6 +46,9 @@ namespace ns3 {
             m_link[0].m_state = IDLE;
             m_link[1].m_state = IDLE;
 
+            NodeID = m_link[0].m_src->GetNode()->GetId();
+            dst_NodeID = m_link[0].m_dst->GetNode()->GetId();
+
             printf("Device 0: %p, Device 1: %p\n", m_link[0].m_src, m_link[1].m_src);
         }
     }
@@ -134,9 +137,16 @@ namespace ns3 {
                 cb_data->next->packet = d_packet;
             }
         }
+
+        uint32_t context;
+
+        if(!wire)
+            context = dst_NodeID;
+        else
+            context = NodeID;
         // printf("delay: %f\n", txTime + d_delay);
         // cudaSim_d->deviceMethod(this, 0);
-        m_cudaSim->d_insert(m_link[wire].m_src, txTime + d_delay, 0, 2, 0, (void*)d_packet);
+        m_cudaSim->d_insert(m_link[wire].m_dst, txTime + d_delay, context, 2, UINT64_MAX, (void*)d_packet);
 
         return true;
         // uint8_t* d_packet;

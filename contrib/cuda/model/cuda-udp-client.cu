@@ -186,7 +186,8 @@ namespace ns3 {
 
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
         CalculateLookAhead(Ipv4Address::ConvertFrom(m_peerAddress).Get());
-        m_cudaSim->ELP_Schedule(GetNode()->GetId(), Seconds(0.0), this, 0, lookahead, nullptr);
+        NodeID = GetNode()->GetId();
+        m_cudaSim->ELP_Schedule(NodeID, Seconds(0.0), this, 0, lookahead, nullptr);
 
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
@@ -332,7 +333,7 @@ namespace ns3 {
 
         // Schedule the next send event
         if(*m_sent < 2)    
-            m_cudaSim->d_insert(this, d_interval, 0, 0, lookahead, nullptr);
+            m_cudaSim->d_insert(this, d_interval, NodeID, 0, lookahead, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

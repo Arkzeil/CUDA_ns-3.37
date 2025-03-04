@@ -113,7 +113,7 @@ namespace ns3 {
                 printf("CudaUdpServer Received packet: %d\n", packet->GetUid());
                 uint32_t receivedSize = packet->GetSize();
                 // this line might execute after destructor is executed --> Illegal memory access
-                // atomicAdd(&m_received, 1);
+                atomicAdd(&m_received, 1);
             }
             
             cudaFree(packet);

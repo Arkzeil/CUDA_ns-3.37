@@ -69,6 +69,7 @@ namespace ns3{
             uint8_t* d_packetBuffer;      // Device memory for packet data
             cudaStream_t m_cudaStream;   // CUDA stream for async processing
             uint64_t lookahead;         // Lookahead time in nanoseconds(for peerAddress)
+            uint32_t NodeID;            // Node ID for the context of scheduling
     };
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);

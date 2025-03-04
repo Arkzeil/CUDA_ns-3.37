@@ -94,6 +94,7 @@ private:
     int* d_queueFront;
     int* d_queueRear;
     int m_queueSize;
+    uint32_t NodeID;
 };
 
 } // namespace ns3

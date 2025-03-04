@@ -74,6 +74,8 @@ namespace ns3
             Link m_link[N_DEVICES]; //!< Link model
 
             CudaELPSimulator* m_cudaSim; //!< CUDA simulator
+            uint32_t NodeID;            // Node ID for the context of scheduling
+            uint32_t dst_NodeID;
     };
 } // namespace ns3
 

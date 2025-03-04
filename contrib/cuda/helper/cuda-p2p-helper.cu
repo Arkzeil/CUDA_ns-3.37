@@ -48,15 +48,16 @@ namespace ns3 {
         deviceB->SetAddress(Mac48Address::Allocate());
         channel->SetDelay(delay);
         
-        // deviceA->Attach(GetPointer(channel));
-        // deviceB->Attach(GetPointer(channel));
-        deviceA->Attach(channel);
-        deviceB->Attach(channel);
         
         a->AddDevice(deviceA);
         b->AddDevice(deviceB);
         printf("Node 0 address: %p, device 0 address: %p\n", GetPointer(a), deviceA);
         printf("Node 1 address: %p, device 1 address: %p\n", GetPointer(b), deviceB);
+
+        // deviceA->Attach(GetPointer(channel));
+        // deviceB->Attach(GetPointer(channel));
+        deviceA->Attach(channel);
+        deviceB->Attach(channel);
         
         container.Add(deviceA);
         container.Add(deviceB);
