@@ -29,13 +29,13 @@ namespace ns3
             CudaNetDevice* GetDstDev(CudaNetDevice* src);
             __device__ void test();
             __device__ bool test(const uint8_t *data, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data);
-            __device__ bool TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data);
+            __device__ bool TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, uint64_t txTime, CUDA_cb_data* cb_data);
             // __device__ void ReceivePacket(const uint8_t* packet, uint32_t size);
         private:
             static const uint32_t N_DEVICES = 2;    // Number of devices in the channel
             uint32_t m_nDevices;    // Number of devices attached to the channel
             Time m_delay;       // Delay in nanoseconds
-            uint32_t d_delay;   // Delay in device memory
+            double d_delay;   // Delay in device memory
             cudaStream_t m_stream;  // CUDA stream for async processing
 
             enum WireState

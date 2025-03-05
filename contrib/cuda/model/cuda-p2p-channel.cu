@@ -55,7 +55,7 @@ namespace ns3 {
 
     void CudaP2PChannel::SetDelay(Time delay) {
         m_delay = delay;
-        d_delay = delay.GetSeconds();
+        d_delay = delay.GetNanoSeconds();;
     }
 
     __device__ void CudaP2PChannel::test(){
@@ -112,7 +112,7 @@ namespace ns3 {
         return m_link[wire].m_dst;
     }
 
-    __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, float txTime, CUDA_cb_data* cb_data) {
+    __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, uint64_t txTime, CUDA_cb_data* cb_data) {
         // Transmit packet from one device to another
         printf("TransmitStart function in channel, packet id: %d, data0: %d\n", d_packet->GetUid(), d_packet->m_data[0]);
         // printf("Device address: %p\n", src);

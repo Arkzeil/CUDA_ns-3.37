@@ -29,6 +29,8 @@ int main(int argc, char* argv[]) {
 
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::CudaELPSimulator"));
+  // GlobalValue::Bind("SchedulerImplementationType",
+  //                   StringValue("ns3::MapScheduler"));
   // NodeContainer nodes;
   // nodes.Create(2);
   Ptr<Node> node0 = CreateObject<Node>();

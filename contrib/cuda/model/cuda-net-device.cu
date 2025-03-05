@@ -273,8 +273,8 @@ namespace ns3 {
     }
     m_txMachineState = BUSY;
     // assuming m_InterframeGap is 0
-    float TxTime = (float)(packet->GetSize() * 8) / d_bps; // in seconds
-    // uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
+    double TxTime = (double)(packet->GetSize() * 8) / d_bps; // in seconds
+    uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
 
     if(cb_data != nullptr){
       cb_data->empty = false;
@@ -287,10 +287,10 @@ namespace ns3 {
     }
     // cudaEventSynchronize(m_event);
     // cudaFree(cb_data->packet->m_data);
-    m_cudaSim->d_insert(this, TxTime, NodeID, 1, lookahead, nullptr);
+    m_cudaSim->d_insert(this, d_interval, NodeID, 1, lookahead, nullptr);
     // m_cudaSim->d_insert(this, 1, 0, 2, 0, (void*)packet);
 
-    bool result = m_channel->TransmitStart(packet, this, TxTime, cb_data);
+    bool result = m_channel->TransmitStart(packet, this, d_interval, cb_data);
     if(result == false) {
       printf("Channel TransmitStart failed\n");
     }

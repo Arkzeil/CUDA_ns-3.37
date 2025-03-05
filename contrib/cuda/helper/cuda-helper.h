@@ -156,7 +156,7 @@ namespace ns3
             uint8_t* packetBuffer;
             uint32_t packetSize;
             Time sendTime;
-            float delay;
+            double delay;
             CUDA_cb_data* next;
             // CudaSocket* socket;
             // Ptr<Packet> packet;

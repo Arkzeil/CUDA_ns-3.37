@@ -202,7 +202,7 @@ namespace ns3 {
         *safe_ts = UINT64_MAX;
         *d_safe_ts1 = UINT64_MAX;
         *d_safe_ts2 = UINT64_MAX;
-        cur_buffer_safe_ts = UINT64_MAX;
+        // cur_buffer_safe_ts = UINT64_MAX;
         cudaCheckErrors("stop and safe_ts cudaMallocManaged failed");
         // Allocate and initialize the event queue on the UMA
         cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
@@ -419,22 +419,23 @@ namespace ns3 {
         ((CudaP2PChannel*)obj)->test();
     }
 
-    __host__ int CudaELPSimulator::h_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void *payload){
+    __host__ int CudaELPSimulator::h_insert(void* impl, uint64_t ts, int context, int type, uint64_t lookahead, void *payload){
         // the queue is still used by the kernel
         while(*h_curHostBufRdy);
 
-        h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, delay, context, 0, type, lookahead, true, payload};
-        
-        if(delay + lookahead < *safe_ts)
-            *safe_ts = delay + lookahead;
-        if(*safe_ts < *h_safe_ts)
+        h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, ts, context, 0, type, lookahead, true, payload};
+        // lookahead might be UINT64_MAX, so we need to check if it is valid
+        if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
+            *safe_ts = ts + lookahead;
+        if(lookahead != UINT64_MAX && *safe_ts < *h_safe_ts)
             *h_safe_ts = *safe_ts;
+        printf("h_insert safe_ts: %lu\n", *safe_ts);
         // *h_curHostBufRdy = 1;
         // ChangeHostQueue();
         return 0;
     }
 
-    __device__ int CudaELPSimulator::d_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void *payload){
+    __device__ int CudaELPSimulator::d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void *payload){
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
@@ -442,10 +443,10 @@ namespace ns3 {
         // the queue is still used by the host
         while(*d_curDevBufRdy);
         
-        printf("insert: %d\n", m_test);
-        printf("insert tid: %d\n", tid);
+        // printf("insert: %d\n", m_test);
+        // printf("insert tid: %d\n", tid);
         // printf("lookahead: %lf\n", lookahead);
-        d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 0, type, lookahead, true, payload};
+        d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 3, type, lookahead, true, payload};
         *d_curDevBufRdy = 1;
         // how can we change the queue if index are determine by the kernel?
         ChangeDevQueue();
@@ -463,8 +464,8 @@ namespace ns3 {
             // cur_buffer_safe_ts is specific to the current buffer, so it should be determined independently
             // but it still can only be updated if current event is safe, because if current event is not safe
             // the value it store might be invalid(as next time this function is called, it might not be same event)
-            if(lookahead != UINT64_MAX && ts + lookahead < cur_buffer_safe_ts)
-                cur_buffer_safe_ts = ts + lookahead;
+            // if(lookahead != UINT64_MAX && ts + lookahead < cur_buffer_safe_ts)
+            //     cur_buffer_safe_ts = ts + lookahead;
             // what happen if ts + lookahead overflow?
             // add a condition to prevent it
             if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts){
@@ -481,6 +482,12 @@ namespace ns3 {
         m_unscheduledEvents--;
         m_eventCount++;
 
+        NS_ASSERT(next.key.m_ts >= m_currentTs);
+        m_currentTs = next.key.m_ts;
+        m_currentContext = next.key.m_context;
+
+        // printf("current ts: %lu\n", m_currentTs);
+
         HostEvent* h_ev = (HostEvent*)next.impl;
         h_insert(h_ev->obj, next.key.m_ts, next.key.m_context, h_ev->type, h_ev->lookahead, h_ev->payload);
         // printf("h_ev type: %d\n", h_ev->type);
@@ -493,7 +500,7 @@ namespace ns3 {
             // printf("Host buffer ready: %p\n", h_curHostBufRdy);
             ChangeHostQueue();
             h_insertIndex = 0;
-            cur_buffer_safe_ts = UINT64_MAX;
+            // cur_buffer_safe_ts = UINT64_MAX;
         }
     }
 
@@ -528,8 +535,8 @@ namespace ns3 {
         for(int i = 0; i < DEVICE_QUEUE_LENGTH; i++){
             DeviceEvent *ev = &h_curDevBuf[i];
             if(__glibc_unlikely(ev->valid)){
-                printf("true\n");
-                ELP_Schedule(ev->context, Time(Seconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
+                // printf("true, ts: %lf\n", ev->ts);
+                ELP_Schedule(ev->context, Time(NanoSeconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                 ev->valid = false;
             }
         }
@@ -544,8 +551,8 @@ namespace ns3 {
             for(int i = 0; i < DEVICE_QUEUE_LENGTH; i++){
                 DeviceEvent *ev = &h_curDevBuf[i];
                 if(__glibc_unlikely(ev->valid)){
-                    printf("true\n");
-                    ELP_Schedule(ev->context, Time(Seconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
+                    // printf("true, ts: %lf\n", ev->ts);
+                    ELP_Schedule(ev->context, Time(NanoSeconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                     ev->valid = false;
                 }
             }
@@ -592,20 +599,32 @@ namespace ns3 {
                 // if(safe_ts1 > *safe_ts || safe_ts2 > *safe_ts)
                 //     *safe_ts = (safe_ts1 < safe_ts2) ? safe_ts1 : safe_ts2;
                 
-                // check 1: check if the safe_ts of another buffer which is execuing by GPU is larger than the current safe_ts
-                // if so, we should use it as the new safe_ts
+                
                 if(h_curHostBuf == h_safeEventQueue1){
+                    // check 1: check if the safe_ts of another buffer which is execuing by GPU is larger than the current safe_ts
+                    // if so, we should use it as the new safe_ts
                     if(safe_ts2 > *safe_ts)
                         *safe_ts = safe_ts2;
+                    // check 2: if the safe_ts of current buffer is smaller, we should use it as it stands for the smallest ts of events 
+                    // to be processed in the buffer
+                    if(safe_ts1 < *safe_ts)
+                        *safe_ts = safe_ts1;
+                    printf("safe ts: %lu\n", *safe_ts);
                 }
                 else{
+                    // check 1: check if the safe_ts of another buffer which is execuing by GPU is larger than the current safe_ts
+                    // if so, we should use it as the new safe_ts
                     if(safe_ts1 > *safe_ts)
                         *safe_ts = safe_ts1;
+                    // check 2: if the safe_ts of current buffer is smaller, we should use it as it stands for the smallest ts of events 
+                    // to be processed in the buffer
+                    if(safe_ts2 < *safe_ts)
+                        *safe_ts = safe_ts2;
+                    printf("safe ts: %lu\n", *safe_ts);
                 }
-                // check 2: if the safe_ts of current buffer is smaller, we should use it as it stands for the smallest ts of events 
-                // to be processed in the buffer
-                if(*safe_ts > cur_buffer_safe_ts)
-                    *safe_ts = cur_buffer_safe_ts;
+                
+                // if(*safe_ts > cur_buffer_safe_ts)
+                //     *safe_ts = cur_buffer_safe_ts;
                 // if(h_bufrdy1 == 0)
                 //     if(safe_ts1 > *safe_ts)
                 //         *safe_ts = safe_ts1;
@@ -620,14 +639,14 @@ namespace ns3 {
             if(__glibc_likely(next.key.m_uid == EventId::UID::RESERVED)){
                 ELP_ProcessOneEvent();
                 // m_events->RemoveNext();
-                printf("CUDA event\n");
+                printf("CUDA event, safe ts: %lu\n", *safe_ts);
                 // sleep(1);
             }
             // Host event, process it on CPU directly
-            else
+            else{
+                printf("Host event, safe ts: %lu\n", *safe_ts);
                 ProcessOneEvent();
-
-            printf("safe ts: %lu\n", *safe_ts);
+            }
         }
 
         // If the simulator stopped naturally by lack of events, make a
@@ -656,7 +675,6 @@ namespace ns3 {
 
         NS_ASSERT_MSG(delay.IsPositive(), "CudaELPSimulator::Schedule(): Negative delay");
         Time tAbsolute = delay + TimeStep(m_currentTs);
-        printf("current ts: %lu\n", m_currentTs);
 
         Scheduler::Event ev;
         HostEvent *h_ev;
@@ -680,6 +698,7 @@ namespace ns3 {
         ev.key.m_uid = EventId::UID::RESERVED;
         // m_uid++;
         m_unscheduledEvents++;
+        printf("ts: %lu, context: %d\n", ev.key.m_ts, ev.key.m_context);
         m_events->Insert(ev);
         // return EventId(event, ev.key.m_ts, ev.key.m_context, ev.key.m_uid);
     }

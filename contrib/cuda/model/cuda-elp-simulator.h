@@ -126,7 +126,7 @@ namespace ns3
     // A simplified device-side event structure
     struct DeviceEvent {
         void *impl;   // pointer to the event implementation
-        double ts;    // event timestamp, assuming to be second (so using double to store floating point)
+        uint64_t ts;    // event timestamp, assuming to be nanosecond
         int context;  // event context
         uint32_t uid;      // unique id
         int type;     // event type identifier
@@ -178,9 +178,9 @@ namespace ns3
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
             // for host to insert an safe event for device to execute
-            __host__ int h_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void* payload);
+            __host__ int h_insert(void* impl, uint64_t ts, int context, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
-            __device__ int d_insert(void* impl, double delay, int context, int type, uint64_t lookahead, void* payload);
+            __device__ int d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
             
             void Run() override;
             Time Now() const override;
@@ -257,8 +257,8 @@ namespace ns3
             uint64_t *safe_ts;
             uint64_t *d_safe_ts1;
             uint64_t *d_safe_ts2;
-            // to store the safe stamp of CPU current writing buffer, need to be reset when the buffer is changed
-            uint64_t cur_buffer_safe_ts;
+            // to store the safe timestamp of CPU current writing buffer, need to be reset when the buffer is changed
+            // uint64_t cur_buffer_safe_ts;
             // used for host to update the safe timestamp for h_safeEventQueue, containing the pointer to the ts
             uint64_t *h_safe_ts;
             // a stop flag for device to check if the simulation is finished

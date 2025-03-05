@@ -179,7 +179,7 @@ namespace ns3 {
         // cudaMallocManaged((void**)&(d_data->packetBuffer), m_size);
         // m_socket->SetRecvCallback(MakeCallback(&CudaUdpClient::Receive, this));
         m_cudaSim = (CudaELPSimulator*)GetPointer(Simulator::GetImplementation());
-        d_interval = m_interval.GetSeconds();
+        d_interval = m_interval.GetNanoSeconds();
 
         // Get destination node using socket->ipv4L3Protocol->netdevice->node in advance
         // Ptr<Node> dstNode = m_cudaSocket->
