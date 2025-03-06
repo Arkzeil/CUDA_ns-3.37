@@ -138,6 +138,11 @@ namespace ns3 {
             }
         }
 
+        // for(int i = 0; i < 28; i++){
+        //     printf("%d ", d_packet->m_data[i]);
+        // }
+        // printf("\n");
+
         uint32_t context;
 
         if(!wire)

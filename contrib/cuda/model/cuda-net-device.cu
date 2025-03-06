@@ -209,6 +209,10 @@ namespace ns3 {
   } 
 
   __device__ void CudaNetDevice::d_Receive(CudaPacket* packet) {
+      // for(int i = 0; i < 28; i++){
+      //   printf("%d ", packet->m_data[i]);
+      // }
+      // printf("\n");
       // Process received packet
       printf("Received packet on GPU, packet id: %d, data0: %d\n", packet->GetUid(), packet->m_data[0]);
       m_ipv4->d_Receive(this, packet);

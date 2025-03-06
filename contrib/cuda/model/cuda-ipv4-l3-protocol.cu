@@ -339,15 +339,19 @@ namespace ns3 {
         *(ipHeader + 6) = 0x00;         // flags and fragment offset
         *(ipHeader + 8) = ttl;          // ttl
         *(ipHeader + 9) = protocol;     // protocol
-        *(uint32_t*)(ipHeader + 12) = source;      // source address
-        *(uint32_t*)(ipHeader + 16) = destination; // destination address
+        *((uint32_t*)(ipHeader + 12)) = source;      // source address
+        *((uint32_t*)(ipHeader + 16)) = destination; // destination address
 
         // Compute checksum
         uint16_t checksum = compute_ipv4_checksum(ipHeader);
         *(ipHeader + 10) = checksum >> 8;
         *(ipHeader + 11) = checksum & 0xFF;
 
-        
+        // for(int i = 0; i < 20; i++){
+        //     printf("%d ", ipHeader[i]);
+        // }
+        // printf("\n");
+
         uint32_t outInterfaceIndex;
         if(m_routing->LookupRoute(destination, &outInterfaceIndex) == false){
             printf("No route found\n");
