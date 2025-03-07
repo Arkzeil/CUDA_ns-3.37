@@ -133,6 +133,7 @@ namespace ns3
         uint64_t lookahead; // lookahead time
         bool valid;  // a flag to indicate if the event is valid
         void *payload; // event-specific payload(usually a pointer to a packet)
+        DeviceEvent *next; // pointer to the next event(used for send, which will bring a chain of events)
         // Add any additional event-specific payload here.
         // For example, a union of data for different event types.
     };
@@ -181,6 +182,7 @@ namespace ns3
             __host__ int h_insert(void* impl, uint64_t ts, int context, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
             __device__ int d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
+            __device__ void ChangeDevQueue();
             
             void Run() override;
             Time Now() const override;
@@ -198,8 +200,7 @@ namespace ns3
             void ProcessEventsWithContext();
 
             __host__ bool is_safe(Scheduler::Event *ev);
-
-            __device__ void ChangeDevQueue();
+            
             __host__ void ChangeHostQueue();
             __host__ void ELP_ProcessOneEvent();
             __host__ void ELP_ScheduleDevEvent();
@@ -262,7 +263,9 @@ namespace ns3
             // used for host to update the safe timestamp for h_safeEventQueue, containing the pointer to the ts
             uint64_t *h_safe_ts;
             // a stop flag for device to check if the simulation is finished
-            int *d_stop;
+            volatile int *d_stop;
+            // a flag to let CPU notify that it's idle and GPU need to release device buffer
+            volatile int *h_idle;
             uint32_t m_test;
             uint32_t d_uid;
 

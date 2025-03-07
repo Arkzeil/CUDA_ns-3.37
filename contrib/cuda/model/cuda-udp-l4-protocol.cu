@@ -215,10 +215,10 @@ namespace ns3 {
         //     }
         //     printf("\n");
         // }
-        for(int i = 0; i < 8; i++){
-            printf("%d ", d_packet->m_data[i]);
-        }
-        printf("\n");
+        // for(int i = 0; i < 8; i++){
+        //     printf("%d ", d_packet->m_data[i]);
+        // }
+        // printf("\n");
 
         m_ipv4->Send(d_packet, saddr, daddr, 0, 0, cb_data);
 
