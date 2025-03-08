@@ -209,8 +209,8 @@ namespace ns3 {
         cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
         cudaMallocManaged(&h_safeEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
         // cudaMallocManaged(&d_eventQueue, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        cudaMallocManaged(&d_nextEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        cudaMallocManaged(&d_nextEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
+        cudaMallocManaged(&d_nextEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent) * 3);
+        cudaMallocManaged(&d_nextEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent) * 3);
         // cudaMemset(d_eventQueue, 0, 100 * sizeof(DeviceEvent));
         cudaCheckErrors("queue cudaMallocManaged failed");
         cudaMallocManaged(&h_bufrdy1, sizeof(int));
@@ -418,6 +418,7 @@ namespace ns3 {
             pos = !pos;
 
             __syncthreads();        // wait for all threads of this block to finish
+            __threadfence();        // ensure that all threads have finished before continuing
             // mark host buffer as consumed, and device buffer as ready for CPU to insert new events
             if(tid == 0){
                 // printf("pos: %d\n", pos);
@@ -426,6 +427,7 @@ namespace ns3 {
                 // all events in current queue are processed 
                 *d_safe_ts = UINT64_MAX;
                 sim->ChangeDevQueue();
+                __threadfence_system();
             }
         }
     }
@@ -461,7 +463,8 @@ namespace ns3 {
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
-        
+        tid *= 3;
+        int index = tid;
         // the queue is still used by the host
         while(*d_curDevBufRdy);
         
@@ -471,41 +474,69 @@ namespace ns3 {
         
         // at least one evnet is inserted in this index 
         if(d_curDevBuf[tid].valid){
-            printf("--------------%p------------------\n", &d_curDevBuf[tid]);
-            DeviceEvent *cur = d_curDevBuf[tid].next;
-            // find the non valid event or nullptr in the list
-            while(cur != nullptr && cur->valid){
-                cur = cur->next;
+            // printf("--------------%p------------------\n", &d_curDevBuf[tid]);
+            // DeviceEvent *cur = d_curDevBuf[tid].next;
+            DeviceEvent *cur = &d_curDevBuf[++index];
+            // cur = cur->next;
+            while(cur->valid){
+                cur = &d_curDevBuf[++index];
+                if(index >= tid + 3){
+                    printf("------------------Device queue is full-------------------\n");
+                    return -1;
+                }
             }
 
-            if(cur != nullptr && !(cur->valid)){
-                cur->impl = impl;
-                cur->ts = delay;
-                cur->context = context;
-                cur->uid = 3;
-                cur->type = type;
-                cur->lookahead = lookahead;
-                cur->valid = true;
-                cur->payload = payload;
-                cur->next = nullptr;
-            }
-            else{
-                cudaMalloc(&cur, sizeof(DeviceEvent));
-                cur->impl = impl;
-                cur->ts = delay;
-                cur->context = context;
-                cur->uid = 3;
-                cur->type = type;
-                cur->lookahead = lookahead;
-                cur->valid = true;
-                cur->payload = payload;
-                cur->next = nullptr;
-                printf("--------------%p------------------\n", cur);
-                printf("--------------type: %d------------------\n", cur->type);
-            }
+            cur->impl = impl;
+            cur->ts = delay;
+            cur->context = context;
+            cur->uid = 3;
+            cur->type = type;
+            cur->lookahead = lookahead;
+            cur->valid = true;
+            cur->payload = payload;
+            cur->next = nullptr;
+            printf("--------------type: %d------------------\n", cur->type);
+            // find the non valid event or nullptr in the list
+            // while(cur->next != nullptr && cur->next->valid){
+            //     cur = cur->next;
+            //     printf("--------------%p------------------\n", cur);
+            // }
+
+            // if(cur->next != nullptr && !(cur->next->valid)){
+            //     cur->next->impl = impl;
+            //     cur->next->ts = delay;
+            //     cur->next->context = context;
+            //     cur->next->uid = 3;
+            //     cur->next->type = type;
+            //     cur->next->lookahead = lookahead;
+            //     cur->next->valid = true;
+            //     cur->next->payload = payload;
+            //     cur->next->next = nullptr;    
+            // }
+            // else{
+            //     DeviceEvent *newEvent;
+            //     cudaMalloc(&newEvent, sizeof(DeviceEvent));
+                
+            //     // Initialize the new event
+            //     newEvent->impl = impl;
+            //     newEvent->ts = delay;
+            //     newEvent->context = context;
+            //     newEvent->uid = 3;
+            //     newEvent->type = type;
+            //     newEvent->lookahead = lookahead;
+            //     newEvent->valid = true;
+            //     newEvent->payload = payload;
+            //     newEvent->next = nullptr;
+
+            //     // Insert the new event at the end of the list
+            //     cur->next = newEvent;
+
+            //     printf("--------------%p------------------\n", cur->next);
+            //     printf("--------------type: %d------------------\n", cur->next->type);
+            // }
         }
         else
-            d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 3, type, lookahead, true, payload};
+            d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 3, type, lookahead, true, payload, nullptr};
         // *d_curDevBufRdy = 1;
         // how can we change the queue if index are determine by the kernel?
         // ChangeDevQueue();
@@ -591,11 +622,12 @@ namespace ns3 {
         h_curDevBuf = (*d_bufrdy1 == 1) ? d_nextEventQueue1 : d_nextEventQueue2;
         // while(!(*h_curDevBufRdy));
         // printf("Inserting event\n");
+        // DeviceEvent *next;
         DeviceEvent *cur;
-        DeviceEvent *prev;
 
+        // h_next = (DeviceEvent*)malloc(sizeof(DeviceEvent));
         // insert valid event(generated by device)
-        for(int i = 0; i < DEVICE_QUEUE_LENGTH; i++){
+        for(int i = 0; i < DEVICE_QUEUE_LENGTH * 3; i++){
             // DeviceEvent *ev = (DeviceEvent*)malloc(sizeof(DeviceEvent));
             // cudaMemcpy(ev, &h_curDevBuf[i], sizeof(DeviceEvent), cudaMemcpyDeviceToHost);
             DeviceEvent *ev = &h_curDevBuf[i];
@@ -604,25 +636,37 @@ namespace ns3 {
                 ELP_Schedule(ev->context, Time(NanoSeconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                 ev->valid = false;
                 
-                cur = ev;
-                prev = ev;
-                printf("-----------------schedule dev next: %p-------------------\n", cur);
-                printf("-----------------schedule dev next: %p-------------------\n", cur->next);
-                while(cur->next != nullptr){
-                    cudaMemcpy(cur, cur->next, sizeof(DeviceEvent), cudaMemcpyDeviceToHost);
-                    printf("-----------------schedule dev type: %d-------------------\n", cur->type);
-
+                for(int j = 0; j < 3; j++){
+                    cur = &h_curDevBuf[i + j];
                     if(__glibc_unlikely(cur->valid)){
                         // printf("true, ts: %lf\n", ev->ts);
                         ELP_Schedule(cur->context, Time(NanoSeconds(cur->ts)), cur->impl, cur->type, cur->lookahead, cur->payload);
                         cur->valid = false;
                     }
-                    // mark it as invalid
-                    cudaMemcpy(prev, cur, sizeof(DeviceEvent), cudaMemcpyHostToDevice);
-                    
-                    prev = cur;
-                    cur = cur->next;
                 }
+                // while(next != nullptr){
+                //     cudaPointerAttributes attr;
+                //     cudaError_t err = cudaPointerGetAttributes(&attr, next);
+                //     printf("attr: %d\n", attr.type);
+                //     if(err != cudaSuccess){
+                //         printf("Error: %s\n", cudaGetErrorString(err));
+                //     }
+                    
+                //     cudaMemcpy(h_next, next, sizeof(DeviceEvent), cudaMemcpyDeviceToHost);
+                //     cudaCheckErrors("D2H cudaMemcpy failed");
+                //     printf("-----------------schedule dev type: %d-------------------\n", h_next->type);
+
+                //     if(__glibc_unlikely(h_next->valid)){
+                //         // printf("true, ts: %lf\n", ev->ts);
+                //         ELP_Schedule(h_next->context, Time(NanoSeconds(h_next->ts)), h_next->impl, h_next->type, h_next->lookahead, h_next->payload);
+                //         h_next->valid = false;
+                //     }
+                //     // mark it as invalid
+                //     cudaMemcpy(next, h_next, sizeof(DeviceEvent), cudaMemcpyHostToDevice);
+                //     cudaCheckErrors("H2D cudaMemcpy failed");
+                    
+                //     next = h_next->next;
+                // }
             }
         }
         // this line might be slower than kernel
@@ -640,24 +684,37 @@ namespace ns3 {
                     ELP_Schedule(ev->context, Time(NanoSeconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                     ev->valid = false;
                     
-                    cur = ev;
-                    prev = ev;
-                    printf("-----------------schedule dev next: %p-------------------\n", cur->next);
-                    while(cur->next != nullptr){
-                        cudaMemcpy(cur, cur->next, sizeof(DeviceEvent), cudaMemcpyDeviceToHost);
-                        printf("-----------------schedule dev type: %d-------------------\n", cur->type);
-
+                    for(int j = 0; j < 3; j++){
+                        cur = &h_curDevBuf[i + j];
                         if(__glibc_unlikely(cur->valid)){
                             // printf("true, ts: %lf\n", ev->ts);
                             ELP_Schedule(cur->context, Time(NanoSeconds(cur->ts)), cur->impl, cur->type, cur->lookahead, cur->payload);
                             cur->valid = false;
                         }
-                        // mark it as invalid
-                        cudaMemcpy(prev, cur, sizeof(DeviceEvent), cudaMemcpyHostToDevice);
-                        
-                        prev = cur;
-                        cur = cur->next;
                     }
+                    // while(next != nullptr){
+                    //     cudaPointerAttributes attr;
+                    //     cudaError_t err = cudaPointerGetAttributes(&attr, next);
+                    //     printf("attr: %d\n", attr.type);
+                    //     if(err != cudaSuccess){
+                    //         printf("Error: %s\n", cudaGetErrorString(err));
+                    //     }
+                        
+                    //     cudaMemcpy(h_next, next, sizeof(DeviceEvent), cudaMemcpyDeviceToHost);
+                    //     cudaCheckErrors("D2H cudaMemcpy failed");
+                    //     printf("-----------------schedule dev type: %d-------------------\n", h_next->type);
+
+                    //     if(__glibc_unlikely(h_next->valid)){
+                    //         // printf("true, ts: %lf\n", ev->ts);
+                    //         ELP_Schedule(h_next->context, Time(NanoSeconds(h_next->ts)), h_next->impl, h_next->type, h_next->lookahead, h_next->payload);
+                    //         h_next->valid = false;
+                    //     }
+                    //     // mark it as invalid
+                    //     cudaMemcpy(next, h_next, sizeof(DeviceEvent), cudaMemcpyHostToDevice);
+                    //     cudaCheckErrors("H2D cudaMemcpy failed");
+                        
+                    //     next = h_next->next;
+                    // }
                 }
             }
             *h_curDevBufRdy = 0;
