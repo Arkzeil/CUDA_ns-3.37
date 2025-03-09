@@ -15,7 +15,7 @@
 #include <vector>
 #include <unordered_map>
 
-#define DEVICE_QUEUE_LENGTH 1
+#define DEVICE_QUEUE_LENGTH 10
 
 namespace ns3
 {
@@ -265,7 +265,7 @@ namespace ns3
             // a stop flag for device to check if the simulation is finished
             volatile int *d_stop;
             // a flag to let CPU notify that it's idle and GPU need to release device buffer
-            volatile int *h_idle;
+            // volatile int *h_idle;
             uint32_t m_test;
             uint32_t d_uid;
 

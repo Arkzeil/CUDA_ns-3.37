@@ -196,7 +196,6 @@ namespace ns3 {
         cudaCheckErrors("stream creation failed");
         // Allocate and initialize the stop flag on the device
         cudaMallocManaged(&d_stop, sizeof(int));
-        cudaMallocManaged(&h_idle, sizeof(int));
         cudaMallocManaged(&safe_ts, sizeof(uint64_t));
         cudaMallocManaged(&d_safe_ts1, sizeof(uint64_t));
         cudaMallocManaged(&d_safe_ts2, sizeof(uint64_t));
@@ -224,7 +223,6 @@ namespace ns3 {
         cudaMemset((void*)d_bufrdy1, 0, sizeof(int));
         cudaMemset((void*)d_bufrdy2, 0, sizeof(int));
         cudaMemset((void*)d_stop, 0, sizeof(int));
-        cudaMemset((void*)h_idle, 0, sizeof(int));
         cudaCheckErrors("ready flags cudaMemset failed");
 
         // Initialize the event buffer
@@ -255,7 +253,6 @@ namespace ns3 {
         cudaFree(d_safe_ts1);
         cudaFree(d_safe_ts2);
         cudaFree((void*)d_stop);
-        cudaFree((void*)h_idle);
         cudaCheckErrors("cleanup cudaFree failed");
         // Free the streams
         cudaStreamDestroy(streamK);
@@ -325,7 +322,7 @@ namespace ns3 {
                                         volatile int *h_bufrdy1, volatile int *h_bufrdy2,
                                         volatile int *d_bufrdy1, volatile int *d_bufrdy2,
                                         uint64_t* d_safe_ts1, uint64_t* d_safe_ts2, 
-                                        volatile int* d_stop, volatile int* h_idle) {
+                                        volatile int* d_stop) {
 
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
         const int totalThreads = gridDim.x * blockDim.x;
@@ -362,11 +359,11 @@ namespace ns3 {
             uint64_t localMin = *d_safe_ts; // Initialize to maximum double
             
             // check if kernel need to change next-event buffer to prevent deadlock 
-            if(tid == 0){
-                if(*h_idle){
-                    *h_idle = 0;
-                }
-            }
+            // if(tid == 0){
+            //     if(*h_idle){
+            //         *h_idle = 0;
+            //     }
+            // }
             // add syncthread?
 
             // Poll the buffer ready flag to check if the buffer is ready for reading.
@@ -453,7 +450,7 @@ namespace ns3 {
             *safe_ts = ts + lookahead;
         if(lookahead != UINT64_MAX && *safe_ts < *h_safe_ts)
             *h_safe_ts = *safe_ts;
-        printf("h_insert safe_ts: %lu\n", *safe_ts);
+        // printf("h_insert safe_ts: %lu\n", *safe_ts);
         // *h_curHostBufRdy = 1;
         // ChangeHostQueue();
         return 0;
@@ -495,7 +492,7 @@ namespace ns3 {
             cur->valid = true;
             cur->payload = payload;
             cur->next = nullptr;
-            printf("--------------type: %d------------------\n", cur->type);
+            // printf("--------------type: %d------------------\n", cur->type);
             // find the non valid event or nullptr in the list
             // while(cur->next != nullptr && cur->next->valid){
             //     cur = cur->next;
@@ -580,7 +577,7 @@ namespace ns3 {
 
         HostEvent* h_ev = (HostEvent*)next.impl;
         h_insert(h_ev->obj, next.key.m_ts, next.key.m_context, h_ev->type, h_ev->lookahead, h_ev->payload);
-        // printf("h_ev type: %d\n", h_ev->type);
+        printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
         // printf("h_ev address: %p\n", h_ev);
         free(h_ev);
@@ -737,7 +734,7 @@ namespace ns3 {
                                                     h_bufrdy1, h_bufrdy2, 
                                                     d_bufrdy1, d_bufrdy2,
                                                     d_safe_ts1, d_safe_ts2, 
-                                                    d_stop, h_idle);
+                                                    d_stop);
         printf("Kernel launched\n");
         cudaCheckErrors("kernel launch failed");
 
@@ -788,11 +785,14 @@ namespace ns3 {
                 }
 
                 if(old == *safe_ts){
-                    // if the safe_ts is not updated, it means that the kernel is processing the events in the buffer
+                    // if the safe_ts is not updated, it probably means that the safe-event buffer condition is not met
+                    // thus CPU still holding the safe-event buffer but kernel is idle 
                     // this would potentially lead to deadlock(if condition of changing buffer is not met)
-                    // so we told kernel to change buffer
-                    *h_idle = 1;
-                    
+                    // so we change safe-event buffer to make kernel see the new events
+                    *h_curHostBufRdy = 1;
+                    // printf("Host buffer ready: %p\n", h_curHostBufRdy);
+                    ChangeHostQueue();
+                    h_insertIndex = 0;
                 }
                 
                 // if(*safe_ts > cur_buffer_safe_ts)
@@ -858,7 +858,7 @@ namespace ns3 {
         h_ev->lookahead = lookahead;
         h_ev->payload = payload;
         // printf("lookahead: %lf\n", lookahead);
-        printf("-----------------h_ev type: %d-------------------\n", h_ev->type);
+        // printf("-----------------h_ev type: %d-------------------\n", h_ev->type);
 
         // make ev.impl point to the host event(which carry the information of the device event)
         // Not a good way to do this, can be modified in the future(best way is probably to use member function pointer like in ns3,
