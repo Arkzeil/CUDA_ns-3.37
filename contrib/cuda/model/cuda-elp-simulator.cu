@@ -26,6 +26,7 @@ namespace ns3 {
     NS_OBJECT_ENSURE_REGISTERED(CudaELPSimulator);
 
     // __managed__ cudaEvent_t event;
+    int eventCounter = 0;
 
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
@@ -418,13 +419,16 @@ namespace ns3 {
             __threadfence();        // ensure that all threads have finished before continuing
             // mark host buffer as consumed, and device buffer as ready for CPU to insert new events
             if(tid == 0){
+                // if thest two lines are after ready flag and safe_ts update, new events in next-event buffer might not be able to inserted
+                // into the event queue on time, and CPU will fetch next event, which might be CPU event, to execute
+                // (it will be considered as safe, as safe_ts is updated)
+                sim->ChangeDevQueue();
+                __threadfence_system();
                 // printf("pos: %d\n", pos);
                 *h_bufrdy = 0;
                 // *d_bufrdy = 0;
                 // all events in current queue are processed 
                 *d_safe_ts = UINT64_MAX;
-                sim->ChangeDevQueue();
-                __threadfence_system();
             }
         }
     }
@@ -448,9 +452,10 @@ namespace ns3 {
         // lookahead might be UINT64_MAX, so we need to check if it is valid
         if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
             *safe_ts = ts + lookahead;
-        if(lookahead != UINT64_MAX && *safe_ts < *h_safe_ts)
-            *h_safe_ts = *safe_ts;
-        // printf("h_insert safe_ts: %lu\n", *safe_ts);
+        if(lookahead != UINT64_MAX && ts + lookahead < *h_safe_ts)
+            *h_safe_ts = ts + lookahead;
+        printf("-------------------h_insert safe_ts: %lu----------------------\n", *safe_ts);
+        printf("-----------------h_insert event counter: %d-------------------\n", ++eventCounter);
         // *h_curHostBufRdy = 1;
         // ChangeHostQueue();
         return 0;
@@ -580,7 +585,7 @@ namespace ns3 {
         printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
         // printf("h_ev address: %p\n", h_ev);
-        free(h_ev);
+        delete h_ev;
         // change the current event queue if condition is met
         if(h_insertIndex == DEVICE_QUEUE_LENGTH){
             *h_curHostBufRdy = 1;

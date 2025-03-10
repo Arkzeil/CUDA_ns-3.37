@@ -49,16 +49,16 @@ int main(int argc, char *argv[]) {
     uint16_t port = 4000;
     UdpServerHelper server(port);
     ApplicationContainer serverApp = server.Install(nodes.Get(1));
-    serverApp.Start(Seconds(1.0));
-    serverApp.Stop(Seconds(10.0));
+    serverApp.Start(Seconds(0.0));
+    serverApp.Stop(Seconds(11.0));
 
     UdpClientHelper client(interfaces.GetAddress(1), port);
     client.SetAttribute("MaxPackets", UintegerValue(100));
-    client.SetAttribute("Interval", TimeValue(Seconds(0.1)));
+    client.SetAttribute("Interval", TimeValue(Seconds(1)));
     client.SetAttribute("PacketSize", UintegerValue(1024));
 
     ApplicationContainer apps = client.Install(nodes.Get(0));
-    apps.Start(Seconds(2.0));
+    apps.Start(Seconds(1.0));
     apps.Stop(Seconds(10.0));
 
     // Run the simulation
