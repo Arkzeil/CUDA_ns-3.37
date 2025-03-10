@@ -448,7 +448,7 @@ namespace ns3 {
         // the queue is still used by the kernel
         while(*h_curHostBufRdy);
 
-        h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, ts, context, 0, type, lookahead, true, payload, nullptr};
+        h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, ts, context, EventId::UID::RESERVED, type, lookahead, true, payload, nullptr};
         // lookahead might be UINT64_MAX, so we need to check if it is valid
         if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
             *safe_ts = ts + lookahead;
@@ -461,7 +461,7 @@ namespace ns3 {
         return 0;
     }
 
-    __device__ int CudaELPSimulator::d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void *payload){
+    __device__ DeviceEvent* CudaELPSimulator::d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void *payload){
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
@@ -484,7 +484,7 @@ namespace ns3 {
                 cur = &d_curDevBuf[++index];
                 if(index >= tid + 3){
                     printf("------------------Device queue is full-------------------\n");
-                    return -1;
+                    return nullptr;
                 }
             }
 
@@ -536,13 +536,14 @@ namespace ns3 {
             //     printf("--------------%p------------------\n", cur->next);
             //     printf("--------------type: %d------------------\n", cur->next->type);
             // }
+            return cur;
         }
         else
             d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 3, type, lookahead, true, payload, nullptr};
         // *d_curDevBufRdy = 1;
         // how can we change the queue if index are determine by the kernel?
         // ChangeDevQueue();
-        return 0;
+        return &d_curDevBuf[tid];
     }
 
     bool CudaELPSimulator::is_safe(Scheduler::Event *ev){

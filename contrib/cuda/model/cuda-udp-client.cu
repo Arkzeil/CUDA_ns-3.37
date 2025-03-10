@@ -204,6 +204,7 @@ namespace ns3 {
         
         
         Simulator::Cancel(m_sendEvent);
+        d_sendEvent->valid = false;
 
         // Simulator::test();
 
@@ -333,7 +334,7 @@ namespace ns3 {
 
         // Schedule the next send event
         // if(*m_sent < 2)    
-        m_cudaSim->d_insert(this, d_interval, NodeID, 0, lookahead, nullptr);
+        d_sendEvent = m_cudaSim->d_insert(this, d_interval, NodeID, 0, lookahead, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {

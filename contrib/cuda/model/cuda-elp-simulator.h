@@ -181,7 +181,7 @@ namespace ns3
             // for host to insert an safe event for device to execute
             __host__ int h_insert(void* impl, uint64_t ts, int context, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
-            __device__ int d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
+            __device__ DeviceEvent* d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
             __device__ void ChangeDevQueue();
             
             void Run() override;

@@ -18,6 +18,7 @@ namespace ns3{
 
     class CUDA_cb_data;
     class CudaELPSimulator;
+    struct DeviceEvent;
 
     class CudaUdpClient : public Application, public Managed{
         public:
@@ -64,6 +65,7 @@ namespace ns3{
 
             // GPU resources
             CudaELPSimulator* m_cudaSim; //!< CUDA simulator
+            DeviceEvent* d_sendEvent;    // Device memory for send event(used for cancellation)
             double d_interval; //!< Packet inter-send time in seconds
             CudaSocket* m_cudaSocket; //!< CUDA socket
             uint8_t* d_packetBuffer;      // Device memory for packet data
