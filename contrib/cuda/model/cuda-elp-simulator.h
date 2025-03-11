@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #define DEVICE_QUEUE_LENGTH 10
+#define DEVICE_EV_ID_OFFSET 1000000
 
 namespace ns3
 {
@@ -179,7 +180,7 @@ namespace ns3
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
             // for host to insert an safe event for device to execute
-            __host__ int h_insert(void* impl, uint64_t ts, int context, int type, uint64_t lookahead, void* payload);
+            __host__ int h_insert(void* impl, uint64_t ts, int context, uint32_t UID, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
             __device__ DeviceEvent* d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
             __device__ void ChangeDevQueue();

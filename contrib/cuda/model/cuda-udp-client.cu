@@ -204,7 +204,7 @@ namespace ns3 {
         
         
         Simulator::Cancel(m_sendEvent);
-        d_sendEvent->valid = false;
+        // d_sendEvent->valid = false;
 
         // Simulator::test();
 

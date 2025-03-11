@@ -259,7 +259,7 @@ namespace ns3{
         // Send data to the specified address
         // Send data to the network device
         // SendToNetDevice(d_buffer, size);
-        printf("DoSendTo: Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
+        // printf("DoSendTo: Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
         // d_m_udp->test(d_packet->m_data, cb_data);  
         // printf("d_m_udp: %p\n", d_m_udp);
         if(m_endPoint == nullptr){
@@ -313,7 +313,7 @@ namespace ns3{
         if(m_shutdownRecv){
             return;
         }
-        printf("Forwarding packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
+        // printf("Forwarding packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
 
         if(m_rxAvailable + d_packet->GetSize() <= m_rcvBufSize){
             if(m_deliveryQueue->Add(d_packet, 0) == false){

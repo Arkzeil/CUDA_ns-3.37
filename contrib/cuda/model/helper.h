@@ -18,7 +18,7 @@ public:
     
     // cudaDeviceSynchronize();
 
-    printf("Allocated Unified Memory at %p\n", ptr);  
+    // printf("Allocated Unified Memory at %p\n", ptr);  
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) 
@@ -32,7 +32,7 @@ public:
         cudaPointerAttributes attributes;
         cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
         if (err == cudaSuccess && attributes.type == cudaMemoryTypeManaged) {
-            printf("Freeing Unified Memory at %p\n", ptr);
+            // printf("Freeing Unified Memory at %p\n", ptr);
             // cudaDeviceSynchronize();
             cudaFree(ptr);
         } else {
@@ -55,7 +55,7 @@ public:
     
     // cudaDeviceSynchronize();
 
-    printf("Allocated Unified Memory for array at %p\n", ptr);  
+    // printf("Allocated Unified Memory for array at %p\n", ptr);  
     
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) 
@@ -68,7 +68,7 @@ public:
         cudaPointerAttributes attributes;
         cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
         if (err == cudaSuccess && attributes.type == cudaMemoryTypeManaged) {
-            printf("Freeing Unified Memory for array at %p\n", ptr);
+            // printf("Freeing Unified Memory for array at %p\n", ptr);
             // cudaDeviceSynchronize();
             cudaFree(ptr);
         } else {

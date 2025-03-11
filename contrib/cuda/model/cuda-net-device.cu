@@ -214,7 +214,7 @@ namespace ns3 {
       // }
       // printf("\n");
       // Process received packet
-      printf("Received packet on GPU, packet id: %d, data0: %d\n", packet->GetUid(), packet->m_data[0]);
+      printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
       m_ipv4->d_Receive(this, packet);
       // ProcessPacketOnCuda(packet);
   }
@@ -308,7 +308,7 @@ namespace ns3 {
       return;
     }
     m_txMachineState = READY;
-    printf("Reset device status on GPU\n");
+    printf("Reset device status using GPU\n");
 
     CudaPacket* packet = DequeuePacket();
     if(packet == nullptr){

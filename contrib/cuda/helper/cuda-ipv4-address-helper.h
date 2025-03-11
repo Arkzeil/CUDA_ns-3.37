@@ -11,7 +11,7 @@
 #include "ns3/node.h"
 
 namespace ns3{
-    class CudaIpv4AddressHelper: public Ipv4AddressHelper{
+    class CudaIpv4AddressHelper{
         public:
             CudaIpv4AddressHelper();
             CudaIpv4AddressHelper(const Ipv4Address network, const Ipv4Mask mask, const Ipv4Address address);

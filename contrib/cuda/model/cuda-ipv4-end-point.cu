@@ -12,7 +12,7 @@ namespace ns3{
                                         m_boundNetDevice(nullptr), 
                                         m_rxEnabled(false) {
         // Constructor
-        printf("CudaIpv4EndPoint initialized\n");
+        // printf("CudaIpv4EndPoint initialized\n");
     }
 
     CudaIpv4EndPoint::CudaIpv4EndPoint(uint32_t address, uint16_t port): 
@@ -23,7 +23,7 @@ namespace ns3{
                                         m_boundNetDevice(nullptr), 
                                         m_rxEnabled(false) {
         // Constructor
-        printf("CudaIpv4EndPoint initialized\n");
+        // printf("CudaIpv4EndPoint initialized\n");
     }
 
     CudaIpv4EndPoint::~CudaIpv4EndPoint() {

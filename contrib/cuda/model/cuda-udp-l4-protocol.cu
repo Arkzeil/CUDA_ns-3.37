@@ -27,7 +27,7 @@ namespace ns3 {
     CudaUdpL4Protocol::CudaUdpL4Protocol(): m_ipv4(nullptr), m_node(nullptr), m_endPoints(nullptr), m_ephemeral(49152), index(0) {
         // Constructor
         // cudaMallocManaged(&m_downTarget, sizeof(DownDeviceFunctionPtr));
-        printf("CudaUdpL4Protocol initialized\n");
+        // printf("CudaUdpL4Protocol initialized\n");
         // m_ipv4 = new CudaIpv4L3Protocol();
         // // cudaMallocManaged(&m_ipv4, sizeof(CudaIpv4L3Protocol));
         // checkCudaErr();
@@ -156,7 +156,7 @@ namespace ns3 {
         // printf("Sending packet from %s to %s\n", saddr.GetLocal(), daddr.GetLocal());
         // printf("Packet contents: %s\n", packet);
         // call the send function of callback
-        printf("UdpL4: Send function, packet id: %d\n", d_packet->GetUid());
+        // printf("UdpL4: Send function, packet id: %d\n", d_packet->GetUid());
         // d_m_ipv4->test(d_packet->m_data, cb_data);
         // uint8_t protocol = PROT_NUMBER;
         // printf("m_ipv4: %p\n", m_ipv4);
@@ -254,7 +254,7 @@ namespace ns3 {
 
     __device__ void CudaUdpL4Protocol::Receive(CudaPacket *packet, uint8_t* Ipv4Header, CudaIpv4Interface *interface){
         // Receive a packet
-        printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
+        // printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
         // printf("UdpL4: socket: %p\n", m_endPoints[0].GetSocket());
         uint8_t* udp_header;
         uint32_t pseudo_header_sum = 0;
@@ -311,7 +311,7 @@ namespace ns3 {
             printf("UdpL4: No Node object found\n");
             return;
         }
-        printf("UdpL4: Notify new aggregate\n");
+        // printf("UdpL4: Notify new aggregate\n");
         if(m_node == nullptr){
             if(node && ipv4){
                 this->SetNode(node);

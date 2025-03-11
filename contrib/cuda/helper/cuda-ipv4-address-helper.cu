@@ -50,6 +50,14 @@ namespace ns3{
         //
         Ipv4Address addr((m_network << m_shift) | m_address);
         ++m_address;
+
+        // uint32_t ipAddress = m_network;
+        // char ipAddr[16];
+        // snprintf(ipAddr,sizeof ipAddr,"%u.%u.%u.%u" ,(ipAddress & 0xff000000) >> 24 
+        //                                         ,(ipAddress & 0x00ff0000) >> 16
+        //                                         ,(ipAddress & 0x0000ff00) >> 8
+        //                                         ,(ipAddress & 0x000000ff));
+        // printf("address: %s\n", ipAddr);
         //
         // The Ipv4AddressGenerator allows us to keep track of the addresses we have
         // allocated and will assert if we accidentally generate a duplicate.  This
@@ -99,16 +107,21 @@ namespace ns3{
         return retval;
     }
 
+    const uint32_t N_BITS = 32; //!< number of bits in a IPv4 address
+
     uint32_t CudaIpv4AddressHelper::NumAddressBits(uint32_t maskbits) const {
         //
         // Calculate the number of address bits
         //
-        uint32_t bits = 0;
-        for(uint32_t i = 0; i < 32; i++) {
-            if(maskbits & (1 << i)) {
-                bits++;
+        for (uint32_t i = 0; i < N_BITS; ++i)
+        {
+            if (maskbits & 1)
+            {
+                return i;
             }
+            maskbits >>= 1;
         }
-        return bits;
+
+        return 0;
     }
 }

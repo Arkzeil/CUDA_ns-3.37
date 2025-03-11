@@ -21,7 +21,7 @@ namespace ns3 {
 
     CudaIpv4L3Protocol::CudaIpv4L3Protocol(): m_node(nullptr), m_interfaceCount(0) {
         // Constructor
-        printf("CudaIpv4L3Protocol initialized\n");
+        // printf("CudaIpv4L3Protocol initialized\n");
         cudaMallocManaged(&m_ipv4Interface, m_maxInterfaceCount * sizeof(CudaIpv4Interface*));
         m_routing = new CudaIpv4StaticRouting();
         checkCudaErr();
@@ -214,7 +214,7 @@ namespace ns3 {
 
     __device__ void CudaIpv4L3Protocol::d_LocalDeliver(CudaPacket *packet, CudaIpv4Interface *interface){
         // Local deliver
-        printf("Local deliver, packet: %d\n", packet->GetUid());
+        // printf("Local deliver, packet: %d\n", packet->GetUid());
         // assuming no fragmentation
         // skip protocol lookup
         uint8_t *Ipv4Header;
@@ -260,7 +260,7 @@ namespace ns3 {
     __device__ void CudaIpv4L3Protocol::d_Receive(CudaNetDevice *device, CudaPacket *packet){
         // Receive a packet
         // For simplicity, we will just print the packet contents
-        printf("Ipv4L3: Received packet: %d\n", packet->GetUid());
+        // printf("Ipv4L3: Received packet: %d\n", packet->GetUid());
         int32_t interface = GetInterfaceForDevice(device);
         // printf("interface: %d\n", interface);
         CudaIpv4Interface *Interface = GetInterface(interface);
@@ -321,7 +321,7 @@ namespace ns3 {
         // Send a packet
         // For simplicity, we will just print the packet contents
         // printf("Sending packet from %s to %s\n", source.GetLocal(), destination.GetLocal());
-        printf("Ipv4L3: Send function, packet id: %d\n", d_packet->GetUid());
+        // printf("Ipv4L3: Send function, packet id: %d\n", d_packet->GetUid());
 
         bool mayFragment = false;
         uint8_t ttl = m_defaultTtl;
@@ -410,7 +410,7 @@ namespace ns3 {
     }
 
     void CudaIpv4L3Protocol::NotifyNewAggregate() {
-        printf("CudaIpv4L3Protocol: New aggregate\n");
+        // printf("CudaIpv4L3Protocol: New aggregate\n");
         // Notify of a new aggregate
         if(m_node == nullptr){
             Ptr<Node> node = this->GetObject<Node>();

@@ -10,7 +10,11 @@ namespace ns3{
         // #ifdef __CUDA_ARCH__
         // m_data = static_cast<uint8_t*>(malloc(m_capacity));
         // #endif
-        m_uid = g_packetUidCounter++;
+        #ifdef __CUDA_ARCH__
+            m_uid = atomicAdd(&g_packetUidCounter, 1);
+        #else
+            m_uid = g_packetUidCounter++;
+        #endif
         // printf("*------------------------------------------------*\n");
     }
 
