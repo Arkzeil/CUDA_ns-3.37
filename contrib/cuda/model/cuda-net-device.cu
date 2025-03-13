@@ -347,13 +347,15 @@ namespace ns3 {
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ bool CudaNetDevice::EnqueuePacket(CudaPacket* packet) {
     // Check if the queue is full
-    // use AND to replace MOD operation, which require queue size to be power of 2
-    if ((*d_queueRear + 1) & (m_queueSize - 1) == *d_queueFront) {
+
+    if ((*d_queueRear + 1) == *d_queueFront) {
       printf("Queue is full, dropping packet\n");
       return false;
     }
 
+    // use AND to replace MOD operation, which require queue size to be power of 2
     int pos = atomicAdd(d_queueRear, 1) & (m_queueSize - 1); // Use atomic operation for thread safety
+
     // CudaPacket* entry = d_packetQueue[pos];           // Get position in the queue
 
     // *entry = *packet; // Assign packet (uses device-side assignment operator)
@@ -371,11 +373,12 @@ namespace ns3 {
       return nullptr; // Queue is empty
     }
 
-    int pos = *d_queueFront & (m_queueSize - 1); // Get position in the queue
+    int pos = atomicAdd(d_queueFront, 1) & (m_queueSize - 1); // Use atomic operation for thread safety
+    // int pos = *d_queueFront & (m_queueSize - 1); // Get position in the queue
     // CudaPacket* entry = d_packetQueue[pos];  // Access packet
 
     // if (threadIdx.x == 0) {
-    *d_queueFront = (*d_queueFront + 1) & (m_queueSize - 1); // Update front position
+    // *d_queueFront = (*d_queueFront + 1) & (m_queueSize - 1); // Update front position
     // }
 
     printf("Dequeued packet on GPU, pos: %d\n", pos);
