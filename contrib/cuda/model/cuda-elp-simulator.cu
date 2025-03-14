@@ -267,14 +267,14 @@ namespace ns3 {
     __device__ void ProcessType0(DeviceEvent* ev) {
         // Insert logic analogous to what your C++ ns-3 event might do
         // For example, a UDP send operation or a simulated network event.
-        printf("Processing Type 0 event\n");
+        // printf("Processing Type 0 event\n");
         ((CudaUdpClient*)(ev->impl))->ELP_Send();
     }
     // Device functions to process different event types
     __device__ void ProcessType1(DeviceEvent* ev) {
         // Insert logic analogous to what your C++ ns-3 event might do
         // For example, a UDP send operation or a simulated network event.
-        printf("Processing Type 1 event\n");
+        // printf("Processing Type 1 event\n");
         ((CudaNetDevice*)(ev->impl))->D_TransmitComplete();
         // cudaSim->insert(ev->impl, 0, 0, 2);
         ev->type = -1;
@@ -282,7 +282,7 @@ namespace ns3 {
 
     __device__ void ProcessType2(DeviceEvent* ev) {
         // Different event processing logic
-        printf("Processing Type 2 event\n");
+        // printf("Processing Type 2 event\n");
         ((CudaNetDevice*)(ev->impl))->d_Receive((CudaPacket*)(ev->payload));
     }
     // General device function that processes an event based on its type.
@@ -456,8 +456,8 @@ namespace ns3 {
             *safe_ts = ts + lookahead;
         if(lookahead != UINT64_MAX && ts + lookahead < *h_safe_ts)
             *h_safe_ts = ts + lookahead;
-        printf("-------------------h_insert safe_ts: %lu----------------------\n", *safe_ts);
-        printf("-----------------h_insert event counter: %d-------------------\n", ++eventCounter);
+        // printf("-------------------h_insert safe_ts: %lu----------------------\n", *safe_ts);
+        // printf("-----------------h_insert event counter: %d-------------------\n", ++eventCounter);
         // *h_curHostBufRdy = 1;
         // ChangeHostQueue();
         return 0;
@@ -585,7 +585,7 @@ namespace ns3 {
 
         HostEvent* h_ev = (HostEvent*)next.impl;
         h_insert(h_ev->obj, next.key.m_ts, next.key.m_context, next.key.m_uid, h_ev->type, h_ev->lookahead, h_ev->payload);
-        printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
+        // printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
         // printf("h_ev address: %p\n", h_ev);
         delete h_ev;
@@ -736,7 +736,7 @@ namespace ns3 {
         volatile uint64_t safe_ts1;
         volatile uint64_t safe_ts2;
         // Launch the persistent event processing kernel
-        PersistentEventKernel<<<1, 32, 0, streamK>>>(this, 
+        PersistentEventKernel<<<2, 32, 0, streamK>>>(this, 
                                                     h_safeEventQueue1, h_safeEventQueue2,  
                                                     d_nextEventQueue1, d_nextEventQueue2, 
                                                     h_bufrdy1, h_bufrdy2, 
@@ -819,12 +819,12 @@ namespace ns3 {
             if(__glibc_likely(next.key.m_uid >= DEVICE_EV_ID_OFFSET)){
                 ELP_ProcessOneEvent();
                 // m_events->RemoveNext();
-                printf("CUDA event, safe ts: %lu\n", *safe_ts);
+                // printf("CUDA event, safe ts: %lu\n", *safe_ts);
                 // sleep(1);
             }
             // Host event, process it on CPU directly
             else{
-                printf("Host event, safe ts: %lu\n", *safe_ts);
+                // printf("Host event, safe ts: %lu\n", *safe_ts);
                 ProcessOneEvent();
             }
         }
@@ -878,7 +878,7 @@ namespace ns3 {
         ev.key.m_uid = d_uid;
         d_uid++;
         m_unscheduledEvents++;
-        printf("ts: %lu, context: %d, UID: %d\n", ev.key.m_ts, ev.key.m_context, ev.key.m_uid);
+        // printf("ts: %lu, context: %d, UID: %d\n", ev.key.m_ts, ev.key.m_context, ev.key.m_uid);
         m_events->Insert(ev);
         // return EventId(event, ev.key.m_ts, ev.key.m_context, ev.key.m_uid);
     }

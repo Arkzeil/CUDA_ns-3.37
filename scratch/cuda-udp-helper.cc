@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
     LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
     
-    uint32_t numPairs = 10; // Default number of client-server pairs
+    uint32_t numPairs = 33; // Default number of client-server pairs
     // Create two nodes
     NodeContainer nodes;
     nodes.Create(2 * numPairs);

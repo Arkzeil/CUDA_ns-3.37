@@ -66,12 +66,13 @@ namespace ns3{
             // GPU resources
             CudaELPSimulator* m_cudaSim; //!< CUDA simulator
             DeviceEvent* d_sendEvent;    // Device memory for send event(used for cancellation)
-            double d_interval; //!< Packet inter-send time in seconds
-            CudaSocket* m_cudaSocket; //!< CUDA socket
+            double d_interval;           //!< Packet inter-send time in seconds
+            CudaSocket* m_cudaSocket;   //!< CUDA socket
             uint8_t* d_packetBuffer;      // Device memory for packet data
             cudaStream_t m_cudaStream;   // CUDA stream for async processing
             uint64_t lookahead;         // Lookahead time in nanoseconds(for peerAddress)
             uint32_t NodeID;            // Node ID for the context of scheduling
+            volatile bool m_stop;       //!< Stop flag, as we currently can't cancel events
     };
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);

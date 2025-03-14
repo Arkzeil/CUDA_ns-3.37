@@ -61,7 +61,9 @@ namespace ns3 {
     CudaUdpClient::CudaUdpClient() 
         : d_packetBuffer(nullptr), m_size(1500), 
         m_interval(Seconds(1.0)), m_count(100), 
-        m_peerPort(0), m_socket(nullptr), m_running(false), m_cudaSocket(nullptr) {
+        m_peerPort(0), m_socket(nullptr), 
+        m_running(false), m_cudaSocket(nullptr),
+        m_stop(false){
         
         InitCudaResources();
         *m_sent = 0;
@@ -201,7 +203,7 @@ namespace ns3 {
         //     Simulator::Cancel(m_sendEvent);
         // }
         // cudaStreamSynchronize(m_cudaStream);
-        
+        m_stop = true;
         
         Simulator::Cancel(m_sendEvent);
         // d_sendEvent->valid = false;
@@ -320,6 +322,9 @@ namespace ns3 {
     }
 
     __device__ void CudaUdpClient::ELP_Send(){
+        if(m_stop)
+            return;
+
         CudaPacket* cuda_packet;
         cudaMalloc(&cuda_packet, sizeof(CudaPacket));
         new(cuda_packet) CudaPacket();

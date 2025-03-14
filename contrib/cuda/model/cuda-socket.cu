@@ -332,7 +332,7 @@ namespace ns3{
         // printf("Trying to fetch packet from delivery queue\n");
         // Receive data from the socket
         if(m_deliveryQueue->empty()){
-            printf("No packets in delivery queue\n");
+            // printf("No packets in delivery queue\n");
             return nullptr;
         }
         CudaPair<CudaPacket*, uint32_t> pair = m_deliveryQueue->pop_front();

@@ -214,7 +214,7 @@ namespace ns3 {
       // }
       // printf("\n");
       // Process received packet
-      printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
+      // printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
       m_ipv4->d_Receive(this, packet);
       // ProcessPacketOnCuda(packet);
   }
@@ -247,8 +247,8 @@ namespace ns3 {
 
       if(m_txMachineState != READY)
         printf("Transmitter is not ready\n");
-      else
-        printf("Transmitter is ready\n");
+      // else
+      //   printf("Transmitter is ready\n");
 
       if(EnqueuePacket(d_packet) == false)
         printf("Enqueue failed\n");
@@ -308,11 +308,11 @@ namespace ns3 {
       return;
     }
     m_txMachineState = READY;
-    printf("Reset device status using GPU\n");
+    // printf("Reset device status using GPU\n");
 
     CudaPacket* packet = DequeuePacket();
     if(packet == nullptr){
-      printf("packet queue is empty\n");
+      // printf("packet queue is empty\n");
       return;
     }
     
@@ -362,7 +362,7 @@ namespace ns3 {
     // entry = packet;
     d_packetQueue[pos] = packet;
 
-    printf("Enqueued packet on GPU, pos: %d\n", pos);
+    // printf("Enqueued packet on GPU, pos: %d\n", pos);
 
     return true;
   }
@@ -381,7 +381,7 @@ namespace ns3 {
     // *d_queueFront = (*d_queueFront + 1) & (m_queueSize - 1); // Update front position
     // }
 
-    printf("Dequeued packet on GPU, pos: %d\n", pos);
+    // printf("Dequeued packet on GPU, pos: %d\n", pos);
 
     return d_packetQueue[pos];
   }

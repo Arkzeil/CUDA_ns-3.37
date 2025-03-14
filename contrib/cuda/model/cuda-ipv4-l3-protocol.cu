@@ -100,7 +100,7 @@ namespace ns3 {
         //     }
         // }
         for(uint32_t i = 0; i < m_interfaceCount; i++){
-            printf("index: %d\n", i);
+            // printf("index: %d\n", i);
             if(m_ipv4Interface[i]->GetDevice() == device){
                 return i;
             }
@@ -382,9 +382,9 @@ namespace ns3 {
                 printf("No device found for interface\n");
                 return;
             }
-            else{
-                printf("device found\n");
-            }
+            // else{
+            //     printf("device found\n");
+            // }
 
             // if(d_packet->GetUid() == 7){
             //     for(int i = 0; i < d_packet->GetSize(); i++){
