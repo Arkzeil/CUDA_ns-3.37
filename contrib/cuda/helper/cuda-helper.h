@@ -211,9 +211,18 @@ namespace ns3
         public:
             CudaPair<T1, T2>* pair_elements;
 
-            __host__ __device__ Cuda_PairList() : pair_elements(nullptr), m_size(0), m_capacity(0) {} // Default constructor
+            __host__ __device__ Cuda_PairList() : pair_elements(nullptr), m_size(0), m_capacity(0) {
+                cudaMallocManaged(&front, sizeof(int));
+                cudaMallocManaged(&rear, sizeof(int));
+                *front = 0;
+                *rear = 0;
+            } // Default constructor
 
             __host__ __device__ Cuda_PairList(int capacity) : m_size(0), m_capacity(capacity) {
+                cudaMallocManaged(&front, sizeof(int));
+                cudaMallocManaged(&rear, sizeof(int));
+                *front = 0;
+                *rear = 0;
                 pair_elements = new CudaPair<T1, T2>[capacity];
             } // Parameterized constructor
 
@@ -223,34 +232,59 @@ namespace ns3
 
             __host__ __device__ bool Add(T1 key, T2 protocol){
                 if(m_size < m_capacity){
-                    pair_elements[m_size++] = CudaPair(key, protocol);
+                    #ifdef __CUDA_ARCH__
+                        if ((*rear + 1) == *front) {
+                            return false; // Queue full
+                        }
+                        int t_rear = atomicAdd(rear, 1) & (m_capacity - 1);
+                        pair_elements[t_rear] = CudaPair(key, protocol);
+                    #else
+                        if ((*rear + 1) == *front) {
+                            return false; // Queue full
+                        }
+                        pair_elements[(*rear)++] = CudaPair(key, protocol);
+                    #endif
+
                     return true;
                 }
                 return false;
             }
-
+            // this function is not ready
             __host__ __device__ void Remove(T1 key){
                 for(int i = 0; i < m_size; i++){
                     if(pair_elements[i].first == key){
-                        pair_elements[i] = pair_elements[--m_size];
+                        #ifdef __CUDA_ARCH__
+                            pair_elements[i] = pair_elements[atomicSub(rear, 1) & (m_capacity - 1)];
+                        #else
+                            pair_elements[i] = pair_elements[(*rear)--];
+                        #endif
+
                         break;
                     }
                 }
             }
+            // many thread might access this function at the same time
+            // __host__ __device__ CudaPair<T1, T2> front(){
+            //     return pair_elements[0];
+            // }
 
-            __host__ __device__ CudaPair<T1, T2> front(){
-                return pair_elements[0];
-            }
+            // __host__ __device__ CudaPair<T1, T2> back(){
+            //     return pair_elements[m_size - 1];
+            // }
 
-            __host__ __device__ CudaPair<T1, T2> back(){
-                return pair_elements[m_size - 1];
-            }
-
-            __host__ __device__ void pop_front(){
-                for(int i = 0; i < m_size - 1; i++){
-                    pair_elements[i] = pair_elements[i + 1];
-                }
-                m_size--;
+            __host__ __device__ CudaPair<T1, T2> pop_front(){
+                #ifdef __CUDA_ARCH__
+                    if (*front == *rear) {
+                        return CudaPair<T1, T2>(nullptr, 0); // Queue empty
+                    }
+                    int t_front = atomicAdd(front, 1) & (m_capacity - 1);
+                    return pair_elements[t_front];
+                #else
+                    if (*front == *rear) {
+                        return CudaPair<T1, T2>(nullptr, 0); // Queue empty
+                    }
+                    return pair_elements[front++];
+                #endif
             }
 
             __host__ __device__ T2 Get(T1 key){
@@ -263,12 +297,14 @@ namespace ns3
             }
 
             __host__ __device__ bool empty(){
-                return m_size == 0;
+                return *front == *rear;
             }
             
         private:
             int m_size;
             int m_capacity;
+            int* front;
+            int* rear;
     };
 
     template <typename T>
