@@ -30,8 +30,7 @@ namespace ns3 {
 
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
-    __device__ volatile int blkcnt1 = 0;
-    __device__ volatile int blkcnt2 = 0;
+    __device__ volatile int blkcnt = 0;
 
     // __managed__ CudaELPSimulator* cudaSim_local = nullptr;
 
@@ -277,7 +276,7 @@ namespace ns3 {
         // printf("Processing Type 1 event\n");
         ((CudaNetDevice*)(ev->impl))->D_TransmitComplete();
         // cudaSim->insert(ev->impl, 0, 0, 2);
-        ev->type = -1;
+        // ev->type = -1;
     }
 
     __device__ void ProcessType2(DeviceEvent* ev) {
@@ -294,6 +293,8 @@ namespace ns3 {
         switch (ev->type) {
             case -1:
                 // No event
+                printf("No event\n");
+                ev->valid = false;
                 break;
             case 0:
                 ProcessType0(ev);
@@ -341,13 +342,14 @@ namespace ns3 {
             // *d_eventCount = 100;
         }
 
+        __threadfence();        // ensure that all threads see the updated stop flag
+
         DeviceEvent* eventQueue;
         volatile int* h_bufrdy;
         volatile int* d_bufrdy;
         uint64_t* d_safe_ts;
         bool pos = 0;
 
-        __syncthreads();
         
         // Loop forever or until a termination condition is met.
         while (!*d_stop) {
@@ -417,20 +419,27 @@ namespace ns3 {
             // check if the other buffer is ready
             pos = !pos;
 
-            __syncthreads();        // wait for all threads of this block to finish
-            __threadfence();        // ensure that all threads have finished before continuing
+            __syncthreads();        // wait for all threads of this block(might be in different warp) to finish
+            __threadfence();        // ensure that all threads of same grid have finished before continuing
+            // mark this block as finished
+            if(localThreadId == 0)
+                atomicAdd((int*)&blkcnt, 1);
             // mark host buffer as consumed, and device buffer as ready for CPU to insert new events
             if(tid == 0){
+                while(blkcnt < gridDim.x);
+
+                blkcnt = 0;
                 // if thest two lines are after ready flag and safe_ts update, new events in next-event buffer might not be able to inserted
                 // into the event queue on time, and CPU will fetch next event, which might be CPU event, to execute
                 // (it will be considered as safe, as safe_ts is updated)
                 sim->ChangeDevQueue();
-                __threadfence_system();
                 // printf("pos: %d\n", pos);
                 *h_bufrdy = 0;
                 // *d_bufrdy = 0;
                 // all events in current queue are processed 
                 *d_safe_ts = UINT64_MAX;
+
+                __threadfence_system();     // ensure that all threads see the updated buffer ready flag
             }
         }
     }
@@ -485,7 +494,7 @@ namespace ns3 {
             while(cur->valid){
                 cur = &d_curDevBuf[++index];
                 if(index >= tid + 3){
-                    printf("------------------Device queue is full-------------------\n");
+                    printf("------------------No more space for this thread -------------------\n");
                     return nullptr;
                 }
             }
@@ -600,7 +609,7 @@ namespace ns3 {
     }
 
     __device__ void CudaELPSimulator::ChangeDevQueue(){
-        printf("Changing device queue\n");
+        // printf("Changing device buffer\n");
         *d_curDevBufRdy = 1;
         d_curDevBuf = (d_curDevBuf == d_nextEventQueue2) ? d_nextEventQueue1 : d_nextEventQueue2;
         d_curDevBufRdy = (d_curDevBuf == d_nextEventQueue2) ? d_bufrdy2 : d_bufrdy1;
@@ -736,7 +745,7 @@ namespace ns3 {
         volatile uint64_t safe_ts1;
         volatile uint64_t safe_ts2;
         // Launch the persistent event processing kernel
-        PersistentEventKernel<<<2, 32, 0, streamK>>>(this, 
+        PersistentEventKernel<<<4, 32, 0, streamK>>>(this, 
                                                     h_safeEventQueue1, h_safeEventQueue2,  
                                                     d_nextEventQueue1, d_nextEventQueue2, 
                                                     h_bufrdy1, h_bufrdy2, 

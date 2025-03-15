@@ -325,6 +325,9 @@ namespace ns3 {
         if(m_stop)
             return;
 
+        if(*m_sent >= m_count)
+            return;
+
         CudaPacket* cuda_packet;
         cudaMalloc(&cuda_packet, sizeof(CudaPacket));
         new(cuda_packet) CudaPacket();

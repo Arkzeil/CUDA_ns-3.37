@@ -15,7 +15,7 @@
 #include <vector>
 #include <unordered_map>
 
-#define DEVICE_QUEUE_LENGTH 10
+#define DEVICE_QUEUE_LENGTH 256
 #define DEVICE_EV_ID_OFFSET 1000000
 
 namespace ns3

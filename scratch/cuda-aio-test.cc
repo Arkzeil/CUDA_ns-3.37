@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numPairs = 5; // Default number of client-server pairs
+  uint32_t numPairs = 33; // Default number of client-server pairs
 
   NodeContainer nodes;
   nodes.Create(2 * numPairs);
