@@ -31,6 +31,8 @@ namespace ns3 {
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
     __device__ volatile int blkcnt = 0;
+    // for master thread to update to prevent overrun of other threads
+    __device__ volatile int itercnt = 0;
 
     // __managed__ CudaELPSimulator* cudaSim_local = nullptr;
 
@@ -210,8 +212,8 @@ namespace ns3 {
         cudaMallocManaged(&h_safeEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
         cudaMallocManaged(&h_safeEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
         // cudaMallocManaged(&d_eventQueue, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent));
-        cudaMallocManaged(&d_nextEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent) * 3);
-        cudaMallocManaged(&d_nextEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent) * 3);
+        cudaMallocManaged(&d_nextEventQueue1, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent) * MAX_NEW_EVENTS);
+        cudaMallocManaged(&d_nextEventQueue2, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent) * MAX_NEW_EVENTS);
         // cudaMemset(d_eventQueue, 0, 100 * sizeof(DeviceEvent));
         cudaCheckErrors("queue cudaMallocManaged failed");
         cudaMallocManaged(&h_bufrdy1, sizeof(int));
@@ -331,6 +333,7 @@ namespace ns3 {
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
         const int totalThreads = gridDim.x * blockDim.x;
         const int localThreadId = threadIdx.x;
+        int iter_count = 0;
 
         __shared__ uint64_t blockMin;
 
@@ -342,15 +345,14 @@ namespace ns3 {
             // *d_eventCount = 100;
         }
 
-        __threadfence();        // ensure that all threads see the updated stop flag
-
         DeviceEvent* eventQueue;
         volatile int* h_bufrdy;
         volatile int* d_bufrdy;
         uint64_t* d_safe_ts;
         bool pos = 0;
 
-        
+        __threadfence_system();        // ensure that all threads see the updated stop flag
+
         // Loop forever or until a termination condition is met.
         while (!*d_stop) {
             // Each thread polls for an event to process.
@@ -371,6 +373,7 @@ namespace ns3 {
             // }
             // add syncthread?
 
+            while (iter_count - itercnt > 1); // don't overrun buffers on device
             // Poll the buffer ready flag to check if the buffer is ready for reading.
             if(!(*h_bufrdy) ){
                 // check if the other buffer is ready
@@ -378,7 +381,7 @@ namespace ns3 {
                 continue;
             }
 
-            if (index < DEVICE_QUEUE_LENGTH) {
+            while (index < DEVICE_QUEUE_LENGTH) {
                 DeviceEvent* ev = &eventQueue[index];
                 
                 // (*d_safe_ts)++;
@@ -435,12 +438,13 @@ namespace ns3 {
                 sim->ChangeDevQueue();
                 // printf("pos: %d\n", pos);
                 *h_bufrdy = 0;
+                __threadfence_system();     // ensure that all threads see the updated buffer ready flag
                 // *d_bufrdy = 0;
                 // all events in current queue are processed 
                 *d_safe_ts = UINT64_MAX;
-
-                __threadfence_system();     // ensure that all threads see the updated buffer ready flag
+                itercnt++;
             }
+            iter_count++;
         }
     }
 
@@ -476,85 +480,100 @@ namespace ns3 {
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
-        tid *= 3;
-        int index = tid;
-        // the queue is still used by the host
-        while(*d_curDevBufRdy);
-        
-        // printf("insert: %d\n", m_test);
-        // printf("insert tid: %d\n", tid);
-        // printf("lookahead: %lf\n", lookahead);
-        
-        // at least one evnet is inserted in this index 
-        if(d_curDevBuf[tid].valid){
-            // printf("--------------%p------------------\n", &d_curDevBuf[tid]);
-            // DeviceEvent *cur = d_curDevBuf[tid].next;
-            DeviceEvent *cur = &d_curDevBuf[++index];
-            // cur = cur->next;
-            while(cur->valid){
-                cur = &d_curDevBuf[++index];
-                if(index >= tid + 3){
-                    printf("------------------No more space for this thread -------------------\n");
-                    return nullptr;
+        // tid *= 3;
+        int index = tid * MAX_NEW_EVENTS;
+        int limit = index + MAX_NEW_EVENTS;
+        bool redo = false;
+
+        while(1){
+            // the queue is still used by the host
+            while(*d_curDevBufRdy);
+            
+            // printf("insert: %d\n", m_test);
+            // printf("insert tid: %d\n", tid);
+            // printf("lookahead: %lf\n", lookahead);
+            
+            // at least one evnet is inserted in this index 
+            if(d_curDevBuf[index].valid){
+                // printf("--------------%p------------------\n", &d_curDevBuf[tid]);
+                // DeviceEvent *cur = d_curDevBuf[tid].next;
+                DeviceEvent *cur = &d_curDevBuf[++index];
+                // cur = cur->next;
+                while(cur->valid){
+                    cur = &d_curDevBuf[++index];
+                    if(index >= limit){
+                        printf("------------------No more space for this thread -------------------\n");
+                        // return nullptr;
+                        // if full, change buffer to make CPU consume the events
+                        ChangeDevQueue();
+                        // using recursion will lead to stack size can't be determined at compile time
+                        // d_insert(impl, delay, context, type, lookahead, payload);
+                        // return nullptr;
+                        redo = true;
+                        break;
+                    }
                 }
+
+                if(redo)
+                    continue;
+
+                cur->impl = impl;
+                cur->ts = delay;
+                cur->context = context;
+                cur->uid = 3;                   // this UID is not used, will be reassigned in the future
+                cur->type = type;
+                cur->lookahead = lookahead;
+                cur->valid = true;
+                cur->payload = payload;
+                cur->next = nullptr;
+                // printf("--------------type: %d------------------\n", cur->type);
+                // find the non valid event or nullptr in the list
+                // while(cur->next != nullptr && cur->next->valid){
+                //     cur = cur->next;
+                //     printf("--------------%p------------------\n", cur);
+                // }
+
+                // if(cur->next != nullptr && !(cur->next->valid)){
+                //     cur->next->impl = impl;
+                //     cur->next->ts = delay;
+                //     cur->next->context = context;
+                //     cur->next->uid = 3;
+                //     cur->next->type = type;
+                //     cur->next->lookahead = lookahead;
+                //     cur->next->valid = true;
+                //     cur->next->payload = payload;
+                //     cur->next->next = nullptr;    
+                // }
+                // else{
+                //     DeviceEvent *newEvent;
+                //     cudaMalloc(&newEvent, sizeof(DeviceEvent));
+                    
+                //     // Initialize the new event
+                //     newEvent->impl = impl;
+                //     newEvent->ts = delay;
+                //     newEvent->context = context;
+                //     newEvent->uid = 3;
+                //     newEvent->type = type;
+                //     newEvent->lookahead = lookahead;
+                //     newEvent->valid = true;
+                //     newEvent->payload = payload;
+                //     newEvent->next = nullptr;
+
+                //     // Insert the new event at the end of the list
+                //     cur->next = newEvent;
+
+                //     printf("--------------%p------------------\n", cur->next);
+                //     printf("--------------type: %d------------------\n", cur->next->type);
+                // }
+                return cur;
             }
-
-            cur->impl = impl;
-            cur->ts = delay;
-            cur->context = context;
-            cur->uid = 3;                   // this UID is not used, will be reassigned in the future
-            cur->type = type;
-            cur->lookahead = lookahead;
-            cur->valid = true;
-            cur->payload = payload;
-            cur->next = nullptr;
-            // printf("--------------type: %d------------------\n", cur->type);
-            // find the non valid event or nullptr in the list
-            // while(cur->next != nullptr && cur->next->valid){
-            //     cur = cur->next;
-            //     printf("--------------%p------------------\n", cur);
-            // }
-
-            // if(cur->next != nullptr && !(cur->next->valid)){
-            //     cur->next->impl = impl;
-            //     cur->next->ts = delay;
-            //     cur->next->context = context;
-            //     cur->next->uid = 3;
-            //     cur->next->type = type;
-            //     cur->next->lookahead = lookahead;
-            //     cur->next->valid = true;
-            //     cur->next->payload = payload;
-            //     cur->next->next = nullptr;    
-            // }
-            // else{
-            //     DeviceEvent *newEvent;
-            //     cudaMalloc(&newEvent, sizeof(DeviceEvent));
-                
-            //     // Initialize the new event
-            //     newEvent->impl = impl;
-            //     newEvent->ts = delay;
-            //     newEvent->context = context;
-            //     newEvent->uid = 3;
-            //     newEvent->type = type;
-            //     newEvent->lookahead = lookahead;
-            //     newEvent->valid = true;
-            //     newEvent->payload = payload;
-            //     newEvent->next = nullptr;
-
-            //     // Insert the new event at the end of the list
-            //     cur->next = newEvent;
-
-            //     printf("--------------%p------------------\n", cur->next);
-            //     printf("--------------type: %d------------------\n", cur->next->type);
-            // }
-            return cur;
+            else
+                d_curDevBuf[index] = DeviceEvent{impl, delay, context, 3, type, lookahead, true, payload, nullptr};
+            // *d_curDevBufRdy = 1;
+            // how can we change the queue if index are determine by the kernel?
+            // ChangeDevQueue();
+            return &d_curDevBuf[index];
         }
-        else
-            d_curDevBuf[tid] = DeviceEvent{impl, delay, context, 3, type, lookahead, true, payload, nullptr};
-        // *d_curDevBufRdy = 1;
-        // how can we change the queue if index are determine by the kernel?
-        // ChangeDevQueue();
-        return &d_curDevBuf[tid];
     }
 
     bool CudaELPSimulator::is_safe(Scheduler::Event *ev){
@@ -641,7 +660,7 @@ namespace ns3 {
 
         // h_next = (DeviceEvent*)malloc(sizeof(DeviceEvent));
         // insert valid event(generated by device)
-        for(int i = 0; i < DEVICE_QUEUE_LENGTH * 3; i++){
+        for(int i = 0; i < DEVICE_QUEUE_LENGTH * MAX_NEW_EVENTS; i++){
             // DeviceEvent *ev = (DeviceEvent*)malloc(sizeof(DeviceEvent));
             // cudaMemcpy(ev, &h_curDevBuf[i], sizeof(DeviceEvent), cudaMemcpyDeviceToHost);
             DeviceEvent *ev = &h_curDevBuf[i];
@@ -650,7 +669,7 @@ namespace ns3 {
                 ELP_Schedule(ev->context, Time(NanoSeconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                 ev->valid = false;
                 
-                for(int j = 0; j < 3; j++){
+                for(int j = 0; j < MAX_NEW_EVENTS; j++){
                     cur = &h_curDevBuf[i + j];
                     if(__glibc_unlikely(cur->valid)){
                         // printf("true, ts: %lf\n", ev->ts);
@@ -691,14 +710,14 @@ namespace ns3 {
 
         if(*h_curDevBufRdy == 1){
             // insert valid event(generated by device)
-            for(int i = 0; i < DEVICE_QUEUE_LENGTH; i++){
+            for(int i = 0; i < DEVICE_QUEUE_LENGTH * MAX_NEW_EVENTS; i++){
                 DeviceEvent *ev = &h_curDevBuf[i];
                 if(__glibc_unlikely(ev->valid)){
                     // printf("true, ts: %lf\n", ev->ts);
                     ELP_Schedule(ev->context, Time(NanoSeconds(ev->ts)), ev->impl, ev->type, ev->lookahead, ev->payload);
                     ev->valid = false;
                     
-                    for(int j = 0; j < 3; j++){
+                    for(int j = 0; j < MAX_NEW_EVENTS; j++){
                         cur = &h_curDevBuf[i + j];
                         if(__glibc_unlikely(cur->valid)){
                             // printf("true, ts: %lf\n", ev->ts);

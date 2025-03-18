@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #define DEVICE_QUEUE_LENGTH 256
+#define MAX_NEW_EVENTS 3
 #define DEVICE_EV_ID_OFFSET 1000000
 
 namespace ns3
