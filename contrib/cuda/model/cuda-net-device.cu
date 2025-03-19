@@ -241,12 +241,12 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
-      printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
+      // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
       if(m_linkUp == false)
         printf("Link is down\n");
 
-      if(m_txMachineState != READY)
-        printf("Transmitter is not ready\n");
+      // if(m_txMachineState != READY)
+      //   printf("Transmitter is not ready\n");
       // else
       //   printf("Transmitter is ready\n");
 

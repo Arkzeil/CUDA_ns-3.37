@@ -145,7 +145,7 @@ namespace ns3 {
         m_currentUid = next.key.m_uid;
         next.impl->Invoke();
         next.impl->Unref();
-        printf("CPU current ts: %lu\n", m_currentTs);
+        // printf("CPU current ts: %lu\n", m_currentTs);
 
         ProcessEventsWithContext();
     }
@@ -299,6 +299,7 @@ namespace ns3 {
                 ev->valid = false;
                 break;
             case 0:
+                printf("Send current ts: %lu\n", ev->ts);
                 ProcessType0(ev);
                 // mark as processed
                 ev->valid = false;
@@ -308,6 +309,7 @@ namespace ns3 {
                 ev->valid = false;
                 break;
             case 2:
+                printf("Recv current ts: %lu\n", ev->ts);
                 ProcessType2(ev);
                 // mark as processed
                 ev->valid = false;
@@ -438,10 +440,10 @@ namespace ns3 {
                 sim->ChangeDevQueue();
                 // printf("pos: %d\n", pos);
                 *h_bufrdy = 0;
-                __threadfence_system();     // ensure that all threads see the updated buffer ready flag
                 // *d_bufrdy = 0;
                 // all events in current queue are processed 
                 *d_safe_ts = UINT64_MAX;
+                __threadfence_system();     // ensure that all threads see the updated buffer ready flag
                 itercnt++;
             }
             iter_count++;
@@ -462,6 +464,9 @@ namespace ns3 {
     __host__ int CudaELPSimulator::h_insert(void* impl, uint64_t ts, int context, uint32_t UID, int type, uint64_t lookahead, void *payload){
         // the queue is still used by the kernel
         while(*h_curHostBufRdy);
+        // what if all full?
+        while(h_curHostBuf[h_insertIndex].valid)
+            h_insertIndex++;
 
         h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, ts, context, UID, type, lookahead, true, payload, nullptr};
         // lookahead might be UINT64_MAX, so we need to check if it is valid

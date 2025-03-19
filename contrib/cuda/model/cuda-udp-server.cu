@@ -110,10 +110,10 @@ namespace ns3 {
         uint32_t from;
         while((packet = socket->CudaRecv(UINT32_MAX, 0, &from)) != nullptr){
             if(packet->GetSize() > 0){
-                printf("CudaUdpServer Received packet: %d\n", packet->GetUid());
+                printf("CudaUdpServer Received packet: %d, total: %llu\n", packet->GetUid(), m_received + 1);
                 uint32_t receivedSize = packet->GetSize();
                 // this line might execute after destructor is executed --> Illegal memory access
-                atomicAdd(&m_received, 1);
+                atomicAdd((uint64_cu*)&m_received, 1);
             }
             
             cudaFree(packet);

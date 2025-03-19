@@ -230,9 +230,9 @@ namespace ns3 {
     __host__ void CudaUdpClient::CleanupCudaResources() {
         cudaFree(d_packetBuffer);
         checkCudaErr();
-        cudaFree(m_sent);
+        cudaFree((void*)m_sent);
         checkCudaErr();
-        cudaFree(m_totalTx);
+        cudaFree((void*)m_totalTx);
         checkCudaErr();
         cudaStreamDestroy(m_cudaStream);
         checkCudaErr(); 
@@ -336,8 +336,8 @@ namespace ns3 {
         // cuda_packet->m_data[0] = 69;
 
         if(m_cudaSocket->Send(cuda_packet, nullptr) >= 0){
-            atomicAdd(m_sent, 1);
-            atomicAdd(m_totalTx, cuda_packet->GetSize());
+            atomicAdd((uint32_t*)m_sent, 1);
+            atomicAdd((uint64_cu*)m_totalTx, cuda_packet->GetSize());
         }
 
         // Schedule the next send event
@@ -436,7 +436,7 @@ namespace ns3 {
         new(cuda_packet) CudaPacket();
         cuda_packet->Allocate(m_size);
 
-        GeneratePacketKernel<<<1, 1, 0, m_cudaStream>>>(cuda_packet, m_cudaSocket, m_size, m_sent, m_totalTx, d_data);
+        GeneratePacketKernel<<<1, 1, 0, m_cudaStream>>>(cuda_packet, m_cudaSocket, m_size, (uint32_t*)m_sent, (uint64_cu*)m_totalTx, d_data);
         // cudaEventCreate(&stopEvent);
         
         // cudaStreamSynchronize(m_cudaStream);

@@ -54,8 +54,8 @@ namespace ns3{
             Time m_interval;  //!< Packet inter-send time
             uint32_t m_size;  //!< Size of the sent packet (including the SeqTsHeader)
 
-            uint32_t *m_sent;       //!< Counter for sent packets
-            uint64_cu *m_totalTx;    //!< Total bytes sent
+            volatile uint32_t *m_sent;       //!< Counter for sent packets
+            volatile uint64_cu *m_totalTx;    //!< Total bytes sent
             Ptr<Socket> m_socket;  //!< Socket
             
             Address m_peerAddress; //!< Remote peer address
