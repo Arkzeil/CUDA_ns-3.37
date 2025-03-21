@@ -247,23 +247,23 @@ namespace ns3
             volatile int *d_bufrdy2;
             // to save current buffer that host and device are using, containing the pointer to the buffer and the flag
             DeviceEvent* h_curHostBuf;
-            DeviceEvent* d_curHostBuf;
+            // DeviceEvent* d_curHostBuf;
             DeviceEvent* h_curDevBuf;
             DeviceEvent* d_curDevBuf;
             volatile int* h_curHostBufRdy;
-            volatile int* d_curHostBufRdy;
+            // volatile int* d_curHostBufRdy;
             volatile int* h_curDevBufRdy;
             volatile int* d_curDevBufRdy;
             // a index for host to insert into correct location of host buffer
-            uint32_t h_insertIndex;
+            volatile uint32_t h_insertIndex;
             // safe timestamp for both host and device to check if the event is safe to be executed
-            uint64_t *safe_ts;
-            uint64_t *d_safe_ts1;
-            uint64_t *d_safe_ts2;
+            volatile uint64_t *safe_ts;
+            volatile uint64_t *d_safe_ts1;
+            volatile uint64_t *d_safe_ts2;
             // to store the safe timestamp of CPU current writing buffer, need to be reset when the buffer is changed
             // uint64_t cur_buffer_safe_ts;
             // used for host to update the safe timestamp for h_safeEventQueue, containing the pointer to the ts
-            uint64_t *h_safe_ts;
+            volatile uint64_t *h_safe_ts;
             // a stop flag for device to check if the simulation is finished
             volatile int *d_stop;
             // a flag to let CPU notify that it's idle and GPU need to release device buffer
