@@ -64,9 +64,9 @@ namespace ns3 {
                 printf("Node is null\n");
             }
             if(!m_cudaSocket){
-                printf("Creating new socket at node %d\n", node->GetId());
+                // printf("Creating new socket at node %d\n", node->GetId());
                 m_cudaSocket = CudaSocket::CreateSocket(node);
-                printf("Completed\n");
+                // printf("Completed\n");
                 // m_cudaSocket->SetNode(node);
                 // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
                 // m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
@@ -75,10 +75,10 @@ namespace ns3 {
                     NS_LOG_ERROR("Failed to bind socket");
                     return;
                 }
-                printf("CudaUdpServer bound to port %d\n", m_port);
+                // printf("CudaUdpServer bound to port %d\n", m_port);
             }
             m_cudaSocket->SetRecv(this);
-            printf("CudaUdpServer started: %p\n", m_cudaSocket);
+            // printf("CudaUdpServer started: %p\n", m_cudaSocket);
             // m_cudaSocket->Connect(InetSocketAddress(Ipv4Address::ConvertFrom(m_peerAddress), m_peerPort));
         }
     }
@@ -110,12 +110,13 @@ namespace ns3 {
         uint32_t from;
         while((packet = socket->CudaRecv(UINT32_MAX, 0, &from)) != nullptr){
             if(packet->GetSize() > 0){
-                printf("CudaUdpServer Received packet: %d, total: %llu\n", packet->GetUid(), m_received + 1);
+                // printf("CudaUdpServer Received packet: %d, total: %llu\n", packet->GetUid(), m_received + 1);
                 uint32_t receivedSize = packet->GetSize();
                 // this line might execute after destructor is executed --> Illegal memory access
                 atomicAdd((uint64_cu*)&m_received, 1);
             }
-            
+
+            packet->Free();
             cudaFree(packet);
         }
         // cudaSim->print_test();

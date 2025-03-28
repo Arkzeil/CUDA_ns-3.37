@@ -82,6 +82,7 @@ namespace ns3{
 
         // Add the IPv4 header
         d_packet->AddHeader(RawIpv4Header, 20);
+        cudaFree(RawIpv4Header); 
         
         // if(RawIpv4Header != nullptr)
         //     cudaFree(RawIpv4Header);

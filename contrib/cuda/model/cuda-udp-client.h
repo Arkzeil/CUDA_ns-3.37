@@ -20,6 +20,13 @@ namespace ns3{
     class CudaELPSimulator;
     struct DeviceEvent;
 
+    class test_class{
+        public:
+            test_class();
+            ~test_class();
+            uint32_t *test;
+    };
+
     class CudaUdpClient : public Application, public Managed{
         public:
             __host__ static TypeId GetTypeId(void);
@@ -34,12 +41,13 @@ namespace ns3{
 
             __device__ void test();
             __device__ void ELP_Send();
+            void StartApplication() override;
 
         protected:
             __host__ virtual void Send(); // Override the Send method.
 
         private:
-            void StartApplication() override;
+            
             void StopApplication() override;
             // __host__ void CudaUdpClient::OffloadToCuda(void);
             static void CUDART_CB Cuda_ReceiveCallback(cudaStream_t stream, cudaError_t status, void* data);
@@ -73,7 +81,11 @@ namespace ns3{
             uint64_t lookahead;         // Lookahead time in nanoseconds(for peerAddress)
             uint32_t NodeID;            // Node ID for the context of scheduling
             volatile bool m_stop;       //!< Stop flag, as we currently can't cancel events
+
+            test_class *testClass;
     };
+
+    extern CudaUdpClient *testClient;
 
     __global__ void ProcessPacketKernel(uint8_t* packetBuffer, int packetSize);
 

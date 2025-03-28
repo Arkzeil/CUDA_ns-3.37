@@ -3,17 +3,17 @@
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/cuda_wrapper.h"
+// #include "ns3/cuda_wrapper.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("SimpleCudaUdpHelperExample");
 
 int main(int argc, char *argv[]) {
-    LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
-    LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
+    // LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
+    // LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
     
-    uint32_t numPairs = 33; // Default number of client-server pairs
+    uint32_t numPairs = 32; // Default number of client-server pairs
     // Create two nodes
     NodeContainer nodes;
     nodes.Create(2 * numPairs);
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
         UdpServerHelper server(port);
         ApplicationContainer serverApp = server.Install(pair.Get(1));
         serverApp.Start(Seconds(0.0));
-        serverApp.Stop(Seconds(11.0));
+        serverApp.Stop(Seconds(101.0));
         
         UdpClientHelper client(interfaces.GetAddress(1), port);
         client.SetAttribute("MaxPackets", UintegerValue(100));
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
         
         ApplicationContainer clientApp = client.Install(pair.Get(0));
         clientApp.Start(Seconds(1.0));
-        clientApp.Stop(Seconds(10.0));
+        clientApp.Stop(Seconds(100.0));
     }
 
     // uint32_t ipAddress = interfaces.GetAddress(1).Get();

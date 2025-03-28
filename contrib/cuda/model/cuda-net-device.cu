@@ -35,7 +35,7 @@ namespace ns3 {
       return tid;
   }
 
-  CudaNetDevice::CudaNetDevice(): m_queueSize(1024), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr) {
+  CudaNetDevice::CudaNetDevice(): m_queueSize(2048), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr) {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);

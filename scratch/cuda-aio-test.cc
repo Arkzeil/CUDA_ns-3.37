@@ -4,7 +4,6 @@
 #include "ns3/point-to-point-helper.h"
 #include "ns3/udp-echo-helper.h"
 #include "ns3/cuda-udp-client.h"
-#include "ns3/cuda-node.h"
 #include "ns3/cuda-p2p-helper.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-ipv4-l3-protocol.h"
@@ -51,6 +50,7 @@ int main(int argc, char* argv[]) {
   // NetDeviceContainer devices = p2p.Install(nodes);
   // NetDeviceContainer devices = p2p.Install(node0, node1);
   CudaP2PHelper cudaP2P;
+  Ptr<CudaUdpClient> app1;
 
   for (uint32_t i = 0; i < numPairs; i++){
     cudaP2P.SetDelay(MilliSeconds(2.0));
@@ -75,8 +75,9 @@ int main(int argc, char* argv[]) {
     app->SetSendInterval(Seconds(1.0));
     nodes.Get(2 * i)->AddApplication(app);
     app->SetStartTime(Seconds(1.0));
-    app->SetStopTime(Seconds(10.0));
+    app->SetStopTime(Seconds(1000.0));
 
+    app1 = app;
     // Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
     // app2->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
     // app2->SetPacketSize(256);
@@ -88,7 +89,7 @@ int main(int argc, char* argv[]) {
     server->SetPort(9);
     nodes.Get(2 * i + 1)->AddApplication(server);
     server->SetStartTime(Seconds(0.0));
-    server->SetStopTime(Seconds(11.0));
+    server->SetStopTime(Seconds(1001.0));
   }
 
   // CudaP2PHelper cudaP2P;
@@ -179,6 +180,12 @@ int main(int argc, char* argv[]) {
   double time_used;
   clock_gettime(CLOCK_MONOTONIC, &start);
 
+  // app1->StartApplication();
+  // cudaSim->ELP_Test(GetPointer(app1));
+  // testSend(GetPointer(app1));
+  // int stop = 1;
+  // cudaMemcpyAsync((void*)d_stop, &stop, sizeof(int), cudaMemcpyHostToDevice, streamC);
+  // cudaCheckErrors("stop cudaMemcpyAsync failed");
   cudaSim->ELP_Run();
 
   // cudaSim->test(GetPointer(app));

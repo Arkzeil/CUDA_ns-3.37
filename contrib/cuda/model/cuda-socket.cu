@@ -34,7 +34,7 @@ namespace ns3{
     CudaSocket::CudaSocket() : m_netDevice(nullptr), m_shutdownRecv(false), m_shutdownSend(false), m_connected(false), m_rxAvailable(0){
         // Constructor
         // cudaStreamCreate(&m_cudaStream);
-        printf("CudaSocket initialized\n");
+        // printf("CudaSocket initialized\n");
         // void *d_temp;
         cudaMallocManaged(&d_sendBuffer, 1500); // Allocate GPU memory for packets (MTU size).
         checkCudaErr();
@@ -42,6 +42,8 @@ namespace ns3{
         // m_defaultAddress = new(m_defaultAddress) Address();
         m_defaultAddress = new Address();
         cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
+        checkCudaErr();
+        cudaMallocManaged(&d_defaultAddress, sizeof(uint32_t));
         checkCudaErr();
         // m_netDevice = new CudaNetDevice();
         m_deliveryQueue = new Cuda_PairList<CudaPacket*, uint32_t>(1024);
@@ -58,6 +60,8 @@ namespace ns3{
         delete m_defaultAddress;
         // checkCudaErr();
         cudaFree(m_defaultPort);
+        checkCudaErr();
+        cudaFree(d_defaultAddress);
         checkCudaErr();
         // cudaStreamDestroy(m_cudaStream);
     }
@@ -114,14 +118,14 @@ namespace ns3{
     int CudaSocket::Bind(){
         // Bind the socket to the default address
         // It should allocate a new socket and bind it to the default address
-        printf("%d\n", m_defaultAddress->GetLength());
+        // printf("%d\n", m_defaultAddress->GetLength());
         m_endPoint = m_udp->Allocate();
-        printf("%d\n", m_defaultAddress->GetLength());
+        // printf("%d\n", m_defaultAddress->GetLength());
         if(m_boundnetdevice){
             // if not set, the socket is not bound to a net device, and device will be found at Ipv4L3Protocol::SendRealOut using route
             m_endPoint->BindToNetDevice(m_boundnetdevice);            
         }
-        printf("%d\n", m_defaultAddress->GetLength());
+        // printf("%d\n", m_defaultAddress->GetLength());
         return FinishBind();
     }
 
@@ -183,7 +187,7 @@ namespace ns3{
         if (InetSocketAddress::IsMatchingType(address) == true){
             InetSocketAddress transport = InetSocketAddress::ConvertFrom(address);
             *m_defaultAddress = Address(transport.GetIpv4());
-            d_defaultAddress = transport.GetIpv4().Get();
+            *d_defaultAddress = transport.GetIpv4().Get();
             // printf("%p\n", m_defaultPort);
             // if(m_defaultPort == nullptr){
             //     cudaMallocManaged(&m_defaultPort, sizeof(uint16_t));
@@ -237,7 +241,7 @@ namespace ns3{
         // cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
         // Send data to the network device
         // SendToNetDevice(d_sendBuffer, size);
-        printf("Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
+        // printf("Sending packet from CUDA Socket, packet id: %d\n", d_packet->GetUid());
         // if(m_netDevice == nullptr){
         //     // m_netDevice = new CudaNetDevice();
         //     printf("NetDevice is null\n");
@@ -249,7 +253,7 @@ namespace ns3{
         //     }
         //     printf("\n");
         // }
-        return DoSendTo(d_packet, d_defaultAddress, *m_defaultPort, 0, cb_data);
+        return DoSendTo(d_packet, *d_defaultAddress, *m_defaultPort, 0, cb_data);
         // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
         // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
         // m_netDevice->EnqueuePacket(d_buffer, size);
@@ -289,7 +293,7 @@ namespace ns3{
         //     printf("\n");
         // }
 
-        d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
+        return d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }
 
@@ -344,6 +348,8 @@ namespace ns3{
             // m_deliveryQueue->pop_front();
             return d_packet;
         }
+        // drop packet
+        return nullptr;
     }
 
     __device__ void CudaSocket::test(){

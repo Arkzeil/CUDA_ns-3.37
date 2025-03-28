@@ -9,6 +9,7 @@ namespace ns3
 {
     __managed__ CudaELPSimulator* cudaSim = nullptr;
     __device__ CudaELPSimulator* cudaSim_d = nullptr;
+    __managed__ int device_id = 0;
 
     bool InitCUDA(cudaDeviceProp &prop) {
         int count;
@@ -82,6 +83,8 @@ namespace ns3
         // }  
         /* 在找到支援 CUDA 1.0 以上的裝置之後，就可以呼叫 cudaSetDevice 函式，把它設為目前要使用的裝置。 */
         cudaSetDevice(i);
+
+        cudaGetDevice(&device_id);
 
         printf("----------------InitCUDA, CUDA check completed-------------------\n");
 

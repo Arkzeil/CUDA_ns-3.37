@@ -21,6 +21,13 @@ namespace ns3
 // Each class should be documented using Doxygen,
 // and have an \ingroup cuda directive
     #define debug_print 1
+    
+    // #define CHECKSUM_ENABLED
+    
+    #ifdef CHECKSUM_ENABLED
+        #define CHECKSUM_CHECK
+    #endif
+
     #define cudaCheckErrors(msg) \
                             do { \
                                 cudaError_t __err = cudaGetLastError(); \
@@ -45,6 +52,7 @@ namespace ns3
 
     extern __managed__ CudaELPSimulator* cudaSim;
     extern __device__ CudaELPSimulator* cudaSim_d;
+    extern __managed__ int device_id;
 
     class DeviceCallback {
         public:
@@ -211,14 +219,14 @@ namespace ns3
         public:
             CudaPair<T1, T2>* pair_elements;
 
-            __host__ __device__ Cuda_PairList() : pair_elements(nullptr), m_size(0), m_capacity(0) {
+            __host__  Cuda_PairList() : pair_elements(nullptr), m_size(0), m_capacity(0) {
                 cudaMallocManaged(&front, sizeof(int));
                 cudaMallocManaged(&rear, sizeof(int));
                 *front = 0;
                 *rear = 0;
             } // Default constructor
 
-            __host__ __device__ Cuda_PairList(int capacity) : m_size(0), m_capacity(capacity) {
+            __host__  Cuda_PairList(int capacity) : m_size(0), m_capacity(capacity) {
                 cudaMallocManaged(&front, sizeof(int));
                 cudaMallocManaged(&rear, sizeof(int));
                 *front = 0;

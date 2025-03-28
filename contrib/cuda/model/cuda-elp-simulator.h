@@ -11,16 +11,18 @@
 #include <mutex>
 #include <thread>
 #include <cuda_runtime.h>
+#include <cooperative_groups.h>
 
 #include <vector>
 #include <unordered_map>
 
-#define DEVICE_QUEUE_LENGTH 256
+#define DEVICE_QUEUE_LENGTH 2048
 #define MAX_NEW_EVENTS 3
 #define DEVICE_EV_ID_OFFSET 1000000
 
 namespace ns3
 {
+    void testSend(void* obj);
     // Forward
     class Scheduler;
     // a 2d table to store the lookahead time for each pair of node number
@@ -171,7 +173,7 @@ namespace ns3
             void Remove(const EventId &id) override;
             void Cancel(const EventId &id) override;
             bool IsExpired(const EventId &id) const override;
-            
+            void ELP_Test(void *obj);
             __host__ void componentMethod();
             __host__ void ELP_Init();
             __host__ void ELP_Cleanup();
@@ -230,6 +232,8 @@ namespace ns3
             // CUDA specific members
             cudaStream_t streamK;
             cudaStream_t streamC;
+            // multi processors count
+            int mp;
 
             CudaELPComponent elpComponent;
             // these are ping-pong buffers for host to save the events and device to fetch
@@ -281,6 +285,13 @@ namespace ns3
 
             std::thread::id m_mainThreadId;
     };
+    __global__ void PersistentEventKernel(CudaELPSimulator *sim, 
+        DeviceEvent* h_safeEventQueue1, DeviceEvent* h_safeEventQueue2, 
+        DeviceEvent* d_nextEventQueue1, DeviceEvent* d_nextEventQueue2, 
+        volatile int *h_bufrdy1, volatile int *h_bufrdy2,
+        volatile int *d_bufrdy1, volatile int *d_bufrdy2,
+        volatile uint64_t* d_safe_ts1, volatile uint64_t* d_safe_ts2, 
+        volatile int* d_stop);
 } // namespace ns3
 
 #endif // CUDA_ELP_SIMULATOR_H

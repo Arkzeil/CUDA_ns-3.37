@@ -217,15 +217,17 @@ namespace ns3 {
         // printf("Local deliver, packet: %d\n", packet->GetUid());
         // assuming no fragmentation
         // skip protocol lookup
-        uint8_t *Ipv4Header;
-        cudaMalloc(&Ipv4Header, sizeof(uint8_t) * 20);
-        packet->ExtractPayload(Ipv4Header, 0, 20);
+        uint8_t *Ipv4Header = nullptr;
 
-        // Verify checksum
-        if(verify_ipv4_checksum(Ipv4Header) == false){
-            printf("Ipv4 Checksum failed\n");
-            // return;
-        }
+        #ifdef CHECKSUM_CHECK
+            cudaMalloc(&Ipv4Header, sizeof(uint8_t) * 20);
+            packet->ExtractPayload(Ipv4Header, 0, 20);
+            // Verify checksum
+            if(verify_ipv4_checksum(Ipv4Header) == false){
+                printf("Ipv4 Checksum failed\n");
+                // return;
+            }
+        #endif
         // if(packet->GetUid() == 7){
         //     for(int i = 0; i < packet->GetSize(); i++){
         //         printf("%d ", packet->m_data[i]);
@@ -329,7 +331,11 @@ namespace ns3 {
         uint8_t tos = 0;
         // skip tos check(assuming no tos in the first place)
         uint8_t *ipHeader;
-        cudaMalloc(&ipHeader, sizeof(uint8_t) * 20);
+        cudaError_t ret = cudaMalloc(&ipHeader, sizeof(uint8_t) * 20);
+        if(ret != cudaSuccess){
+            printf("%s\n", cudaGetErrorString(ret));
+            // return;
+        }
 
         *(ipHeader + 0) = 0x05;        // version and IHL(20 bytes = 5 words)
         *(ipHeader + 1) = 0x45;         // DSCP and ECN
@@ -342,11 +348,12 @@ namespace ns3 {
         *((uint32_t*)(ipHeader + 12)) = source;      // source address
         *((uint32_t*)(ipHeader + 16)) = destination; // destination address
 
-        // Compute checksum
-        uint16_t checksum = compute_ipv4_checksum(ipHeader);
-        *(ipHeader + 10) = checksum >> 8;
-        *(ipHeader + 11) = checksum & 0xFF;
-
+        #ifdef CHECKSUM_CHECK
+            // Compute checksum
+            uint16_t checksum = compute_ipv4_checksum(ipHeader);
+            *(ipHeader + 10) = checksum >> 8;
+            *(ipHeader + 11) = checksum & 0xFF;
+        #endif
         // for(int i = 0; i < 20; i++){
         //     printf("%d ", ipHeader[i]);
         // }

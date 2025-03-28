@@ -152,6 +152,7 @@ namespace ns3 {
         // printf("delay: %f\n", txTime + d_delay);
         // cudaSim_d->deviceMethod(this, 0);
         m_cudaSim->d_insert(m_link[wire].m_dst, txTime + d_delay, context, 2, UINT64_MAX, (void*)d_packet);
+        // __threadfence();
 
         return true;
         // uint8_t* d_packet;

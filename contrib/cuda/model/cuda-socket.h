@@ -63,7 +63,8 @@ namespace ns3{
             void SetRcvBufSize(uint32_t size);
             CudaNetDevice* GetBoundNetDevice();
             void SetRecv(CudaUdpServer* server);
-
+            uint32_t *d_defaultAddress;                      //!< Default address on the device
+            uint16_t *m_defaultPort;                        //!< Default port
             // void SetRecvCallback(Callback<void, Ptr<Socket>> receivedData) override;
         private:
             uint8_t* d_sendBuffer;
@@ -82,9 +83,9 @@ namespace ns3{
             //     m_icmpCallback6; //!< ICMPv6 callback
 
             Address *m_defaultAddress;                      //!< Default address
-            uint16_t *m_defaultPort;                        //!< Default port
+            
             // TracedCallback<Ptr<const Packet>> m_dropTrace; //!< Trace for dropped packets
-            uint32_t d_defaultAddress;                      //!< Default address on the device
+            
 
             mutable enum SocketErrno m_errno; //!< Socket error code
             bool m_shutdownSend;              //!< Send no longer allowed

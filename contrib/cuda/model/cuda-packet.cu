@@ -29,7 +29,11 @@ namespace ns3{
         }
         if (m_data == nullptr) {
             // m_data = static_cast<uint8_t*>(malloc(m_capacity));
-            cudaMalloc((void**)&m_data, m_capacity);
+            cudaError_t ret = cudaMalloc((void**)&m_data, m_capacity);
+            if(ret != cudaSuccess){
+                printf("%s\n", cudaGetErrorString(ret));
+                // return;
+            }
         }
         m_size = size;
     }

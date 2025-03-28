@@ -24,6 +24,18 @@ namespace ns3 {
     std::vector<CUDA_cb_data*> cb_data_list;
     cudaEvent_t startEvent, stopEvent;
 
+    CudaUdpClient *testClient = nullptr;
+
+    test_class::test_class(){
+        printf("Test class constructor\n");
+        cudaMallocManaged(&test, sizeof(uint32_t));
+        checkCudaErr();
+    }
+    
+    test_class::~test_class(){
+        printf("Test class destructor\n");
+    }
+
     __host__ TypeId CudaUdpClient::GetTypeId(void) {
         static TypeId tid = TypeId("ns3::CudaUdpClient")
             .SetParent<Application>()
@@ -31,7 +43,7 @@ namespace ns3 {
             .AddConstructor<CudaUdpClient>()
             .AddAttribute("MaxPackets",
                             "The maximum number of packets the application will send",
-                            UintegerValue(100),
+                            UintegerValue(1024),
                             MakeUintegerAccessor(&CudaUdpClient::m_count),
                             MakeUintegerChecker<uint32_t>())
             .AddAttribute("Interval",
@@ -60,7 +72,7 @@ namespace ns3 {
 
     CudaUdpClient::CudaUdpClient() 
         : d_packetBuffer(nullptr), m_size(1500), 
-        m_interval(Seconds(1.0)), m_count(100), 
+        m_interval(Seconds(1.0)), m_count(1024), 
         m_peerPort(0), m_socket(nullptr), 
         m_running(false), m_cudaSocket(nullptr),
         m_stop(false){
@@ -68,6 +80,7 @@ namespace ns3 {
         InitCudaResources();
         *m_sent = 0;
         *m_totalTx = 0;
+        testClient = this;
         
         printf("CudaUdpClient initialized\n");
         printf("Packet size: %d bytes\n", m_size);
@@ -125,28 +138,33 @@ namespace ns3 {
     void CudaUdpClient::CalculateLookAhead(uint32_t dst){
         CudaIpv4L3Protocol* l3 = m_cudaSocket->GetUdp()->GetIpv4();
         uint32_t index;
-        if(l3->m_routing->LookupRoute(dst, &index)){
-            printf("Route found, index: %d\n", index);
-        }
-        else{
-            printf("Route not found\n");
-        }
+        l3->m_routing->LookupRoute(dst, &index);
+        // if(l3->m_routing->LookupRoute(dst, &index)){
+        //     printf("Route found, index: %d\n", index);
+        // }
+        // else{
+        //     printf("Route not found\n");
+        // }
         CudaNetDevice* dev = m_cudaSocket->GetUdp()->GetIpv4()->GetInterface(index)->GetDevice();
         CudaNetDevice* dst_dev = dev->GetChannel()->GetDstDev(dev);
         uint32_t dst_node = dst_dev->GetNode()->GetId();
         uint64_t bandwidth = dev->GetBandwidth(); // bps
-        printf("Destination node: %d\n", dst_node);
+        // printf("Destination node: %d\n", dst_node);
         lookahead = lookaheadTable.getValue(GetNode()->GetId(), dst_node);
         
         lookahead += ((float)(m_size * 8) / bandwidth) * 1e9;
         dev->lookahead = lookahead;
         
-        printf("Lookahead: %lu\n", lookahead);
+        // printf("Lookahead: %lu\n", lookahead);
+    }
+
+    __global__ void testKernel(void *obj){
+        ((CudaUdpClient*)obj)->ELP_Send();
     }
 
     void 
     CudaUdpClient::StartApplication(){
-        printf("---------------------Starting application----------------------\n");
+        // printf("---------------------Starting application----------------------\n");
         // printf("Initial thread: %ld\n", std::this_thread::get_id());
         // EventDispatcher::GetInstance().StartWorker();
         // NS_LOG_FUNCTION(this);
@@ -167,8 +185,10 @@ namespace ns3 {
             if(node == nullptr){
                 printf("Node is null\n");
             }
-            printf("Creating client new socket at node %d, addr: %p\n", node->GetId(), GetPointer(node));
+            // printf("Creating client new socket at node %d, addr: %p\n", node->GetId(), GetPointer(node));
             m_cudaSocket = CudaSocket::CreateSocket(node);
+            // cudaMallocManaged(&testClass, sizeof(test_class));
+            // new(testClass) test_class();
             // m_cudaSocket->SetNode(node);
             // cudaStreamAttachMemAsync(m_cudaStream, m_cudaSocket);
             // m_cudaSocket->Bind(InetSocketAddress(Ipv4Address::GetAny(), 9));
@@ -191,6 +211,10 @@ namespace ns3 {
         NodeID = GetNode()->GetId();
         m_cudaSim->ELP_Schedule(NodeID, Seconds(0.0), this, 0, lookahead, nullptr);
 
+        // testKernel<<<1, 1, 0, m_cudaStream>>>(this);
+        // cudaStreamSynchronize(m_cudaStream);
+        // cudaMemPrefetchAsync(m_cudaSocket, sizeof(CudaSocket), 0, m_cudaStream);
+        // cudaStreamSynchronize(m_cudaStream);
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
         // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->h_insert(this, 0, 0, 0, GetNode()->GetId());
     }
@@ -210,7 +234,7 @@ namespace ns3 {
 
         // Simulator::test();
 
-        printf("Node %d: Total packets sent: %d\n",GetNode()->GetId(), *m_sent);
+        // printf("Node %d: Total packets sent: %d\n",GetNode()->GetId(), *m_sent);
     }
 
     __host__ void CudaUdpClient::InitCudaResources() {
@@ -329,12 +353,17 @@ namespace ns3 {
             return;
 
         CudaPacket* cuda_packet;
-        cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+        cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+        if(ret != cudaSuccess){
+            printf("%s\n", cudaGetErrorString(ret));
+            return;
+        }
         new(cuda_packet) CudaPacket();
         cuda_packet->Allocate(m_size);
 
         // cuda_packet->m_data[0] = 69;
-
+        // printf("socket default address: %p\n", (m_cudaSocket->d_defaultAddress));
+        // printf("test's test address: %p\n", (testClass->test));
         if(m_cudaSocket->Send(cuda_packet, nullptr) >= 0){
             atomicAdd((uint32_t*)m_sent, 1);
             atomicAdd((uint64_cu*)m_totalTx, cuda_packet->GetSize());
