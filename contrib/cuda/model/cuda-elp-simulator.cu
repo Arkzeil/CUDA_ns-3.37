@@ -69,6 +69,7 @@ namespace ns3 {
 
         cudaDeviceGetAttribute(&mp, cudaDevAttrMultiProcessorCount, 0);
         cudaCheckErrors("get multiprocessor count fail");
+        printf("Number of multiprocessors: %d\n", mp);
         // cudaSim = this;
         printf("This: %p\n", this);
         m_test = 69;
@@ -853,7 +854,7 @@ namespace ns3 {
         volatile uint64_t safe_ts1;
         volatile uint64_t safe_ts2;
         // Launch the persistent event processing kernel
-        PersistentEventKernel<<<mp, 32, 0, streamK>>>(this, 
+        PersistentEventKernel<<<mp, 64, 0, streamK>>>(this, 
                                                     h_safeEventQueue1, h_safeEventQueue2,  
                                                     d_nextEventQueue1, d_nextEventQueue2, 
                                                     h_bufrdy1, h_bufrdy2, 
@@ -868,12 +869,6 @@ namespace ns3 {
             // cudaMemcpyAsync((void*)&old_safe_ts1, (void*)d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
             // cudaMemcpyAsync((void*)&old_safe_ts2, (void*)d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
             // cudaStreamSynchronize(streamC);
-            // synchronize with the device safe_ts
-            // should I use async?
-            cudaMemcpyAsync((void*)&safe_ts1, (void*)d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
-            cudaMemcpyAsync((void*)&safe_ts2, (void*)d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
-            cudaStreamSynchronize(streamC);
-            cudaCheckErrors("safe_ts cudaMemcpyAsync failed");
             // if(safe_ts1 != old_safe_ts1 || safe_ts2 != old_safe_ts2){
             //     // if the safe_ts of the buffer is updated, we should skip the following process and enter the next loop
             //     continue;
@@ -892,6 +887,12 @@ namespace ns3 {
             /*************************Kernel change next-event buffer here********************************* */
             /*************************Kernel change buffer safe time here********************************** */
             if(!is_safe(&next)){
+                // synchronize with the device safe_ts
+                // should I use async?
+                cudaMemcpyAsync((void*)&safe_ts1, (void*)d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
+                cudaMemcpyAsync((void*)&safe_ts2, (void*)d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
+                cudaStreamSynchronize(streamC);
+                cudaCheckErrors("safe_ts cudaMemcpyAsync failed");
                 // get the smaller buffer time stamp of 2 buffers, but larger than host safe_ts as the new safe_ts
                 // to ensure that the scenario that one buffer is empty but kernel is executing another buffer
                 // will there be a race condition between host and kernel?

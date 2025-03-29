@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numPairs = 33; // Default number of client-server pairs
+  uint32_t numPairs = 500; // Default number of client-server pairs
 
   NodeContainer nodes;
   nodes.Create(2 * numPairs);
@@ -52,6 +52,8 @@ int main(int argc, char* argv[]) {
   CudaP2PHelper cudaP2P;
   Ptr<CudaUdpClient> app1;
 
+  uint32_t j = 1;
+
   for (uint32_t i = 0; i < numPairs; i++){
     cudaP2P.SetDelay(MilliSeconds(2.0));
     cudaP2P.SetBandwidth(DataRate("10Mbps"));
@@ -60,7 +62,10 @@ int main(int argc, char* argv[]) {
     // Assign IP addresses
     CudaIpv4AddressHelper ipv4;
     std::ostringstream subnet;
-    subnet << "10.1." << i + 1 << ".0";
+    if(i / 256 >= j)
+      j++;
+    subnet << "10." << j << "." << (i + 1) % 256 << ".0";
+    // subnet << "10.1." << i + 1 << ".0";
     ipv4.SetBase(subnet.str().c_str(), "255.255.255.0");
 
     Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(cudaDevices);
@@ -75,7 +80,7 @@ int main(int argc, char* argv[]) {
     app->SetSendInterval(Seconds(1.0));
     nodes.Get(2 * i)->AddApplication(app);
     app->SetStartTime(Seconds(1.0));
-    app->SetStopTime(Seconds(1000.0));
+    app->SetStopTime(Seconds(1001.0));
 
     app1 = app;
     // Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
@@ -89,7 +94,7 @@ int main(int argc, char* argv[]) {
     server->SetPort(9);
     nodes.Get(2 * i + 1)->AddApplication(server);
     server->SetStartTime(Seconds(0.0));
-    server->SetStopTime(Seconds(1001.0));
+    server->SetStopTime(Seconds(1002.0));
   }
 
   // CudaP2PHelper cudaP2P;

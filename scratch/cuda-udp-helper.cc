@@ -13,13 +13,15 @@ int main(int argc, char *argv[]) {
     // LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
     // LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
     
-    uint32_t numPairs = 32; // Default number of client-server pairs
+    uint32_t numPairs = 500; // Default number of client-server pairs
     // Create two nodes
     NodeContainer nodes;
     nodes.Create(2 * numPairs);
     
     InternetStackHelper internet;
     internet.Install(nodes);
+
+    uint32_t j = 1;
     
     for (uint32_t i = 0; i < numPairs; i++) {
         NodeContainer pair(nodes.Get(2 * i), nodes.Get(2 * i + 1));
@@ -32,7 +34,10 @@ int main(int argc, char *argv[]) {
         
         Ipv4AddressHelper address;
         std::ostringstream subnet;
-        subnet << "10.1." << i + 1 << ".0";
+        if(i / 256 >= j)
+            j++;
+        subnet << "10." << j << "." << (i + 1) % 256 << ".0";
+        // subnet << "10.1." << i + 1 << ".0";
         address.SetBase(subnet.str().c_str(), "255.255.255.0");
         Ipv4InterfaceContainer interfaces = address.Assign(devices);
         
@@ -44,16 +49,16 @@ int main(int argc, char *argv[]) {
         UdpServerHelper server(port);
         ApplicationContainer serverApp = server.Install(pair.Get(1));
         serverApp.Start(Seconds(0.0));
-        serverApp.Stop(Seconds(101.0));
+        serverApp.Stop(Seconds(1002.0));
         
         UdpClientHelper client(interfaces.GetAddress(1), port);
-        client.SetAttribute("MaxPackets", UintegerValue(100));
+        client.SetAttribute("MaxPackets", UintegerValue(1024));
         client.SetAttribute("Interval", TimeValue(Seconds(1)));
         client.SetAttribute("PacketSize", UintegerValue(256));
         
         ApplicationContainer clientApp = client.Install(pair.Get(0));
         clientApp.Start(Seconds(1.0));
-        clientApp.Stop(Seconds(100.0));
+        clientApp.Stop(Seconds(1001.0));
     }
 
     // uint32_t ipAddress = interfaces.GetAddress(1).Get();
