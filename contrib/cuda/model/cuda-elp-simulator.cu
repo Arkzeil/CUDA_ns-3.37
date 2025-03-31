@@ -387,7 +387,7 @@ namespace ns3 {
                                         volatile int* d_stop) {
 
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
-        const int totalThreads = gridDim.x * blockDim.x;
+        const int totalThreads = gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z;
         const int localThreadId = threadIdx.x;
         int iter_count = 0;
 
@@ -854,7 +854,7 @@ namespace ns3 {
         volatile uint64_t safe_ts1;
         volatile uint64_t safe_ts2;
         // Launch the persistent event processing kernel
-        PersistentEventKernel<<<mp, 64, 0, streamK>>>(this, 
+        PersistentEventKernel<<<48, 32, 0, streamK>>>(this, 
                                                     h_safeEventQueue1, h_safeEventQueue2,  
                                                     d_nextEventQueue1, d_nextEventQueue2, 
                                                     h_bufrdy1, h_bufrdy2, 

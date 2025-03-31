@@ -246,6 +246,9 @@ namespace ns3
                         }
                         int t_rear = atomicAdd(rear, 1) & (m_capacity - 1);
                         pair_elements[t_rear] = CudaPair(key, protocol);
+                        // int t_rear = *rear & (m_capacity - 1);
+                        // *rear++;
+                        // pair_elements[t_rear] = CudaPair(key, protocol);
                     #else
                         if ((*rear + 1) == *front) {
                             return false; // Queue full
@@ -287,6 +290,9 @@ namespace ns3
                     }
                     int t_front = atomicAdd(front, 1) & (m_capacity - 1);
                     return pair_elements[t_front];
+                    // int t_front = *front & (m_capacity - 1);
+                    // *front++;
+                    // return pair_elements[t_front];
                 #else
                     if (*front == *rear) {
                         return CudaPair<T1, T2>(nullptr, 0); // Queue empty

@@ -365,8 +365,11 @@ namespace ns3 {
         // printf("socket default address: %p\n", (m_cudaSocket->d_defaultAddress));
         // printf("test's test address: %p\n", (testClass->test));
         if(m_cudaSocket->Send(cuda_packet, nullptr) >= 0){
-            atomicAdd((uint32_t*)m_sent, 1);
-            atomicAdd((uint64_cu*)m_totalTx, cuda_packet->GetSize());
+            // only one thread should update the sent and totalTx
+            // atomicAdd((uint32_t*)m_sent, 1);
+            (*m_sent)++;
+            // atomicAdd((uint64_cu*)m_totalTx, cuda_packet->GetSize());
+            (*m_totalTx) += cuda_packet->GetSize();
         }
 
         // Schedule the next send event
