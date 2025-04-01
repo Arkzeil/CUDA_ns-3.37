@@ -19,12 +19,20 @@
 #define DEVICE_QUEUE_LENGTH 2048
 #define MAX_NEW_EVENTS 3
 #define DEVICE_EV_ID_OFFSET 1000000
+#define TPB 64  // Threads per block (block size)
+#define MAX_PACKET_PER_THREAD 4
 
 namespace ns3
 {
     void testSend(void* obj);
+
     // Forward
     class Scheduler;
+    class CudaPacket;
+
+    // packet queue for device-side
+    extern CudaPacket* d_threadBuffer;
+
     // a 2d table to store the lookahead time for each pair of node number
     // the value is actually the delay between the two nodes, need to add the packet transmission time
     template <typename T>

@@ -215,6 +215,10 @@ namespace ns3 {
       // printf("\n");
       // Process received packet
       // printf("Received packet on GPU, packet id: %d\n", packet->GetUid());
+      if(packet->ready == 0){
+        printf("Packet is not ready\n");
+        return;
+      }
       m_ipv4->d_Receive(this, packet);
       // ProcessPacketOnCuda(packet);
   }

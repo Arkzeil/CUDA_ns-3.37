@@ -16,6 +16,7 @@
 #include "ns3/cuda-udp-server.h"
 #include "ns3/cuda-p2p-channel.h"
 #include "ns3/cuda-net-device.h"
+#include "ns3/cuda-packet.h"
 
 #include <unistd.h>
 
@@ -30,6 +31,7 @@ namespace ns3 {
 
     // __managed__ cudaEvent_t event;
     int eventCounter = 0;
+    CudaPacket* d_threadBuffer = nullptr;
 
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
@@ -75,6 +77,7 @@ namespace ns3 {
         m_test = 69;
         d_uid = DEVICE_EV_ID_OFFSET;
         h_insertIndex = 0;
+
         ELP_Init();
     }
 
@@ -235,6 +238,9 @@ namespace ns3 {
         cudaMemset((void*)d_stop, 0, sizeof(int));
         cudaCheckErrors("ready flags cudaMemset failed");
 
+        cudaMalloc(&d_threadBuffer, sizeof(CudaPacket) * mp * TPB * MAX_PACKET_PER_THREAD);
+        cudaCheckErrors("packet buffer cudaMalloc failed");
+
         // Initialize the event buffer
         h_curHostBuf = h_safeEventQueue1;
         // d_curHostBuf = h_safeEventQueue1;
@@ -263,6 +269,12 @@ namespace ns3 {
         cudaFree((void*)d_safe_ts1);
         cudaFree((void*)d_safe_ts2);
         cudaFree((void*)d_stop);
+
+        cudaFree(d_threadBuffer);
+        // for(int i = 0; i < mp * TPB * MAX_PACKET_PER_THREAD; i++){
+        //     CudaPacket* packet = (CudaPacket*)d_threadBuffer + i;
+        //     packet->Free();
+        // }
         cudaCheckErrors("cleanup cudaFree failed");
         // Free the streams
         cudaStreamDestroy(streamK);
@@ -853,8 +865,9 @@ namespace ns3 {
         volatile uint64_t old_safe_ts2;
         volatile uint64_t safe_ts1;
         volatile uint64_t safe_ts2;
+        
         // Launch the persistent event processing kernel
-        PersistentEventKernel<<<48, 32, 0, streamK>>>(this, 
+        PersistentEventKernel<<<mp, TPB, 0, streamK>>>(this, 
                                                     h_safeEventQueue1, h_safeEventQueue2,  
                                                     d_nextEventQueue1, d_nextEventQueue2, 
                                                     h_bufrdy1, h_bufrdy2, 

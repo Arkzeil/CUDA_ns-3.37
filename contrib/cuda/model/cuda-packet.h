@@ -35,8 +35,8 @@ namespace ns3{
             __device__ void PrintContents() const;
 
             uint8_t* m_data;       // Pointer to packet data in GPU memory
+            uint32_t ready;      // Flag to indicate if the packet is ready for processing
             uint32_t m_crc;        // CRC checksum (optional)
-
         private:
             uint32_t m_uid;          // Unique identifier for the packet
             uint32_t m_size;       // Current size of the packet

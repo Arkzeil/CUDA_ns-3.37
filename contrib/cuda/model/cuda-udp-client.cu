@@ -249,6 +249,8 @@ namespace ns3 {
         checkCudaErr();
         cudaMallocManaged(&m_totalTx, sizeof(uint64_cu));
         checkCudaErr();
+
+        d_threadBuf = d_threadBuffer;
     }
 
     __host__ void CudaUdpClient::CleanupCudaResources() {
@@ -352,14 +354,26 @@ namespace ns3 {
         if(*m_sent >= m_count)
             return;
 
+        int tid = threadIdx.x + blockIdx.x * blockDim.x;
         CudaPacket* cuda_packet;
-        cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));
-        if(ret != cudaSuccess){
-            printf("%s\n", cudaGetErrorString(ret));
-            return;
+        int i = 0;
+        while(1){
+            if(d_threadBuf[tid * MAX_PACKET_PER_THREAD+ i].ready == 0){
+                break;
+            }
+            i = (i + 1) & (MAX_PACKET_PER_THREAD - 1);
         }
+        
+        cuda_packet = (d_threadBuf + tid * MAX_PACKET_PER_THREAD + i);
         new(cuda_packet) CudaPacket();
         cuda_packet->Allocate(m_size);
+        // cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));
+        // if(ret != cudaSuccess){
+        //     printf("%s\n", cudaGetErrorString(ret));
+        //     return;
+        // }
+        // new(cuda_packet) CudaPacket();
+        // cuda_packet->Allocate(m_size);
 
         // cuda_packet->m_data[0] = 69;
         // printf("socket default address: %p\n", (m_cudaSocket->d_defaultAddress));

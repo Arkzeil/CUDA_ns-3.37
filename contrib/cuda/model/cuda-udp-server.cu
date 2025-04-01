@@ -118,7 +118,8 @@ namespace ns3 {
             }
 
             packet->Free();
-            cudaFree(packet);
+            // cudaFree(packet);
+            packet->ready = 0;
         }
         // cudaSim->print_test();
         // cudaSim_d->deviceMethod();

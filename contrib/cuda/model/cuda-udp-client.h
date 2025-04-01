@@ -19,6 +19,7 @@ namespace ns3{
     class CUDA_cb_data;
     class CudaELPSimulator;
     struct DeviceEvent;
+    class CudaPacket;
 
     class test_class{
         public:
@@ -81,6 +82,7 @@ namespace ns3{
             uint64_t lookahead;         // Lookahead time in nanoseconds(for peerAddress)
             uint32_t NodeID;            // Node ID for the context of scheduling
             volatile bool m_stop;       //!< Stop flag, as we currently can't cancel events
+            CudaPacket* d_threadBuf;     // Device memory for thread buffer(as we can't access global variable in __device__ function)
 
             test_class *testClass;
     };

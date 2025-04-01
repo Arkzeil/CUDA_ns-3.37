@@ -165,12 +165,12 @@ namespace ns3 {
         uint16_t udp_length = d_packet->GetSize() + 8;
 
         // Compute UDP checksum
-        uint8_t *udp_header;
-        cudaError_t ret = cudaMalloc(&udp_header, 8);
-        if(ret != cudaSuccess){
-            printf("%s\n", cudaGetErrorString(ret));
-            // return;
-        }
+        uint8_t udp_header[8];
+        // cudaError_t ret = cudaMalloc(&udp_header, 8);
+        // if(ret != cudaSuccess){
+        //     printf("%s\n", cudaGetErrorString(ret));
+        //     // return;
+        // }
         udp_header[0] = sport >> 8;
         udp_header[1] = sport & 0xFF;
         udp_header[2] = dport >> 8;
@@ -213,7 +213,7 @@ namespace ns3 {
         // }
 
         d_packet->AddHeader(udp_header, 8);
-        cudaFree(udp_header);
+        // cudaFree(udp_header);
 
         // if(d_packet->GetUid() == 7){
         //     for(int i = 0; i < d_packet->GetSize(); i++){
@@ -262,13 +262,13 @@ namespace ns3 {
         // Receive a packet
         // printf("UdpL4: Receiving packet: %d\n", packet->GetUid());
         // printf("UdpL4: socket: %p\n", m_endPoints[0].GetSocket());
-        uint8_t* udp_header;
+        uint8_t udp_header[8];
         uint32_t pseudo_header_sum = 0;
-        cudaError_t ret = cudaMalloc(&udp_header, 8);
-        if(ret != cudaSuccess){
-            printf("%s\n", cudaGetErrorString(ret));
-            // return;
-        }
+        // cudaError_t ret = cudaMalloc(&udp_header, 8);
+        // if(ret != cudaSuccess){
+        //     printf("%s\n", cudaGetErrorString(ret));
+        //     // return;
+        // }
         packet->ExtractPayload(udp_header, 0, 8);
 
         // for(int i = 0; i < 20; i++){
@@ -295,7 +295,7 @@ namespace ns3 {
         // }
 
         packet->RemoveHeader(8);
-        cudaFree(udp_header);
+        // cudaFree(udp_header);
         // if(packet->GetUid() == 7){
         //     for(int i = 0; i < packet->GetSize(); i++){
         //         printf("%d ", packet->m_data[i]);
