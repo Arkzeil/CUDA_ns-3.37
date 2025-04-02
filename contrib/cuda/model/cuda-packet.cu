@@ -6,7 +6,7 @@ namespace ns3{
     __managed__ uint32_t g_packetUidCounter = 0;
 
     __host__ __device__ CudaPacket::CudaPacket()
-        : m_data(nullptr), m_size(0), m_capacity(MAX_PACKET_SIZE), m_crc(0) {
+        : m_data(nullptr), m_size(0), m_capacity(MAX_PACKET_SIZE), m_crc(0), offset(MAX_PACKET_SIZE) {
         // #ifdef __CUDA_ARCH__
         // m_data = static_cast<uint8_t*>(malloc(m_capacity));
         // #endif
@@ -77,10 +77,12 @@ namespace ns3{
         // cudaMemcpyAsync(m_data + headerSize, m_data, m_size, cudaMemcpyDeviceToDevice);
         // cudaMemcpyAsync(m_data, header, headerSize, cudaMemcpyDeviceToDevice);
         // copy backwards to avoid overlap
-        for(int i = m_size - 1; i >= 0; i--){
-            m_data[i + headerSize] = m_data[i];
-        }
-        memcpy(m_data, header, headerSize);
+        // for(int i = m_size - 1; i >= 0; i--){
+        //     m_data[i + headerSize] = m_data[i];
+        // }
+        // memcpy(m_data, header, headerSize);
+        offset -= headerSize;
+        memcpy(m_data + offset, header, headerSize); // Copy header
         m_size += headerSize;
     }
 
@@ -94,12 +96,12 @@ namespace ns3{
         m_size += trailerSize;
     }
 
-    __device__ void CudaPacket::ExtractPayload(uint8_t* dstBuffer, uint32_t offset, uint32_t length) const {
-        if (offset + length > m_size) {
+    __device__ void CudaPacket::ExtractPayload(uint8_t* dstBuffer, uint32_t off, uint32_t length) const {
+        if (off + length > m_size) {
             printf("Error: Extracting payload exceeds packet size\n");
             return;
         }
-        memcpy(dstBuffer, m_data + offset, length);
+        memcpy(dstBuffer, m_data + offset + off, length);
         // cudaMemcpyAsync(dstBuffer, m_data + offset, length, cudaMemcpyDeviceToDevice);
     }
 
@@ -109,8 +111,11 @@ namespace ns3{
             return;
         }
         // memmove(m_data, m_data + headerSize, m_size - headerSize); // Shift data
-        memcpy(m_data, m_data + headerSize, m_size - headerSize); // Shift data
+        // memcpy(m_data, m_data + headerSize, m_size - headerSize); // Shift data
         // cudaMemcpyAsync(m_data, m_data + headerSize, m_size - headerSize, cudaMemcpyDeviceToDevice); // Shift data
+        
+        // just shift the offset, no need to shift the data
+        offset += headerSize;
         m_size -= headerSize;
     }
 
@@ -120,6 +125,7 @@ namespace ns3{
             return;
         }
         m_size = size;
+        offset = m_capacity - size;
     }
 
     __host__ __device__ uint32_t CudaPacket::GetSize() const {
@@ -128,6 +134,10 @@ namespace ns3{
 
     __host__ __device__ uint32_t CudaPacket::GetUid() const {
         return m_uid;
+    }
+
+    __host__ __device__ uint8_t* CudaPacket::GetData(){
+        return m_data + offset;
     }
 
     __device__ void CudaPacket::ComputeCRC() {

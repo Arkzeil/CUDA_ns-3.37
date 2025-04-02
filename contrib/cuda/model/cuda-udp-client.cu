@@ -367,6 +367,7 @@ namespace ns3 {
         
         cuda_packet = (d_threadBuf + tid * MAX_PACKET_PER_THREAD + i);
         new(cuda_packet) CudaPacket();
+        // fill packet in backwards
         cuda_packet->m_data = d_packetRawBuf + (tid * MAX_PACKET_PER_THREAD + i) * MAX_PACKET_SIZE;
         cuda_packet->SetSize(m_size);
         // cuda_packet->Allocate(m_size);

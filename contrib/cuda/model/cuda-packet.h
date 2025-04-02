@@ -24,18 +24,21 @@ namespace ns3{
             __device__ CudaPacket& operator=(const CudaPacket& other);
             // Packet operations
             __device__ void AddHeader(void* header, uint32_t headerSize);
+            // this should be deprecated as we're appending packet in backwards
             __device__ void AddTrailer(void* trailer, uint32_t trailerSize);
-            __device__ void ExtractPayload(uint8_t* dstBuffer, uint32_t offset, uint32_t length) const;
+            __device__ void ExtractPayload(uint8_t* dstBuffer, uint32_t off, uint32_t length) const;
             __host__ __device__ void RemoveHeader(uint32_t headerSize);
             __host__ __device__ void SetSize(uint32_t size);
             __host__ __device__ uint32_t GetSize() const;
             __host__ __device__ uint32_t GetUid() const;
+            __host__ __device__ uint8_t* GetData();
             __device__ void ComputeCRC();
 
             // Debugging
             __device__ void PrintContents() const;
 
             uint8_t* m_data;       // Pointer to packet data in GPU memory
+            uint32_t offset;     // Offset for the valid data in the packet
             uint32_t ready;      // Flag to indicate if the packet is ready for processing
             uint32_t m_crc;        // CRC checksum (optional)
         private:

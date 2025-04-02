@@ -191,7 +191,7 @@ namespace ns3 {
 
             // printf("UdpL4: send pseudo checksum: %d\n", pseudo_header_sum);
             
-            uint16_t checksum = compute_udp_checksum(udp_header, d_packet->m_data, d_packet->GetSize(), pseudo_header_sum);
+            uint16_t checksum = compute_udp_checksum(udp_header, d_packet->GetData(), d_packet->GetSize(), pseudo_header_sum);
             // printf("UdpL4: checksum: %d\n", checksum);
             
             udp_header[6] = checksum >> 8;
@@ -303,7 +303,7 @@ namespace ns3 {
         //     printf("\n");
         // }
         #ifdef CHECKSUM_CHECK
-            if(!verify_udp_checksum(udp_header, packet->m_data, packet->GetSize(), pseudo_header_sum, (udp_header[6] << 8) | udp_header[7])){
+            if(!verify_udp_checksum(udp_header, packet->GetData(), packet->GetSize(), pseudo_header_sum, (udp_header[6] << 8) | udp_header[7])){
                 printf("UdpL4: Checksum failed\n");
                 printf("checksum: %d\n", (udp_header[6] << 8) | udp_header[7]);
                 // return;
