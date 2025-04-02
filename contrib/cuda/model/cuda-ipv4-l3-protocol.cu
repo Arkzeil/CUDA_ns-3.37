@@ -330,12 +330,12 @@ namespace ns3 {
         // Skip ttl check(assuming no ttl in the first place)
         uint8_t tos = 0;
         // skip tos check(assuming no tos in the first place)
-        uint8_t *ipHeader;
-        cudaError_t ret = cudaMalloc(&ipHeader, sizeof(uint8_t) * 20);
-        if(ret != cudaSuccess){
-            printf("%s\n", cudaGetErrorString(ret));
-            // return;
-        }
+        uint8_t ipHeader[20];
+        // cudaError_t ret = cudaMalloc(&ipHeader, sizeof(uint8_t) * 20);
+        // if(ret != cudaSuccess){
+        //     printf("%s\n", cudaGetErrorString(ret));
+        //     // return;
+        // }
 
         *(ipHeader + 0) = 0x05;        // version and IHL(20 bytes = 5 words)
         *(ipHeader + 1) = 0x45;         // DSCP and ECN

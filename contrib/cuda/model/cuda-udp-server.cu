@@ -117,7 +117,7 @@ namespace ns3 {
                 m_received++;
             }
 
-            packet->Free();
+            // packet->Free();
             // cudaFree(packet);
             packet->ready = 0;
         }

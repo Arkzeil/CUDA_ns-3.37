@@ -114,6 +114,14 @@ namespace ns3{
         m_size -= headerSize;
     }
 
+    __host__ __device__ void CudaPacket::SetSize(uint32_t size) {
+        if (size > m_capacity) {
+            printf("Error: Setting size exceeds packet capacity\n");
+            return;
+        }
+        m_size = size;
+    }
+
     __host__ __device__ uint32_t CudaPacket::GetSize() const {
         return m_size;
     }

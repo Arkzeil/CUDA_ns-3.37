@@ -251,6 +251,7 @@ namespace ns3 {
         checkCudaErr();
 
         d_threadBuf = d_threadBuffer;
+        d_packetRawBuf = d_packetRawBuffer;
     }
 
     __host__ void CudaUdpClient::CleanupCudaResources() {
@@ -366,7 +367,9 @@ namespace ns3 {
         
         cuda_packet = (d_threadBuf + tid * MAX_PACKET_PER_THREAD + i);
         new(cuda_packet) CudaPacket();
-        cuda_packet->Allocate(m_size);
+        cuda_packet->m_data = d_packetRawBuf + (tid * MAX_PACKET_PER_THREAD + i) * MAX_PACKET_SIZE;
+        cuda_packet->SetSize(m_size);
+        // cuda_packet->Allocate(m_size);
         // cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));
         // if(ret != cudaSuccess){
         //     printf("%s\n", cudaGetErrorString(ret));

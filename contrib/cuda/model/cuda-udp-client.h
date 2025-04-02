@@ -83,6 +83,7 @@ namespace ns3{
             uint32_t NodeID;            // Node ID for the context of scheduling
             volatile bool m_stop;       //!< Stop flag, as we currently can't cancel events
             CudaPacket* d_threadBuf;     // Device memory for thread buffer(as we can't access global variable in __device__ function)
+            uint8_t* d_packetRawBuf; // Device memory for raw packet data
 
             test_class *testClass;
     };
