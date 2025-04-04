@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     app->SetSendInterval(Seconds(1.0));
     nodes.Get(2 * i)->AddApplication(app);
     app->SetStartTime(Seconds(1.0));
-    app->SetStopTime(Seconds(1001.0));
+    app->SetStopTime(Seconds(3001.0));
 
     app1 = app;
     // Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     server->SetPort(9);
     nodes.Get(2 * i + 1)->AddApplication(server);
     server->SetStartTime(Seconds(0.0));
-    server->SetStopTime(Seconds(1002.0));
+    server->SetStopTime(Seconds(3002.0));
   }
 
   // CudaP2PHelper cudaP2P;

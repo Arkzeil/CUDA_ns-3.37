@@ -293,7 +293,7 @@ namespace ns3{
         //     printf("\n");
         // }
 
-        return d_m_udp->Send(d_packet, 0, dest, 0, port, cb_data);
+        return d_m_udp->OptimizeSend(d_packet, 0, dest, 0, port, cb_data);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }
 

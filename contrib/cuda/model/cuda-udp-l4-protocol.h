@@ -20,6 +20,34 @@ namespace ns3
     // class CudaList<CudaIpv4EndPoint*>;
 
     typedef void (*DownDeviceFunctionPtr)(const uint8_t*, uint32_t, uint32_t, uint8_t, uint32_t);
+
+    // Consider using __attribute__((packed)) or ensure no padding if exact layout matters
+    struct CudaUdpHeader {
+        uint16_t sport;
+        uint16_t dport;
+        uint16_t length;
+        uint16_t checksum;
+    }; // 8 bytes
+
+    struct CudaIpv4Header {
+        // Standard 20-byte header fields (ensure correct order)
+        uint8_t  version_ihl;
+        uint8_t  dscp_ecn;
+        uint16_t total_length;
+        uint16_t identification;
+        uint16_t flags_fragment_offset;
+        uint8_t  ttl;
+        uint8_t  protocol;
+        uint16_t header_checksum;
+        uint32_t saddr;
+        uint32_t daddr;
+        // Options would go here if used
+    }; // 20 bytes
+
+    struct CombinedIpUdpHeaders {
+        CudaIpv4Header ip; // Outer header comes first in memory
+        CudaUdpHeader udp; // Inner header follows
+    }; // Total 28 bytes (for standard headers)
     
     class CudaUdpL4Protocol : public UdpL4Protocol, public Managed{
         public:
@@ -47,6 +75,8 @@ namespace ns3
             __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
             __device__ int Send(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data);
             __device__ void Receive(CudaPacket *packet, uint8_t* Ipv4Header, CudaIpv4Interface *interface);
+            __device__ int PrepareHeader(CudaUdpHeader* udp_hdr_ptr, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, uint16_t len, CUDA_cb_data* cb_data);
+            __device__ int OptimizeSend(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data);
         protected:
             // void DoDispose() override;
             void NotifyNewAggregate() override;

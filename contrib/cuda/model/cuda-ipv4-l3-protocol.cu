@@ -406,6 +406,68 @@ namespace ns3 {
         }
     }
 
+    __device__ void CudaIpv4L3Protocol::PrepareHeader(CudaIpv4Header* ip_hdr_ptr, uint32_t source, uint32_t destination, uint8_t protocol, uint16_t len, CUDA_cb_data* cb_data){
+        ip_hdr_ptr->version_ihl = 0x05; // version and IHL(20 bytes = 5 words)
+        ip_hdr_ptr->dscp_ecn = 0x45; // DSCP and ECN
+        ip_hdr_ptr->total_length = len; // total length
+        ip_hdr_ptr->identification = 0x00; // identification (fragmentation)
+        ip_hdr_ptr->flags_fragment_offset = 0x00; // flags and fragment offset
+        ip_hdr_ptr->ttl = m_defaultTtl; // ttl
+        ip_hdr_ptr->protocol = protocol; // protocol
+        ip_hdr_ptr->saddr = source; // source address
+        ip_hdr_ptr->daddr = destination; // destination address
+        // Compute checksum
+        #ifdef CHECKSUM_CHECK
+            uint16_t checksum = compute_ipv4_checksum((uint8_t*)ip_hdr_ptr);
+            ip_hdr_ptr->header_checksum = checksum;
+        #endif
+    }
+
+    __device__ void CudaIpv4L3Protocol::OptimizeSend(CudaPacket *d_packet, uint32_t destination, uint32_t route, CUDA_cb_data* cb_data){
+        uint32_t outInterfaceIndex;
+        if(m_routing->LookupRoute(destination, &outInterfaceIndex) == false){
+            printf("No route found\n");
+            // return;
+            // assuming only one interface
+            outInterfaceIndex = 0;
+        }
+        
+        CudaIpv4Interface *outInterface = GetInterface(outInterfaceIndex);
+
+        if(outInterface == nullptr){
+            printf("No interface found\n");
+            return;
+        }
+
+        if(outInterface->IsUp() == false){
+            printf("Interface is down\n");
+            return;
+        }
+        else{
+            CudaNetDevice *device = outInterface->GetDevice();
+            // printf("Interface: %p, Device address: %p\n",outInterface, device);
+            int32_t interface = GetInterfaceForDevice(device);
+            if(interface == -1){
+                printf("No device found for interface\n");
+                return;
+            }
+            // else{
+            //     printf("device found\n");
+            // }
+
+            // if(d_packet->GetUid() == 7){
+            //     for(int i = 0; i < d_packet->GetSize(); i++){
+            //         printf("%d ", d_packet->m_data[i]);
+            //     }
+            //     printf("\n");
+            // }
+
+            // Skip the checking of device MTU
+
+            outInterface->OptimizeSend(device, d_packet, 0, cb_data);
+        }
+    }
+
     void CudaIpv4L3Protocol::SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader) {
         // Send a packet out
         // For simplicity, we will just print the packet contents

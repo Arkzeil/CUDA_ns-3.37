@@ -99,6 +99,12 @@ namespace ns3{
         // skip the check of local interface
     }
 
+    __device__ void CudaIpv4Interface::OptimizeSend(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data) {
+        // Optimize the send operation
+
+        device->Send(d_packet, destination, 0, cb_data);
+    }
+
     __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {
         // Check if the interface is up
         return m_isUp;

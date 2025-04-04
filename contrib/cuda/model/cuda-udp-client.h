@@ -84,6 +84,7 @@ namespace ns3{
             volatile bool m_stop;       //!< Stop flag, as we currently can't cancel events
             CudaPacket* d_threadBuf;     // Device memory for thread buffer(as we can't access global variable in __device__ function)
             uint8_t* d_packetRawBuf; // Device memory for raw packet data
+            size_t d_pitch;          // Pitch for 2D memory allocation
 
             test_class *testClass;
     };

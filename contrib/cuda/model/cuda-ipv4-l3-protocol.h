@@ -12,6 +12,7 @@ namespace ns3{
     class CudaPacket;
     class CudaUdpL4Protocol;
     class CudaIpv4StaticRouting;
+    struct CudaIpv4Header;
 
     class CudaIpv4L3Protocol : public Ipv4L3Protocol, public Managed{
         public:
@@ -42,6 +43,8 @@ namespace ns3{
             __device__ void d_Receive(CudaNetDevice* device, CudaPacket *packet);
             __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
             __device__ void Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data);
+            __device__ void PrepareHeader(CudaIpv4Header* ip_hdr_ptr, uint32_t source, uint32_t destination, uint8_t protocol, uint16_t len, CUDA_cb_data* cb_data);
+            __device__ void OptimizeSend(CudaPacket *d_packet, uint32_t destination, uint32_t route, CUDA_cb_data* cb_data);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);
         
             // simple routing, uint32_t address with corresponding interface index, only one hop is supported

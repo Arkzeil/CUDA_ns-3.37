@@ -33,6 +33,7 @@ namespace ns3 {
     int eventCounter = 0;
     CudaPacket* d_threadBuffer = nullptr;
     uint8_t* d_packetRawBuffer = nullptr;
+    size_t pitch;
 
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
@@ -240,7 +241,8 @@ namespace ns3 {
         cudaCheckErrors("ready flags cudaMemset failed");
 
         cudaMalloc(&d_threadBuffer, sizeof(CudaPacket) * mp * TPB * MAX_PACKET_PER_THREAD);
-        cudaMalloc(&d_packetRawBuffer, sizeof(uint8_t) * mp * TPB * MAX_PACKET_PER_THREAD * MAX_PACKET_SIZE);
+        // cudaMalloc(&d_packetRawBuffer, sizeof(uint8_t) * mp * TPB * MAX_PACKET_PER_THREAD * MAX_PACKET_SIZE);
+        cudaMallocPitch((void**)&d_packetRawBuffer, &pitch, sizeof(uint8_t) * MAX_PACKET_SIZE, mp * TPB * MAX_PACKET_PER_THREAD);
         cudaCheckErrors("packet buffer cudaMalloc failed");
 
         // Initialize the event buffer

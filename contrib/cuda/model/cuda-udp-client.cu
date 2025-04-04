@@ -43,7 +43,7 @@ namespace ns3 {
             .AddConstructor<CudaUdpClient>()
             .AddAttribute("MaxPackets",
                             "The maximum number of packets the application will send",
-                            UintegerValue(1024),
+                            UintegerValue(4096),
                             MakeUintegerAccessor(&CudaUdpClient::m_count),
                             MakeUintegerChecker<uint32_t>())
             .AddAttribute("Interval",
@@ -72,7 +72,7 @@ namespace ns3 {
 
     CudaUdpClient::CudaUdpClient() 
         : d_packetBuffer(nullptr), m_size(1500), 
-        m_interval(Seconds(1.0)), m_count(1024), 
+        m_interval(Seconds(1.0)), m_count(4096), 
         m_peerPort(0), m_socket(nullptr), 
         m_running(false), m_cudaSocket(nullptr),
         m_stop(false){
@@ -252,6 +252,7 @@ namespace ns3 {
 
         d_threadBuf = d_threadBuffer;
         d_packetRawBuf = d_packetRawBuffer;
+        d_pitch = pitch;
     }
 
     __host__ void CudaUdpClient::CleanupCudaResources() {
@@ -368,7 +369,7 @@ namespace ns3 {
         cuda_packet = (d_threadBuf + tid * MAX_PACKET_PER_THREAD + i);
         new(cuda_packet) CudaPacket();
         // fill packet in backwards
-        cuda_packet->m_data = d_packetRawBuf + (tid * MAX_PACKET_PER_THREAD + i) * MAX_PACKET_SIZE;
+        cuda_packet->m_data = d_packetRawBuf + (tid * MAX_PACKET_PER_THREAD + i) * d_pitch;
         cuda_packet->SetSize(m_size);
         // cuda_packet->Allocate(m_size);
         // cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));

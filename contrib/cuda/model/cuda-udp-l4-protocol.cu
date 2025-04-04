@@ -232,6 +232,46 @@ namespace ns3 {
         // printf("Udp Prorocol: Sending packet from %d:%d to %d:%d\n", saddr.Get(), sport, daddr.Get(), dport);
     }
 
+    __device__ int CudaUdpL4Protocol::PrepareHeader(CudaUdpHeader* udp_hdr_ptr, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, uint16_t len, CUDA_cb_data* cb_data) {
+        // Prepare the UDP header
+        udp_hdr_ptr->sport = sport;
+        udp_hdr_ptr->dport = dport;
+        udp_hdr_ptr->length = len;
+        udp_hdr_ptr->checksum = 0;
+        #ifdef CHECKSUM_CHECK
+            uint32_t pseudo_header_sum = 0;
+            pseudo_header_sum += (saddr >> 16) & 0xFFFF;
+            pseudo_header_sum += saddr & 0xFFFF;
+            pseudo_header_sum += (daddr >> 16) & 0xFFFF;
+            pseudo_header_sum += daddr & 0xFFFF;
+            pseudo_header_sum += PROT_NUMBER; // Protocol number
+            pseudo_header_sum += len;
+
+            // printf("UdpL4: send pseudo checksum: %d\n", pseudo_header_sum);
+            
+            uint16_t checksum = compute_udp_checksum((uint8_t*)udp_hdr_ptr, nullptr, len, pseudo_header_sum);
+            // printf("UdpL4: checksum: %d\n", checksum);
+            
+            udp_hdr_ptr->checksum = checksum;
+        #endif
+
+        return len; // UDP header size is 8 bytes
+    }
+
+    __device__ int CudaUdpL4Protocol::OptimizeSend(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data) {
+        uint16_t udp_length = d_packet->GetSize() + 8;
+        // 1. Create the combined header structure on the stack (target: registers)
+        CombinedIpUdpHeaders combined_headers;
+        uint16_t udpTotalLength = PrepareHeader(&combined_headers.udp, udp_length,
+                                                saddr, daddr, sport, dport, cb_data);
+        m_ipv4->PrepareHeader(&combined_headers.ip, udpTotalLength,
+                                saddr, daddr, 17 /*UDP Proto*/, cb_data);
+
+        d_packet->AddHeader(&combined_headers, sizeof(CombinedIpUdpHeaders));
+
+        m_ipv4->OptimizeSend(d_packet, daddr, 0, cb_data);
+    }
+
     __device__ bool verify_udp_checksum(const uint8_t *udp_header, const uint8_t *payload, int length, uint32_t pseudo_header_sum, uint16_t received_checksum) {
         uint32_t sum = pseudo_header_sum; // Start with pseudo-header sum
         uint32_t UDP_sum = 0;

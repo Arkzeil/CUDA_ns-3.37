@@ -49,16 +49,16 @@ int main(int argc, char *argv[]) {
         UdpServerHelper server(port);
         ApplicationContainer serverApp = server.Install(pair.Get(1));
         serverApp.Start(Seconds(0.0));
-        serverApp.Stop(Seconds(1002.0));
+        serverApp.Stop(Seconds(3002.0));
         
         UdpClientHelper client(interfaces.GetAddress(1), port);
-        client.SetAttribute("MaxPackets", UintegerValue(1024));
+        client.SetAttribute("MaxPackets", UintegerValue(4096));
         client.SetAttribute("Interval", TimeValue(Seconds(1)));
         client.SetAttribute("PacketSize", UintegerValue(256));
         
         ApplicationContainer clientApp = client.Install(pair.Get(0));
         clientApp.Start(Seconds(1.0));
-        clientApp.Stop(Seconds(1001.0));
+        clientApp.Stop(Seconds(3001.0));
     }
 
     // uint32_t ipAddress = interfaces.GetAddress(1).Get();

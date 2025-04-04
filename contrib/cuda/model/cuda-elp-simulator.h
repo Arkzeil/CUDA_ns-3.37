@@ -33,6 +33,7 @@ namespace ns3
     // packet buffer for device-side
     extern CudaPacket* d_threadBuffer;
     extern uint8_t* d_packetRawBuffer;
+    extern size_t pitch;
 
     // a 2d table to store the lookahead time for each pair of node number
     // the value is actually the delay between the two nodes, need to add the packet transmission time

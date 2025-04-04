@@ -82,7 +82,26 @@ namespace ns3{
         // }
         // memcpy(m_data, header, headerSize);
         offset -= headerSize;
-        memcpy(m_data + offset, header, headerSize); // Copy header
+        // memcpy(m_data + offset, header, headerSize); // Copy header
+        uint8_t* dst = m_data + offset;
+        const uint8_t* src = (const uint8_t*)header;
+
+        // Use 32-bit memory copies for better performance
+        uint32_t* dst32 = (uint32_t*)dst;
+        const uint32_t* src32 = (const uint32_t*)src;
+
+        int i;
+        for (i = 0; i + 4 <= headerSize; i += 4) {
+            *dst32++ = *src32++;
+        }
+
+        // Copy remaining bytes (if header is not a multiple of 4)
+        uint8_t* dst8 = (uint8_t*)dst32;
+        const uint8_t* src8 = (const uint8_t*)src32;
+        for (; i < headerSize; i++) {
+            *dst8++ = *src8++;
+        }
+        
         m_size += headerSize;
     }
 
