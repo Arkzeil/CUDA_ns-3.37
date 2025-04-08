@@ -17,10 +17,12 @@
 #include <unordered_map>
 
 #define DEVICE_QUEUE_LENGTH 2048
+#define EVENT_KINDS 3
 #define MAX_NEW_EVENTS 3
 #define DEVICE_EV_ID_OFFSET 1000000
 #define TPB 64  // Threads per block (block size)
 #define MAX_PACKET_PER_THREAD 4
+#define WARP_SIZE 32
 
 namespace ns3
 {
@@ -194,6 +196,7 @@ namespace ns3
             __device__ void deviceMethod(void *obj, int func_id);
             // for host to insert an safe event for device to execute
             __host__ int h_insert(void* impl, uint64_t ts, int context, uint32_t UID, int type, uint64_t lookahead, void* payload);
+            __host__ int h_insert_sort(void* impl, uint64_t ts, int context, uint32_t UID, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
             __device__ DeviceEvent* d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
             __device__ void ChangeDevQueue();

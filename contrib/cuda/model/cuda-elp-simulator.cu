@@ -35,6 +35,10 @@ namespace ns3 {
     uint8_t* d_packetRawBuffer = nullptr;
     size_t pitch;
 
+    int warp_index[EVENT_KINDS];
+    int warp_thread_index[EVENT_KINDS] = {0};
+    int next_avail_warp = EVENT_KINDS;
+
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
     __device__ volatile int blkcnt = 0;
@@ -256,6 +260,9 @@ namespace ns3 {
         d_curDevBufRdy = d_bufrdy1;
 
         h_safe_ts = d_safe_ts1;
+
+        for(int i = 0; i < EVENT_KINDS; i++)
+            warp_index[i] = i;
     }
 
     __host__ void CudaELPSimulator::ELP_Cleanup(){
@@ -310,6 +317,7 @@ namespace ns3 {
         ((CudaNetDevice*)(ev->impl))->d_Receive((CudaPacket*)(ev->payload));
     }
     // General device function that processes an event based on its type.
+    // ideal approach is to use function pointer to call the function, skip for now
     __device__ void cuda_ProcessOneEvent(DeviceEvent* ev) {
         // You might include pre-event hooks here if needed.
         // For example: PreEventHook(ev->ts, ev->context, ev->uid);
@@ -417,14 +425,13 @@ namespace ns3 {
             // *d_safe_ts2 = UINT64_MAX;
             // *d_eventCount = 100;
         }
+        __threadfence_system();        // ensure that all threads see the updated stop flag
 
         DeviceEvent* eventQueue;
         volatile int* h_bufrdy;
         volatile int* d_bufrdy;
         volatile uint64_t* d_safe_ts;
         bool pos = 0;
-
-        __threadfence_system();        // ensure that all threads see the updated stop flag
 
         // Loop forever or until a termination condition is met.
         while (!*d_stop) {
@@ -448,7 +455,7 @@ namespace ns3 {
 
             while (iter_count - itercnt > 0); // don't overrun buffers on device
             // Poll the buffer ready flag to check if the buffer is ready for reading.
-            __threadfence_system();        // ensure that all threads see the updated buffer ready flag
+            // __threadfence_system();        // ensure that all threads see the updated buffer ready flag
             if(!(*h_bufrdy) ){
                 // check if the other buffer is ready
                 pos = !pos;
@@ -540,6 +547,14 @@ namespace ns3 {
         while(h_curHostBuf[h_insertIndex].valid)
             h_insertIndex++;
 
+        if(h_insertIndex >= DEVICE_QUEUE_LENGTH){
+            printf("------------------No more space for this thread -------------------\n");
+            // // return nullptr;
+            // // if full, change buffer to make CPU consume the events
+            // ChangeHostQueue();
+            // h_insertIndex = 0;
+        }
+
         h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, ts, context, UID, type, lookahead, true, payload, nullptr};
         // lookahead might be UINT64_MAX, so we need to check if it is valid
         if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
@@ -550,6 +565,32 @@ namespace ns3 {
         // printf("-----------------h_insert event counter: %d-------------------\n", ++eventCounter);
         // *h_curHostBufRdy = 1;
         // ChangeHostQueue();
+        return 0;
+    }
+
+    __host__ int CudaELPSimulator::h_insert_sort(void* impl, uint64_t ts, int context, uint32_t UID, int type, uint64_t lookahead, void *payload){
+        // the queue is still used by the kernel
+        while(*h_curHostBufRdy);
+        // what if all full?
+        // while(h_curHostBuf[h_insertIndex].valid)
+        //     h_insertIndex++;
+
+        int index = warp_index[type] * WARP_SIZE + (warp_thread_index[type]++);
+        h_curHostBuf[index] = DeviceEvent{impl, ts, context, UID, type, lookahead, true, payload, nullptr};
+        // what if the event amount is not even? then there might be not enough space for the next event
+        if(warp_thread_index[type] == WARP_SIZE){
+            warp_thread_index[type] = 0;
+            warp_index[type] = next_avail_warp++;
+        }
+        if(next_avail_warp > mp * 2)
+            printf("No more space for this thread\n");
+        
+        // h_curHostBuf[h_insertIndex++] = DeviceEvent{impl, ts, context, UID, type, lookahead, true, payload, nullptr};
+        // lookahead might be UINT64_MAX, so we need to check if it is valid
+        if(lookahead != UINT64_MAX && ts + lookahead < *safe_ts)
+            *safe_ts = ts + lookahead;
+        if(lookahead != UINT64_MAX && ts + lookahead < *h_safe_ts)
+            *h_safe_ts = ts + lookahead;
         return 0;
     }
 
@@ -693,7 +734,7 @@ namespace ns3 {
         // printf("current ts: %lu\n", m_currentTs);
 
         HostEvent* h_ev = (HostEvent*)next.impl;
-        h_insert(h_ev->obj, next.key.m_ts, next.key.m_context, next.key.m_uid, h_ev->type, h_ev->lookahead, h_ev->payload);
+        h_insert_sort(h_ev->obj, next.key.m_ts, next.key.m_context, next.key.m_uid, h_ev->type, h_ev->lookahead, h_ev->payload);
         // printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
         // printf("h_ev address: %p\n", h_ev);
@@ -722,6 +763,12 @@ namespace ns3 {
         h_curHostBufRdy = (h_curHostBuf == h_safeEventQueue2) ? h_bufrdy2 : h_bufrdy1;
         // the safe_ts should also be changed based on the new buffer
         h_safe_ts = (h_curHostBuf == h_safeEventQueue2) ? d_safe_ts2 : d_safe_ts1;
+
+        for(int i = 0; i < EVENT_KINDS; i++){
+            warp_index[i] = i;
+            warp_thread_index[i] = 0;
+        }
+        next_avail_warp = EVENT_KINDS;
     }
 
     __host__ void CudaELPSimulator::ELP_ScheduleDevEvent(){
