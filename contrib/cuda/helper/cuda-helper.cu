@@ -86,6 +86,28 @@ namespace ns3
 
         cudaGetDevice(&device_id);
 
+        int d;
+        cudaGetDevice(&d);
+
+        int pma = 0;
+        cudaDeviceGetAttribute(&pma, cudaDevAttrPageableMemoryAccess, d);
+        printf("Full Unified Memory Support: %s\n", pma == 1? "YES" : "NO");
+        
+        int cma = 0;
+        cudaDeviceGetAttribute(&cma, cudaDevAttrConcurrentManagedAccess, d);
+        printf("CUDA Managed Memory with full support: %s\n", cma == 1? "YES" : "NO");
+
+        int device = 0;
+        printf("CUDA device properties pageableMemoryAccess: %d\n", prop.pageableMemoryAccess);
+        printf("CUDA device properties hostNativeAtomicSupported: %d\n", prop.hostNativeAtomicSupported);
+        printf("CUDA device properties pageableMemoryAccessUsesHostPageTables: %d\n", prop.pageableMemoryAccessUsesHostPageTables);
+        printf("CUDA device properties directManagedMemAccessFromHost: %d\n", prop.directManagedMemAccessFromHost);
+        printf("CUDA device properties concurrentManagedAccess: %d\n", prop.concurrentManagedAccess);
+        printf("CUDA device properties pageableMemoryAccess: %d\n", prop.pageableMemoryAccess);
+        printf("CUDA device properties managedMemory: %d\n", prop.managedMemory);
+        printf("CUDA device properties concurrentManagedAccess: %d\n", prop.concurrentManagedAccess);
+        printf("CUDA device properties managedMemory: %d\n", prop.managedMemory);
+
         printf("----------------InitCUDA, CUDA check completed-------------------\n");
 
         return true;

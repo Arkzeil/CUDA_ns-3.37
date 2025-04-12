@@ -402,6 +402,53 @@ namespace ns3 {
         }
     }
 
+    __global__ void SingleBufKernel(CudaELPSimulator *sim, 
+                                    DeviceEvent* h_safeEventQueue, volatile int *h_bufrdy, 
+                                    volatile int *d_bufrdy, volatile uint64_t* d_safe_ts){
+        const int tid = threadIdx.x + blockIdx.x * blockDim.x;
+        const int totalThreads = gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z;
+        const int localThreadId = threadIdx.x;
+                                        
+        int index = tid;
+        while (index < DEVICE_QUEUE_LENGTH) {
+            DeviceEvent* ev = &h_safeEventQueue[index];
+            
+            // (*d_safe_ts)++;
+            // Process the event based on its type.
+            if(ev->valid){
+                // printf("tid: %d\n", tid);
+                cuda_ProcessOneEvent(ev);
+            }
+            // Mark the event as processed (or remove it from the queue).
+            // if(ev->ts < *d_safe_ts)
+            //     *d_safe_ts = ev->ts;
+            
+            index += totalThreads;
+        }
+
+        __syncthreads();        // wait for all threads of this block(might be in different warp) to finish
+        __threadfence();        // ensure that all threads of same grid have finished before continuing
+        // mark this block as finished
+        if(localThreadId == 0)
+            atomicAdd((int*)&blkcnt, 1);
+        // mark host buffer as consumed, and device buffer as ready for CPU to insert new events
+        if(tid == 0){
+            while(blkcnt < gridDim.x);
+
+            blkcnt = 0;
+            // if thest two lines are after ready flag and safe_ts update, new events in next-event buffer might not be able to inserted
+            // into the event queue on time, and CPU will fetch next event, which might be CPU event, to execute
+            // (it will be considered as safe, as safe_ts is updated)
+            sim->ChangeDevQueue();
+            // printf("pos: %d\n", pos);
+            *h_bufrdy = 0;
+            // *d_bufrdy = 0;
+            // all events in current queue are processed 
+            *d_safe_ts = UINT64_MAX;
+            __threadfence_system();     // ensure that all threads see the updated buffer ready flag
+        }
+    }
+
     // A persistent kernel that polls the device queue and executes events when their time is reached.
     __global__ void PersistentEventKernel(CudaELPSimulator *sim, 
                                         DeviceEvent* h_safeEventQueue1, DeviceEvent* h_safeEventQueue2, 
@@ -443,7 +490,7 @@ namespace ns3 {
             d_bufrdy = (!pos) ? d_bufrdy1 : d_bufrdy2;
             d_safe_ts = (!pos) ? d_safe_ts1 : d_safe_ts2;
 
-            uint64_t localMin = *d_safe_ts; // Initialize to maximum double
+            // uint64_t localMin = *d_safe_ts; // Initialize to maximum double
             
             // check if kernel need to change next-event buffer to prevent deadlock 
             // if(tid == 0){
@@ -741,10 +788,8 @@ namespace ns3 {
         delete h_ev;
         // change the current event queue if condition is met
         if(h_insertIndex == DEVICE_QUEUE_LENGTH){
-            *h_curHostBufRdy = 1;
             // printf("Host buffer ready: %p\n", h_curHostBufRdy);
             ChangeHostQueue();
-            h_insertIndex = 0;
             // cur_buffer_safe_ts = UINT64_MAX;
         }
     }
@@ -758,6 +803,15 @@ namespace ns3 {
     }
 
     __host__ void CudaELPSimulator::ChangeHostQueue(){
+        cudaStreamSynchronize(streamK);
+        SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
+        
+        // int count = next_avail_warp * WARP_SIZE * sizeof(DeviceEvent);
+        // cudaMemPrefetchAsync(h_curHostBuf, count, device_id, streamC);
+        // cudaStreamSynchronize(streamC);
+        *h_curHostBufRdy = 1;
+        // cudaMemPrefetchAsync((void*)h_curHostBufRdy, sizeof(volatile int), device_id, streamC);
+        // cudaStreamSynchronize(streamC);
         h_curHostBuf = (h_curHostBuf == h_safeEventQueue2) ? h_safeEventQueue1 : h_safeEventQueue2;
         // as h_curHostBuf already inverted, the corresponding ready flag should also be changed based on the new buffer
         h_curHostBufRdy = (h_curHostBuf == h_safeEventQueue2) ? h_bufrdy2 : h_bufrdy1;
@@ -769,6 +823,8 @@ namespace ns3 {
             warp_thread_index[i] = 0;
         }
         next_avail_warp = EVENT_KINDS;
+
+        h_insertIndex = 0;
     }
 
     __host__ void CudaELPSimulator::ELP_ScheduleDevEvent(){
@@ -918,6 +974,8 @@ namespace ns3 {
         volatile uint64_t safe_ts1;
         volatile uint64_t safe_ts2;
         
+        // cudaMemAdvise(h_curHostBuf, DEVICE_QUEUE_LENGTH * sizeof(DeviceEvent), cudaMemAdviseSetReadMostly, device_id);
+        // cudaCheckErrors("cudaMemAdvise failed");
         // Launch the persistent event processing kernel
         PersistentEventKernel<<<mp, TPB, 0, streamK>>>(this, 
                                                     h_safeEventQueue1, h_safeEventQueue2,  
@@ -995,10 +1053,8 @@ namespace ns3 {
                     // thus CPU still holding the safe-event buffer but kernel is idle 
                     // this would potentially lead to deadlock(if condition of changing buffer is not met)
                     // so we change safe-event buffer to make kernel see the new events
-                    *h_curHostBufRdy = 1;
                     // printf("Host buffer ready: %p\n", h_curHostBufRdy);
                     ChangeHostQueue();
-                    h_insertIndex = 0;
                 }
                 
                 // if(*safe_ts > cur_buffer_safe_ts)
@@ -1044,6 +1100,70 @@ namespace ns3 {
         // printf("Kernel finished\n");
         cudaStreamSynchronize(streamC);
         // printf("Stream finished\n");
+    }
+
+    void CudaELPSimulator::ELP_RunSK(){
+        NS_LOG_FUNCTION(this);
+        // Set the current threadId as the main threadId
+        m_mainThreadId = std::this_thread::get_id();
+        ProcessEventsWithContext();
+        m_stop = false;
+        volatile uint64_t lookahead;
+        volatile uint64_t old_safe_ts1;
+        volatile uint64_t old_safe_ts2;
+        volatile uint64_t safe_ts1;
+        volatile uint64_t safe_ts2;
+
+        // printf("Kernel launched\n");
+        cudaCheckErrors("kernel launch failed");
+
+        while (!m_events->IsEmpty() && !m_stop){
+            uint64_t old = *safe_ts;
+            ELP_ScheduleDevEvent();
+
+            Scheduler::Event next = m_events->PeekNext();
+  
+            if(!is_safe(&next)){
+                cudaMemcpyAsync((void*)&safe_ts1, (void*)d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
+                cudaMemcpyAsync((void*)&safe_ts2, (void*)d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
+                cudaStreamSynchronize(streamC);
+                cudaCheckErrors("safe_ts cudaMemcpyAsync failed");
+
+                *safe_ts = (safe_ts1 < safe_ts2) ? safe_ts1 : safe_ts2;
+
+                if(old == *safe_ts){
+                    // if the safe_ts is not updated, it probably means that the safe-event buffer condition is not met
+                    // thus CPU still holding the safe-event buffer but kernel is idle 
+                    // this would potentially lead to deadlock(if condition of changing buffer is not met)
+                    // so we change safe-event buffer to make kernel see the new events
+                    // printf("Host buffer ready: %p\n", h_curHostBufRdy);
+                    ChangeHostQueue();
+                }
+
+                continue;
+            }
+
+            // GPU event, insert into safe event queue
+            if(__glibc_likely(next.key.m_uid >= DEVICE_EV_ID_OFFSET)){
+                // printf("-------------------safe ts: %lu---------------------\n", *safe_ts);
+                ELP_ProcessOneEvent();
+                // m_events->RemoveNext();
+                // printf("CUDA event, safe ts: %lu\n", *safe_ts);
+                // sleep(1);
+            }
+            // Host event, process it on CPU directly
+            else{
+                // printf("Host event, safe ts: %lu\n", *safe_ts);
+                ProcessOneEvent();
+            }
+        }
+
+        NS_ASSERT(!m_events->IsEmpty() || m_unscheduledEvents == 0);
+
+        // Wait for the kernel to finish
+        cudaStreamSynchronize(streamK);
+        // printf("Kernel finished\n");
+        cudaStreamSynchronize(streamC);
     }
 
     // take a event from the device event queue and insert it into the host queue

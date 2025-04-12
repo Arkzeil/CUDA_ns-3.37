@@ -190,6 +190,7 @@ namespace ns3
             __host__ void ELP_Init();
             __host__ void ELP_Cleanup();
             __host__ void ELP_Run();
+            __host__ void ELP_RunSK();
             __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, uint64_t lookahead, void *payload);
             // void test(void *obj);
             __host__ __device__ void print_test() const;

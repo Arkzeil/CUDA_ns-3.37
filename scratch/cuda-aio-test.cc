@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
   // int stop = 1;
   // cudaMemcpyAsync((void*)d_stop, &stop, sizeof(int), cudaMemcpyHostToDevice, streamC);
   // cudaCheckErrors("stop cudaMemcpyAsync failed");
-  cudaSim->ELP_Run();
+  cudaSim->ELP_RunSK();
 
   // cudaSim->test(GetPointer(app));
   // printf("Current time: %f\n", Simulator::Now().GetSeconds());
