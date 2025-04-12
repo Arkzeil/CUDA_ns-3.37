@@ -44,6 +44,8 @@ namespace ns3 {
     __device__ volatile int blkcnt = 0;
     // for master thread to update to prevent overrun of other threads
     __device__ volatile int itercnt = 0;
+    // for d_insert to ensure that only one thread will change the buffer
+    __device__ volatile int d_changeQueueLock = 0;
 
     // __managed__ CudaELPSimulator* cudaSim_local = nullptr;
 
@@ -212,6 +214,8 @@ namespace ns3 {
     __host__ void CudaELPSimulator::ELP_Init(){
         cudaStreamCreate(&streamK);
         cudaStreamCreate(&streamC);
+        for(int i = 0; i < 7; i++)
+            cudaStreamCreate(&streamArr[i]);
         cudaCheckErrors("stream creation failed");
         // Allocate and initialize the stop flag on the device
         cudaMallocManaged(&d_stop, sizeof(int));
@@ -646,8 +650,9 @@ namespace ns3 {
         // we can't access variables of class object if member function is called by non-member __device__ function?
         // printf("tid: %d\n", tid);                    // Debugging
         // tid *= 3;
-        int index = tid * MAX_NEW_EVENTS;
-        int limit = index + MAX_NEW_EVENTS;
+        int ini_index = tid * MAX_NEW_EVENTS;
+        int index = ini_index;
+        int limit = ini_index + MAX_NEW_EVENTS;
         bool redo = false;
 
         while(1){
@@ -672,12 +677,19 @@ namespace ns3 {
                         // printf("------------------No more space for this thread -------------------\n");
                         // return nullptr;
                         // if full, change buffer to make CPU consume the events
-                        ChangeDevQueue();
-                        index = tid * MAX_NEW_EVENTS;
+                        index = ini_index;
                         // using recursion will lead to stack size can't be determined at compile time
                         // d_insert(impl, delay, context, type, lookahead, payload);
                         // return nullptr;
                         redo = true;
+
+                        // but multiple threads might be trying to change the queue at the same time
+                        if (atomicCAS((int*)&d_changeQueueLock, 0, 1) == 0){
+                            ChangeDevQueue();
+                            __threadfence_system(); // ensure that all threads see the updated buffer ready flag
+                            // --- Release Lock ---
+                            atomicExch((int*)&d_changeQueueLock, 0); // Release the lock
+                        }
                         break;
                     }
                 }
@@ -804,12 +816,15 @@ namespace ns3 {
 
     __host__ void CudaELPSimulator::ChangeHostQueue(){
         cudaStreamSynchronize(streamK);
+        // if this line if put after kernel invocation, there's a chance that the host will hang in h_insert_sort 
+        // as *h_curHostBufRdy might be 1 as long as the kernel execution is faster than host
+        *h_curHostBufRdy = 1;
         SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
         
         // int count = next_avail_warp * WARP_SIZE * sizeof(DeviceEvent);
         // cudaMemPrefetchAsync(h_curHostBuf, count, device_id, streamC);
         // cudaStreamSynchronize(streamC);
-        *h_curHostBufRdy = 1;
+        
         // cudaMemPrefetchAsync((void*)h_curHostBufRdy, sizeof(volatile int), device_id, streamC);
         // cudaStreamSynchronize(streamC);
         h_curHostBuf = (h_curHostBuf == h_safeEventQueue2) ? h_safeEventQueue1 : h_safeEventQueue2;
@@ -1097,9 +1112,10 @@ namespace ns3 {
 
         // Wait for the kernel to finish
         cudaStreamSynchronize(streamK);
-        // printf("Kernel finished\n");
+        // // printf("Kernel finished\n");
         cudaStreamSynchronize(streamC);
         // printf("Stream finished\n");
+        // cudaDeviceSynchronize();
     }
 
     void CudaELPSimulator::ELP_RunSK(){

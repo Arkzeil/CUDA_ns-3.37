@@ -244,6 +244,7 @@ namespace ns3
             Ptr<Scheduler> m_events;
 
             // CUDA specific members
+            cudaStream_t streamArr[7];
             cudaStream_t streamK;
             cudaStream_t streamC;
             // multi processors count
