@@ -39,6 +39,8 @@ namespace ns3 {
     int warp_thread_index[EVENT_KINDS] = {0};
     int next_avail_warp = EVENT_KINDS;
 
+    int parallelism = 0;
+
     LookaheadTable<uint64_t> lookaheadTable;
     // to record how many block has completed
     __device__ volatile int blkcnt = 0;
@@ -214,9 +216,13 @@ namespace ns3 {
     __host__ void CudaELPSimulator::ELP_Init(){
         cudaStreamCreate(&streamK);
         cudaStreamCreate(&streamC);
-        for(int i = 0; i < 7; i++)
-            cudaStreamCreate(&streamArr[i]);
+        // for(int i = 0; i < 7; i++)
+        //     cudaStreamCreate(&streamArr[i]);
         cudaCheckErrors("stream creation failed");
+
+        cudaEventCreate(&eventK);
+        cudaEventCreate(&eventC);
+        cudaCheckErrors("event creation failed");
         // Allocate and initialize the stop flag on the device
         cudaMallocManaged(&d_stop, sizeof(int));
         cudaMallocManaged(&safe_ts, sizeof(uint64_t));
@@ -295,7 +301,9 @@ namespace ns3 {
         // Free the streams
         cudaStreamDestroy(streamK);
         cudaStreamDestroy(streamC);
-        cudaCheckErrors("stream destroy failed");
+        cudaEventDestroy(eventK);
+        cudaEventDestroy(eventC);
+        cudaCheckErrors("stream and event destroy failed");
     }
 
     // Device functions to process different event types
@@ -414,6 +422,9 @@ namespace ns3 {
         const int localThreadId = threadIdx.x;
                                         
         int index = tid;
+        // in single kernel method, the buffer should be ready so we don't need to check
+        // but we need to check it if we remove stream synchronization in ChangeHostQueue
+        // while(*h_bufrdy == 0);
         while (index < DEVICE_QUEUE_LENGTH) {
             DeviceEvent* ev = &h_safeEventQueue[index];
             
@@ -430,27 +441,27 @@ namespace ns3 {
             index += totalThreads;
         }
 
-        __syncthreads();        // wait for all threads of this block(might be in different warp) to finish
-        __threadfence();        // ensure that all threads of same grid have finished before continuing
+        // __syncthreads();        // wait for all threads of this block(might be in different warp) to finish
+        // __threadfence();        // ensure that all threads of same grid have finished before continuing
         // mark this block as finished
-        if(localThreadId == 0)
-            atomicAdd((int*)&blkcnt, 1);
+        // if(localThreadId == 0)
+        //     atomicAdd((int*)&blkcnt, 1);
         // mark host buffer as consumed, and device buffer as ready for CPU to insert new events
-        if(tid == 0){
-            while(blkcnt < gridDim.x);
+        // if(tid == 0){
+        //     while(blkcnt < gridDim.x);
 
-            blkcnt = 0;
-            // if thest two lines are after ready flag and safe_ts update, new events in next-event buffer might not be able to inserted
-            // into the event queue on time, and CPU will fetch next event, which might be CPU event, to execute
-            // (it will be considered as safe, as safe_ts is updated)
-            sim->ChangeDevQueue();
-            // printf("pos: %d\n", pos);
-            *h_bufrdy = 0;
-            // *d_bufrdy = 0;
-            // all events in current queue are processed 
-            *d_safe_ts = UINT64_MAX;
-            __threadfence_system();     // ensure that all threads see the updated buffer ready flag
-        }
+        //     blkcnt = 0;
+        //     // if thest two lines are after ready flag and safe_ts update, new events in next-event buffer might not be able to inserted
+        //     // into the event queue on time, and CPU will fetch next event, which might be CPU event, to execute
+        //     // (it will be considered as safe, as safe_ts is updated)
+        //     sim->ChangeDevQueue();
+        //     // printf("pos: %d\n", pos);
+        //     *h_bufrdy = 0;
+        //     // *d_bufrdy = 0;
+        //     // all events in current queue are processed 
+        //     *d_safe_ts = UINT64_MAX;
+        //     __threadfence_system();     // ensure that all threads see the updated buffer ready flag
+        // }
     }
 
     // A persistent kernel that polls the device queue and executes events when their time is reached.
@@ -657,7 +668,8 @@ namespace ns3 {
 
         while(1){
             // the queue is still used by the host
-            while(*d_curDevBufRdy);
+            // this line would be unnecessary if we use normal kernel approach
+            // while(*d_curDevBufRdy);
             
             // printf("insert: %d\n", m_test);
             // printf("insert tid: %d\n", tid);
@@ -806,20 +818,34 @@ namespace ns3 {
         }
     }
 
-    __device__ void CudaELPSimulator::ChangeDevQueue(){
+    __host__ __device__ void CudaELPSimulator::ChangeDevQueue(){
         // printf("Changing device buffer\n");
         *d_curDevBufRdy = 1;
         d_curDevBuf = (d_curDevBuf == d_nextEventQueue2) ? d_nextEventQueue1 : d_nextEventQueue2;
         d_curDevBufRdy = (d_curDevBuf == d_nextEventQueue2) ? d_bufrdy2 : d_bufrdy1;
-        __threadfence();
+        // __threadfence();
     }
 
     __host__ void CudaELPSimulator::ChangeHostQueue(){
-        cudaStreamSynchronize(streamK);
+        int count = next_avail_warp * WARP_SIZE;
+        if(count > parallelism)
+            parallelism = count;
+        // int blk = count / TPB + 1;
+        // cudaStreamSynchronize(streamK);
+        cudaEventSynchronize(eventK);
+        ChangeDevQueue();
+        // printf("pos: %d\n", pos);
+        volatile int *h_curHostBufRdy_2 = (h_curHostBuf == h_safeEventQueue1) ? h_bufrdy2 : h_bufrdy1;
+        *h_curHostBufRdy_2 = 0;
+        // *d_bufrdy = 0;
+        // all events in current queue are processed 
+        volatile uint64_t *h_safe_ts_2 = (h_curHostBuf == h_safeEventQueue1) ? d_safe_ts2 : d_safe_ts1;
+        *h_safe_ts_2 = UINT64_MAX;
         // if this line if put after kernel invocation, there's a chance that the host will hang in h_insert_sort 
         // as *h_curHostBufRdy might be 1 as long as the kernel execution is faster than host
         *h_curHostBufRdy = 1;
         SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
+        cudaEventRecord(eventK, streamK);
         
         // int count = next_avail_warp * WARP_SIZE * sizeof(DeviceEvent);
         // cudaMemPrefetchAsync(h_curHostBuf, count, device_id, streamC);
@@ -1140,10 +1166,16 @@ namespace ns3 {
             Scheduler::Event next = m_events->PeekNext();
   
             if(!is_safe(&next)){
+                // if(cudaEventQuery(eventK) != cudaSuccess){
+                //     continue;
+                // }
                 cudaMemcpyAsync((void*)&safe_ts1, (void*)d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
                 cudaMemcpyAsync((void*)&safe_ts2, (void*)d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
-                cudaStreamSynchronize(streamC);
                 cudaCheckErrors("safe_ts cudaMemcpyAsync failed");
+                // in here, previous kernel complete . So we might get updated safe_ts while we view the wrong next event,
+                // so we need to 'continue' in the end
+
+                cudaStreamSynchronize(streamC);
 
                 *safe_ts = (safe_ts1 < safe_ts2) ? safe_ts1 : safe_ts2;
 
@@ -1180,6 +1212,19 @@ namespace ns3 {
         cudaStreamSynchronize(streamK);
         // printf("Kernel finished\n");
         cudaStreamSynchronize(streamC);
+        printf("Max parallelism: %d\n", parallelism);
+        // int cnt = 0;
+        // for(int i = 0; i < DEVICE_QUEUE_LENGTH; i++){
+        //     DeviceEvent *ev = &h_safeEventQueue1[i];
+        //     DeviceEvent *ev2 = &h_safeEventQueue2[i];
+        //     if(ev->valid){
+        //         cnt++;
+        //     }
+        //     if(ev2->valid){
+        //         cnt++;
+        //     }
+        // }
+        // printf("Remaining Event count: %d\n", cnt);
     }
 
     // take a event from the device event queue and insert it into the host queue

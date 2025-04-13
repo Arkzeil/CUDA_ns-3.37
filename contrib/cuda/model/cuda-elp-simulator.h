@@ -200,7 +200,7 @@ namespace ns3
             __host__ int h_insert_sort(void* impl, uint64_t ts, int context, uint32_t UID, int type, uint64_t lookahead, void* payload);
             // for device to insert an event for host to schedule
             __device__ DeviceEvent* d_insert(void* impl, uint64_t delay, int context, int type, uint64_t lookahead, void* payload);
-            __device__ void ChangeDevQueue();
+            __host__ __device__ void ChangeDevQueue();
             
             void Run() override;
             Time Now() const override;
@@ -244,9 +244,11 @@ namespace ns3
             Ptr<Scheduler> m_events;
 
             // CUDA specific members
-            cudaStream_t streamArr[7];
+            // cudaStream_t streamArr[7];
             cudaStream_t streamK;
             cudaStream_t streamC;
+            cudaEvent_t eventK;
+            cudaEvent_t eventC;
             // multi processors count
             int mp;
 
