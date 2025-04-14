@@ -81,6 +81,7 @@ namespace ns3 {
 
         cudaDeviceGetAttribute(&mp, cudaDevAttrMultiProcessorCount, 0);
         cudaCheckErrors("get multiprocessor count fail");
+        mp *= BPSM;
         printf("Number of multiprocessors: %d\n", mp);
         // cudaSim = this;
         printf("This: %p\n", this);
@@ -265,11 +266,12 @@ namespace ns3 {
         h_curDevBuf = d_nextEventQueue1;
         d_curDevBuf = d_nextEventQueue1;
         h_curHostBufRdy = h_bufrdy1;
-        // d_curHostBufRdy = h_bufrdy1;
+        d_curHostBufRdy = h_bufrdy1;
         h_curDevBufRdy = d_bufrdy1;
         d_curDevBufRdy = d_bufrdy1;
 
         h_safe_ts = d_safe_ts1;
+        d_safe_ts = d_safe_ts1;
 
         for(int i = 0; i < EVENT_KINDS; i++)
             warp_index[i] = i;
@@ -419,7 +421,7 @@ namespace ns3 {
                                     volatile int *d_bufrdy, volatile uint64_t* d_safe_ts){
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
         const int totalThreads = gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z;
-        const int localThreadId = threadIdx.x;
+        // const int localThreadId = threadIdx.x;
                                         
         int index = tid;
         // in single kernel method, the buffer should be ready so we don't need to check
@@ -835,17 +837,20 @@ namespace ns3 {
         cudaEventSynchronize(eventK);
         ChangeDevQueue();
         // printf("pos: %d\n", pos);
-        volatile int *h_curHostBufRdy_2 = (h_curHostBuf == h_safeEventQueue1) ? h_bufrdy2 : h_bufrdy1;
-        *h_curHostBufRdy_2 = 0;
+        d_curHostBufRdy = (h_curHostBuf == h_safeEventQueue1) ? h_bufrdy2 : h_bufrdy1;
+        *d_curHostBufRdy = 0;
         // *d_bufrdy = 0;
         // all events in current queue are processed 
-        volatile uint64_t *h_safe_ts_2 = (h_curHostBuf == h_safeEventQueue1) ? d_safe_ts2 : d_safe_ts1;
-        *h_safe_ts_2 = UINT64_MAX;
+        d_safe_ts = (h_curHostBuf == h_safeEventQueue1) ? d_safe_ts2 : d_safe_ts1;
+        *d_safe_ts = UINT64_MAX;
         // if this line if put after kernel invocation, there's a chance that the host will hang in h_insert_sort 
         // as *h_curHostBufRdy might be 1 as long as the kernel execution is faster than host
         *h_curHostBufRdy = 1;
         SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
         cudaEventRecord(eventK, streamK);
+
+        // d_curHostBufRdy = h_curHostBufRdy;
+        // d_safe_ts = h_safe_ts;
         
         // int count = next_avail_warp * WARP_SIZE * sizeof(DeviceEvent);
         // cudaMemPrefetchAsync(h_curHostBuf, count, device_id, streamC);
@@ -1169,13 +1174,12 @@ namespace ns3 {
                 // if(cudaEventQuery(eventK) != cudaSuccess){
                 //     continue;
                 // }
-                cudaMemcpyAsync((void*)&safe_ts1, (void*)d_safe_ts1, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
-                cudaMemcpyAsync((void*)&safe_ts2, (void*)d_safe_ts2, sizeof(uint64_t), cudaMemcpyDeviceToHost, streamC);
-                cudaCheckErrors("safe_ts cudaMemcpyAsync failed");
+                safe_ts1 = *d_safe_ts1;
+                safe_ts2 = *d_safe_ts2;
                 // in here, previous kernel complete . So we might get updated safe_ts while we view the wrong next event,
                 // so we need to 'continue' in the end
 
-                cudaStreamSynchronize(streamC);
+                // cudaStreamSynchronize(streamC);
 
                 *safe_ts = (safe_ts1 < safe_ts2) ? safe_ts1 : safe_ts2;
 
@@ -1195,9 +1199,6 @@ namespace ns3 {
             if(__glibc_likely(next.key.m_uid >= DEVICE_EV_ID_OFFSET)){
                 // printf("-------------------safe ts: %lu---------------------\n", *safe_ts);
                 ELP_ProcessOneEvent();
-                // m_events->RemoveNext();
-                // printf("CUDA event, safe ts: %lu\n", *safe_ts);
-                // sleep(1);
             }
             // Host event, process it on CPU directly
             else{

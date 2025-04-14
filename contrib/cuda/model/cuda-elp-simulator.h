@@ -20,9 +20,10 @@
 #define EVENT_KINDS 3
 #define MAX_NEW_EVENTS 3
 #define DEVICE_EV_ID_OFFSET 1000000
-#define TPB 64  // Threads per block (block size)
+#define TPB 128  // Threads per block (block size)
 #define MAX_PACKET_PER_THREAD 4
 #define WARP_SIZE 32
+#define BPSM 2   // Blocks per SM
 
 namespace ns3
 {
@@ -140,7 +141,7 @@ namespace ns3
     extern LookaheadTable<uint64_t> lookaheadTable;
 
     // A simplified device-side event structure
-    struct DeviceEvent {
+    struct alignas(8) DeviceEvent {
         void *impl;   // pointer to the event implementation
         uint64_t ts;    // event timestamp, assuming to be nanosecond
         int context;  // event context
@@ -272,7 +273,7 @@ namespace ns3
             DeviceEvent* h_curDevBuf;
             DeviceEvent* d_curDevBuf;
             volatile int* h_curHostBufRdy;
-            // volatile int* d_curHostBufRdy;
+            volatile int* d_curHostBufRdy;
             volatile int* h_curDevBufRdy;
             volatile int* d_curDevBufRdy;
             // a index for host to insert into correct location of host buffer
@@ -285,6 +286,7 @@ namespace ns3
             // uint64_t cur_buffer_safe_ts;
             // used for host to update the safe timestamp for h_safeEventQueue, containing the pointer to the ts
             volatile uint64_t *h_safe_ts;
+            volatile uint64_t *d_safe_ts;
             // a stop flag for device to check if the simulation is finished
             volatile int *d_stop;
             // a flag to let CPU notify that it's idle and GPU need to release device buffer
