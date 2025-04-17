@@ -1,0 +1,63 @@
+#include "cuda-bridge-helper.h"
+#include "ns3/cuda-net-device.h"
+#include "ns3/cuda-p2p-channel.h"
+#include "ns3/cuda-elp-simulator.h"
+
+namespace ns3 {
+    NS_LOG_COMPONENT_DEFINE("CudaBridgeHelper");
+
+    CudaBridgeHelper::CudaBridgeHelper(): delay(0), bandwidth(0) {
+        // Set default values
+    }
+    
+    CudaBridgeHelper::~CudaBridgeHelper() {
+        // Destructor
+    }
+
+    void CudaBridgeHelper::SetDelay(Time delay) {
+        // Set the delay of the bridge net device
+        this->delay = delay;
+    }
+
+    void CudaBridgeHelper::SetBandwidth(DataRate bandwidth) {
+        // Set the bandwidth of the bridge net device
+        this->bandwidth = bandwidth;
+    }
+
+    NetDeviceContainer CudaBridgeHelper::Install(Ptr<Node> node, NetDeviceContainer c) {
+        // Install P2P net devices on the nodes
+        NetDeviceContainer container;
+        // Ptr<CudaNetDevice> deviceA = CreateObject<CudaNetDevice>();
+        // Ptr<CudaNetDevice> deviceB = CreateObject<CudaNetDevice>();
+        // Ptr<CudaP2PChannel> channel = CreateObject<CudaP2PChannel>();
+        CudaNetDevice* deviceA = new CudaNetDevice();
+        CudaNetDevice* deviceB = new CudaNetDevice();
+        CudaP2PChannel* channel = new CudaP2PChannel();
+        
+        deviceA->SetDataRate(bandwidth);
+        deviceA->SetAddress(Mac48Address::Allocate());
+        deviceB->SetDataRate(bandwidth);
+        deviceB->SetAddress(Mac48Address::Allocate());
+        channel->SetDelay(delay);
+        
+        
+        a->AddDevice(deviceA);
+        b->AddDevice(deviceB);
+        printf("Node 0 address: %p, device 0 address: %p\n", GetPointer(a), deviceA);
+        printf("Node 1 address: %p, device 1 address: %p\n", GetPointer(b), deviceB);
+
+        // deviceA->Attach(GetPointer(channel));
+        // deviceB->Attach(GetPointer(channel));
+        deviceA->Attach(channel);
+        deviceB->Attach(channel);
+        
+        container.Add(deviceA);
+        container.Add(deviceB);
+
+        lookaheadTable.addValue(a->GetId(), b->GetId(), delay.GetNanoSeconds());
+        lookaheadTable.addValue(b->GetId(), a->GetId(), delay.GetNanoSeconds());
+        printf("Lookahead table: %lu\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
+        
+        return container;
+    }
+}
