@@ -375,10 +375,12 @@ build_cuda_lib(
         model/cuda-simulator.cu
         model/cuda-elp-simulator.cu
         model/cuda-ipv4-static-routing.cu
+        model/cuda-bridge-net-device.cu
         helper/cuda-helper.cu
         helper/cuda-p2p-helper.cu
         helper/cuda-ipv4-address-helper.cu
         helper/cuda-internet-stack-helper.cc
+        helper/cuda-bridge-helper.cu
     HEADER_FILES                          # Header files
         model/cuda-udp-client.h
         # model/cuda-packet-kernel.cuh
@@ -398,10 +400,12 @@ build_cuda_lib(
         model/cuda-simulator.h
         model/cuda-elp-simulator.h
         model/cuda-ipv4-static-routing.h
+        model/cuda-bridge-net-device.h
         helper/cuda-helper.h
         helper/cuda-p2p-helper.h
         helper/cuda-ipv4-address-helper.h
         helper/cuda-internet-stack-helper.h
+        helper/cuda-bridge-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart
 )

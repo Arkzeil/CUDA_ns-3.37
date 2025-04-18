@@ -5,7 +5,7 @@
 #include "ns3/cuda-packet.h"
 #include "ns3/cuda-ipv4-l3-protocol.h"
 #include "ns3/cuda-elp-simulator.h"
-
+#include "ns3/cuda-bridge-net-device.h"
 
 namespace ns3 {
 
@@ -35,7 +35,8 @@ namespace ns3 {
       return tid;
   }
 
-  CudaNetDevice::CudaNetDevice(): m_queueSize(2048), m_rxCallback(nullptr), m_txMachineState(READY), m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr) {
+  CudaNetDevice::CudaNetDevice(): m_queueSize(2048), m_rxCallback(nullptr), m_txMachineState(READY), 
+  m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr), m_rxCB_enable(false) {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);
@@ -98,8 +99,12 @@ namespace ns3 {
       printf("Set receive callback at CudaNetDevice\n");
   }
 
+  __host__ void CudaNetDevice::AddBridgePort(Ptr<NetDevice> bridgePort){
+      printf("Should not be called here\n");
+  }
+
   bool CudaNetDevice::SupportsSendFrom() const {
-      return false;
+      return true;
   }
 
   __global__ void PacketProcessingKernel(uint8_t* packet, int packetSize) {
@@ -219,8 +224,33 @@ namespace ns3 {
         printf("Packet is not ready\n");
         return;
       }
-      m_ipv4->d_Receive(this, packet);
+
+      if(m_rxCB_enable){
+        // the inheritance does not work in CUDA(I have to make descructor __device__, but its parent is in host space)
+        // so I can only explictly do static cast
+        MACAddress src = MACAddress{0,0,0,0,0,0};
+        MACAddress dst = MACAddress{0,0,0,0,0,0};
+        ((CudaBridgeNetDevice*)bridge)->ReceiveFromDevice(this, packet, 69, src, dst, PacketType::PACKET_OTHERHOST);
+      }
+      else
+        m_ipv4->d_Receive(this, packet);
       // ProcessPacketOnCuda(packet);
+  }
+
+  // __device__ void CudaNetDevice::ReceiveFromDevice() {
+  //     // Process received packet
+  //     printf("Should not be called here\n");
+  //     // ProcessPacketOnCuda(packet);
+  // }
+
+  __host__ void CudaNetDevice::register_callback(CudaNetDevice* device) {
+      // Register the callback function
+      // m_rxCallback = device->m_rxCallback;
+      // m_rxCB_enable = true;
+      printf("Registering callback at CudaNetDevice\n");
+      // m_rxCallback = device->m_rxCallback;
+      m_rxCB_enable = true;
+      bridge = device;
   }
 
   __device__ void CudaNetDevice::test(const uint8_t *data, CUDA_cb_data* cb_data) {
@@ -245,6 +275,34 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
+      // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
+      if(m_linkUp == false)
+        printf("Link is down\n");
+
+      // if(m_txMachineState != READY)
+      //   printf("Transmitter is not ready\n");
+      // else
+      //   printf("Transmitter is ready\n");
+
+      if(EnqueuePacket(d_packet) == false)
+        printf("Enqueue failed\n");
+      else{
+        if(m_txMachineState == READY){
+          // cudaFree((void*)data);
+          CudaPacket* packet = DequeuePacket();
+          if(packet == nullptr){
+            printf("dequeued packet is null\n");
+            return;
+          }
+
+          // cudaFree(d_packet->m_data);
+          
+          TransmitStart(packet, cb_data);
+        }
+      }
+  }
+
+  __device__ void CudaNetDevice::SendFrom(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
       // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
       if(m_linkUp == false)
         printf("Link is down\n");

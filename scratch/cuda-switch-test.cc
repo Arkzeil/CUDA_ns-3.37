@@ -13,6 +13,7 @@
 #include "ns3/cuda-udp-server.h"
 #include "ns3/cuda-ipv4-static-routing.h"
 #include "ns3/cuda-elp-simulator.h"
+#include "ns3/cuda-bridge-helper.h"
 
 #include <ctime>
 
@@ -36,9 +37,8 @@ int main(int argc, char* argv[]) {
 
   NodeContainer nodes;
   nodes.Create(2 * numPairs);
-
-
-  Ptr<Node> switchNode = CreateObject<Node>();
+  NodeContainer switchNodes;
+  switchNodes.Create(numPairs);
 
   // Install the Internet stack
   Cuda_InternetStackHelper internet;
@@ -61,17 +61,23 @@ int main(int argc, char* argv[]) {
   uint32_t j = 1;
 
   for (uint32_t i = 0; i < numPairs; i++){
-    bridge.SetDelay(MilliSeconds(2.0));
-    bridge.SetBandwidth(DataRate("10Mbps"));
+    cudaP2P.SetDelay(MilliSeconds(2.0));
+    cudaP2P.SetBandwidth(DataRate("10Mbps"));
     // NetDeviceContainer cudaDevices = cudaP2P.Install(nodes.Get(2 * i), nodes.Get(2 * i + 1));
     // Connect client to switch
-    NetDeviceContainer link1 = bridge.Install(nodes.Get(2 * i), switchNode);
-    NetDeviceContainer link2 = bridge.Install(nodes.Get(2 * i + 1), switchNode);
+    NetDeviceContainer link1 = cudaP2P.Install(nodes.Get(2 * i), switchNodes.Get(i));
+    NetDeviceContainer link2 = cudaP2P.Install(nodes.Get(2 * i + 1), switchNodes.Get(i));
 
     // Save the endpoint devices for IP assignment
     NetDeviceContainer endpoints;
+    // Save the corrsponding switch device
+    NetDeviceContainer switchDevices;
     endpoints.Add(link1.Get(0));
     endpoints.Add(link2.Get(0));
+    switchDevices.Add(link1.Get(1));
+    switchDevices.Add(link2.Get(1));
+
+    bridge.Install(switchNodes.Get(i), switchDevices);
     
     // Assign IP addresses
     CudaIpv4AddressHelper ipv4;
@@ -94,7 +100,7 @@ int main(int argc, char* argv[]) {
     app->SetSendInterval(Seconds(1.0));
     nodes.Get(2 * i)->AddApplication(app);
     app->SetStartTime(Seconds(1.0));
-    app->SetStopTime(Seconds(3001.0));
+    app->SetStopTime(Seconds(11.0));
 
     app1 = app;
     // Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
@@ -108,7 +114,7 @@ int main(int argc, char* argv[]) {
     server->SetPort(9);
     nodes.Get(2 * i + 1)->AddApplication(server);
     server->SetStartTime(Seconds(0.0));
-    server->SetStopTime(Seconds(3002.0));
+    server->SetStopTime(Seconds(12.0));
   }
   InitCudaSim();
 

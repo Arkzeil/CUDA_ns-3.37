@@ -18,6 +18,11 @@ namespace ns3{
     class CudaPacket;
     class CudaELPSimulator;
     class CudaIpv4L3Protocol;
+    class CudaNetDevice;
+
+    struct MACAddress{
+        uint8_t addr[6];
+    };
 
     class CudaBridgeNetDevice: public CudaNetDevice, public Managed{
         public:
@@ -38,6 +43,13 @@ namespace ns3{
             uint16_t GetMtu() const override;
             Ptr<Node> GetNode() const override;
             void SetNode(Ptr<Node> node);
+            __device__ void ReceiveFromDevice(CudaNetDevice* device,
+                                                CudaPacket* packet,
+                                                uint16_t protocol,
+                                                MACAddress& source,
+                                                MACAddress& destination,
+                                                PacketType packetType);
+            __host__ void AddBridgePort(Ptr<NetDevice> bridgePort) override;
 
             // GPU-specific methods
             CudaP2PChannel* GetChannel();
@@ -57,15 +69,16 @@ namespace ns3{
             uint32_t m_mtu;
             NetDevice::ReceiveCallback m_rxCallback;
 
-            CudaNetDevice* m_ports; //!< Pointer to the CUDA net device, which is used to send packets as part of the bridge(port)
+            CudaNetDevice** m_ports; //!< Pointer to the CUDA net device, which is used to send packets as part of the bridge(port)
 
             // CUDA-related members
             CudaELPSimulator* m_cudaSim; //!< CUDA simulator
             CudaIpv4L3Protocol* m_ipv4; //!< Pointer to the IPv4 L3 protocol, used for packet receive as we currently do not adopting callback mechanism
             cudaStream_t m_stream;
-            CudaP2PChannel *m_channel;
+            CudaP2PChannel **m_channel;
             uint32_t NodeID;
             uint32_t maxPorts = 10;
+            uint32_t portCnt = 0;
     };
 }
 

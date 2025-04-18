@@ -2,6 +2,7 @@
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-p2p-channel.h"
 #include "ns3/cuda-elp-simulator.h"
+#include "ns3/cuda-bridge-net-device.h"
 
 namespace ns3 {
     NS_LOG_COMPONENT_DEFINE("CudaBridgeHelper");
@@ -26,38 +27,30 @@ namespace ns3 {
 
     NetDeviceContainer CudaBridgeHelper::Install(Ptr<Node> node, NetDeviceContainer c) {
         // Install P2P net devices on the nodes
-        NetDeviceContainer container;
+        NetDeviceContainer devs;
         // Ptr<CudaNetDevice> deviceA = CreateObject<CudaNetDevice>();
         // Ptr<CudaNetDevice> deviceB = CreateObject<CudaNetDevice>();
         // Ptr<CudaP2PChannel> channel = CreateObject<CudaP2PChannel>();
-        CudaNetDevice* deviceA = new CudaNetDevice();
-        CudaNetDevice* deviceB = new CudaNetDevice();
-        CudaP2PChannel* channel = new CudaP2PChannel();
-        
-        deviceA->SetDataRate(bandwidth);
-        deviceA->SetAddress(Mac48Address::Allocate());
-        deviceB->SetDataRate(bandwidth);
-        deviceB->SetAddress(Mac48Address::Allocate());
-        channel->SetDelay(delay);
-        
-        
-        a->AddDevice(deviceA);
-        b->AddDevice(deviceB);
-        printf("Node 0 address: %p, device 0 address: %p\n", GetPointer(a), deviceA);
-        printf("Node 1 address: %p, device 1 address: %p\n", GetPointer(b), deviceB);
+        CudaBridgeNetDevice* dev = new CudaBridgeNetDevice();
+        devs.Add(dev);
+        node->AddDevice(dev);
+       
+        for(NetDeviceContainer::Iterator i = c.Begin(); i != c.End(); ++i) {
+            // Ptr<CudaNetDevice> device = DynamicCast<CudaNetDevice>(*i);
+            // if (device == 0) {
+            //     NS_FATAL_ERROR("CudaBridgeHelper::Install(): Not a CudaNetDevice");
+            // }
+            // dev->AddBridgePort(device);
+            dev->AddBridgePort(*i);
+        }
 
-        // deviceA->Attach(GetPointer(channel));
-        // deviceB->Attach(GetPointer(channel));
-        deviceA->Attach(channel);
-        deviceB->Attach(channel);
+        return devs;
         
-        container.Add(deviceA);
-        container.Add(deviceB);
-
-        lookaheadTable.addValue(a->GetId(), b->GetId(), delay.GetNanoSeconds());
-        lookaheadTable.addValue(b->GetId(), a->GetId(), delay.GetNanoSeconds());
-        printf("Lookahead table: %lu\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
+        // deviceA->SetDataRate(bandwidth);
+        // deviceA->SetAddress(Mac48Address::Allocate());
+        // deviceB->SetDataRate(bandwidth);
+        // deviceB->SetAddress(Mac48Address::Allocate());
+        // channel->SetDelay(delay);
         
-        return container;
     }
 }

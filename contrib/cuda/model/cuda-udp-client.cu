@@ -234,7 +234,7 @@ namespace ns3 {
 
         // Simulator::test();
 
-        // printf("Node %d: Total packets sent: %d\n",GetNode()->GetId(), *m_sent);
+        printf("Node %d: Total packets sent: %d\n",GetNode()->GetId(), *m_sent);
     }
 
     __host__ void CudaUdpClient::InitCudaResources() {

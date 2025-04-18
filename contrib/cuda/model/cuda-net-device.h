@@ -20,6 +20,7 @@ class CUDA_cb_data;
 class CudaPacket;
 class CudaELPSimulator;
 class CudaIpv4L3Protocol;
+class CudaBridgeNetDevice;
 
 class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
@@ -36,6 +37,7 @@ public:
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
     virtual bool SupportsSendFrom(void) const;
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
+    __host__ virtual void AddBridgePort(Ptr<NetDevice> bridgePort);
     bool Attach(CudaP2PChannel *channel);
     void SetDataRate(DataRate bps);
     bool SetMtu(const uint16_t mtu) override;
@@ -43,14 +45,19 @@ public:
     Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
     void Receive(CudaPacket *packet);
+    // __device__ virtual void ReceiveFromDevice();
     __device__ void d_Receive(CudaPacket *packet);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
     void OffloadPacketProcessing();
     __host__ __device__ uint64_t GetBandwidth();
+    // we have not implement callback mechanism for now, so the callback is actually pre-defined fixed function, 
+    // this is just for setting the flag
+    __host__ void register_callback(CudaNetDevice* device);
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
+    __device__ void SendFrom(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
     __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
     __device__ void D_TransmitComplete();
     void TransmitComplete(cudaStream_t stream);
@@ -61,6 +68,19 @@ public:
     CudaP2PChannel* GetChannel();
 
     uint64_t lookahead;
+
+    enum PacketType
+    {
+        PACKET_HOST = 1, //!< Packet addressed to us
+        NS3_PACKET_HOST = PACKET_HOST,
+        PACKET_BROADCAST, //!< Packet addressed to all
+        NS3_PACKET_BROADCAST = PACKET_BROADCAST,
+        PACKET_MULTICAST, //!< Packet addressed to multicast group
+        NS3_PACKET_MULTICAST = PACKET_MULTICAST,
+        PACKET_OTHERHOST, //!< Packet addressed to someone else
+        NS3_PACKET_OTHERHOST = PACKET_OTHERHOST,
+    };
+    
 private:
     void ProcessPacketOnCuda(Ptr<Packet> packet);
 
@@ -95,6 +115,9 @@ private:
     int* d_queueRear;
     int m_queueSize;
     uint32_t NodeID;
+    CudaNetDevice* bridge;
+    // we have not implement callback mechanism for now, use a simple flag and pre-defined callback first
+    bool m_rxCB_enable; //!< Enable or disable the recv callback of the device
 };
 
 } // namespace ns3
