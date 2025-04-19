@@ -14,14 +14,31 @@
 #include "helper.h"
 #include "ns3/cuda-net-device.h"
 
+#define MAX_MAC_ENTRIES 16 
+
 namespace ns3{
     class CudaPacket;
     class CudaELPSimulator;
     class CudaIpv4L3Protocol;
     class CudaNetDevice;
 
-    struct MACAddress{
-        uint8_t addr[6];
+    class alignas(8) MACAddress{
+        public:
+            uint8_t addr[6];
+            __host__ __device__ bool operator==(const MACAddress& other) const {
+                for (int i = 0; i < 6; ++i) {
+                    if (addr[i] != other.addr[i]) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+    };
+
+    struct EthernetHeader {
+        uint8_t dst[6];    // Destination MAC
+        uint8_t src[6];    // Source MAC
+        uint16_t ethType;  // EtherType (e.g., 0x0800 for IPv4)
     };
 
     class CudaBridgeNetDevice: public CudaNetDevice, public Managed{
@@ -51,6 +68,14 @@ namespace ns3{
                                                 PacketType packetType);
             __host__ void AddBridgePort(Ptr<NetDevice> bridgePort) override;
 
+            __host__ __device__ void Learn(MACAddress source, CudaNetDevice* port);
+            __host__ __device__ CudaNetDevice* GetLearnedState(MACAddress source);
+            __device__ void ForwardUnicast(CudaNetDevice* incomingPort,
+                                            CudaPacket* packet,
+                                            uint16_t protocol,
+                                            MACAddress src,
+                                            MACAddress dst);
+
             // GPU-specific methods
             CudaP2PChannel* GetChannel();
             __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
@@ -68,17 +93,30 @@ namespace ns3{
             Ptr<Node> m_node;
             uint32_t m_mtu;
             NetDevice::ReceiveCallback m_rxCallback;
+            bool m_enableLearning;
+
+            /**
+             * \ingroup bridge
+             * Structure holding the status of an address
+             */
+            struct  LearnedState
+            {
+                MACAddress mac;                     //!< MAC address
+                CudaNetDevice* associatedPort;      //!< port associated with the address
+                uint64_t expirationTime;           //!< time it takes for learned MAC state to expire(ns)
+            };
 
             CudaNetDevice** m_ports; //!< Pointer to the CUDA net device, which is used to send packets as part of the bridge(port)
 
+            LearnedState* m_learningTable; //!< Container for known address statuses
             // CUDA-related members
             CudaELPSimulator* m_cudaSim; //!< CUDA simulator
             CudaIpv4L3Protocol* m_ipv4; //!< Pointer to the IPv4 L3 protocol, used for packet receive as we currently do not adopting callback mechanism
             cudaStream_t m_stream;
             CudaP2PChannel **m_channel;
             uint32_t NodeID;
-            uint32_t maxPorts = 10;
             uint32_t portCnt = 0;
+            uint32_t tableSize = 0;
     };
 }
 

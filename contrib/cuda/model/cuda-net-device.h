@@ -21,6 +21,7 @@ class CudaPacket;
 class CudaELPSimulator;
 class CudaIpv4L3Protocol;
 class CudaBridgeNetDevice;
+class MACAddress;
 
 class CudaNetDevice : public PointToPointNetDevice, public Managed{
 public:
@@ -57,8 +58,9 @@ public:
     __host__ void register_callback(CudaNetDevice* device);
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
-    __device__ void SendFrom(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
+    __device__ void SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol);
     __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
+    __device__ bool TransmitStart_test(CudaPacket* packet, CUDA_cb_data* cb_data);
     __device__ void D_TransmitComplete();
     void TransmitComplete(cudaStream_t stream);
     // Helper functions
@@ -105,6 +107,7 @@ private:
 
     // CUDA-related members
     CudaELPSimulator* m_cudaSim; //!< CUDA simulator
+    uint8_t m_macAddress[6];                            //!< MAC address of this NetDevice
     CudaIpv4L3Protocol* m_ipv4; //!< Pointer to the IPv4 L3 protocol, used for packet receive as we currently do not adopting callback mechanism
     cudaStream_t m_stream;
     cudaEvent_t m_event;        // !< CUDA event to synchronize packet enqueueing

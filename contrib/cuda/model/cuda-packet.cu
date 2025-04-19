@@ -87,19 +87,37 @@ namespace ns3{
         const uint8_t* src = (const uint8_t*)header;
 
         // Use 32-bit memory copies for better performance
-        uint32_t* dst32 = (uint32_t*)dst;
-        const uint32_t* src32 = (const uint32_t*)src;
+        // uint32_t* dst32 = (uint32_t*)dst;
+        // const uint32_t* src32 = (const uint32_t*)src;
 
-        int i;
-        for (i = 0; i + 4 <= headerSize; i += 4) {
-            *dst32++ = *src32++;
+        // int i;
+        // for (i = 0; i + 4 <= headerSize; i += 4) {
+        //     *dst32++ = *src32++;
+        // }
+
+        // // Copy remaining bytes (if header is not a multiple of 4)
+        // uint8_t* dst8 = (uint8_t*)dst32;
+        // const uint8_t* src8 = (const uint8_t*)src32;
+        // for (; i < headerSize; i++) {
+        //     *dst8++ = *src8++;
+        // }
+        // Check for 4-byte alignment
+        if ((((uintptr_t)dst | (uintptr_t)src) & 0x3) == 0) {
+            // 4-byte aligned, do 32-bit copy
+            uint32_t* dst32 = (uint32_t*)dst;
+            const uint32_t* src32 = (const uint32_t*)src;
+            int i;
+            for (i = 0; i + 4 <= headerSize; i += 4) {
+                dst32[i / 4] = src32[i / 4];
+            }
+            dst += i;
+            src += i;
+            headerSize -= i;
         }
 
-        // Copy remaining bytes (if header is not a multiple of 4)
-        uint8_t* dst8 = (uint8_t*)dst32;
-        const uint8_t* src8 = (const uint8_t*)src32;
-        for (; i < headerSize; i++) {
-            *dst8++ = *src8++;
+        // Copy any remaining bytes (or use this path always for safety)
+        for (int i = 0; i < headerSize; i++) {
+            dst[i] = src[i];
         }
         
         m_size += headerSize;

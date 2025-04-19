@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numPairs = 1; // Default number of client-server pairs
+  uint32_t numPairs = 100; // Default number of client-server pairs
 
   NodeContainer nodes;
   nodes.Create(2 * numPairs);
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     app->SetSendInterval(Seconds(1.0));
     nodes.Get(2 * i)->AddApplication(app);
     app->SetStartTime(Seconds(1.0));
-    app->SetStopTime(Seconds(11.0));
+    app->SetStopTime(Seconds(3001.0));
 
     app1 = app;
     // Ptr<CudaUdpClient> app2 = CreateObject<CudaUdpClient>();
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     server->SetPort(9);
     nodes.Get(2 * i + 1)->AddApplication(server);
     server->SetStartTime(Seconds(0.0));
-    server->SetStopTime(Seconds(12.0));
+    server->SetStopTime(Seconds(3002.0));
   }
   InitCudaSim();
 

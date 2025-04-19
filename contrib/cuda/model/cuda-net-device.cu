@@ -71,6 +71,7 @@ namespace ns3 {
 
   void CudaNetDevice::SetAddress(Address address) {
       m_address = Mac48Address::ConvertFrom(address);
+      m_address.CopyTo(m_macAddress);
       printf("Set address at CudaNetDevice\n");
   }
 
@@ -225,12 +226,30 @@ namespace ns3 {
         return;
       }
 
+      #ifdef CHECKSUM_CHECK
+        uint32_t fcs = 0;
+        packet->GetTrailer(&fcs, sizeof(fcs));
+        // printf("FCS: %x\n", fcs);
+        packet->RemoveTrailer(sizeof(fcs));
+      #endif
+
+      uint32_t ethertype_padded;
+      uint16_t etherType;
+      MACAddress dst;
+      MACAddress src;
+
+      packet->ExtractPayload(dst.addr, 0, 6);
+      packet->RemoveHeader(6);
+      packet->ExtractPayload(src.addr, 0, 6);
+      packet->RemoveHeader(6);
+      packet->ExtractPayload((uint8_t*)&ethertype_padded, 0, sizeof(ethertype_padded));
+      packet->RemoveHeader(4);
+
       if(m_rxCB_enable){
         // the inheritance does not work in CUDA(I have to make descructor __device__, but its parent is in host space)
         // so I can only explictly do static cast
-        MACAddress src = MACAddress{0,0,0,0,0,0};
-        MACAddress dst = MACAddress{0,0,0,0,0,0};
-        ((CudaBridgeNetDevice*)bridge)->ReceiveFromDevice(this, packet, 69, src, dst, PacketType::PACKET_OTHERHOST);
+        etherType = ethertype_padded & 0xFFFF;
+        ((CudaBridgeNetDevice*)bridge)->ReceiveFromDevice(this, packet, etherType, src, dst, PacketType::PACKET_OTHERHOST);
       }
       else
         m_ipv4->d_Receive(this, packet);
@@ -302,7 +321,7 @@ namespace ns3 {
       }
   }
 
-  __device__ void CudaNetDevice::SendFrom(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
+  __device__ void CudaNetDevice::SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol) {
       // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
       if(m_linkUp == false)
         printf("Link is down\n");
@@ -311,6 +330,17 @@ namespace ns3 {
       //   printf("Transmitter is not ready\n");
       // else
       //   printf("Transmitter is ready\n");
+      uint32_t fcs;
+      // if not padding, the header would not be aligned, error would occur when adding header
+      uint32_t ethertype_padded = 0x0800; // IPv4
+      d_packet->AddHeader(&ethertype_padded, sizeof(ethertype_padded));
+      d_packet->AddHeader(src.addr, 6);
+      d_packet->AddHeader(dst.addr, 6);
+
+      #ifdef CHECKSUM_CHECK
+        // fcs CRC32 implementation
+        d_packet->AddTrailer(&fcs, sizeof(fcs));
+      #endif
 
       if(EnqueuePacket(d_packet) == false)
         printf("Enqueue failed\n");
@@ -325,9 +355,43 @@ namespace ns3 {
 
           // cudaFree(d_packet->m_data);
           
-          TransmitStart(packet, cb_data);
+          TransmitStart_test(packet, nullptr);
         }
       }
+  }
+
+  __device__ bool CudaNetDevice::TransmitStart_test(CudaPacket* packet, CUDA_cb_data* cb_data) {
+    // Start transmission
+    // assuming size is in bytes
+    if(m_txMachineState == BUSY) {
+      printf("Transmitter busy, dropping packet\n");
+      return false;
+    }
+    m_txMachineState = BUSY;
+    // assuming m_InterframeGap is 0
+    double TxTime = (double)(packet->GetSize() * 8) / d_bps; // in seconds
+    uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
+
+    if(cb_data != nullptr){
+      cb_data->empty = false;
+      // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
+      // cb_data->next->init();
+      cb_data->packetSize = 0;
+      cb_data->dst = this;
+      cb_data->delay = TxTime;
+      cb_data->func_id = 1;
+    }
+    // cudaEventSynchronize(m_event);
+    // cudaFree(cb_data->packet->m_data);
+    m_cudaSim->d_insert(this, d_interval, NodeID, 1, lookahead, nullptr);
+    // m_cudaSim->d_insert(this, 1, 0, 2, 0, (void*)packet);
+
+    bool result = m_channel->TransmitStart(packet, this, d_interval, cb_data);
+    if(result == false) {
+      printf("Channel TransmitStart failed\n");
+    }
+
+    return result;
   }
 
   __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data) {
