@@ -367,7 +367,7 @@ namespace ns3 {
       printf("Transmitter busy, dropping packet\n");
       return false;
     }
-    // m_txMachineState = BUSY;
+    m_txMachineState = BUSY;
     // assuming m_InterframeGap is 0
     double TxTime = (double)(packet->GetSize() * 8) / d_bps; // in seconds
     uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
@@ -429,10 +429,10 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::D_TransmitComplete(){
-    // if(m_txMachineState != BUSY){
-    //   printf("Device state must be busy\n");
-    //   return;
-    // }
+    if(m_txMachineState != BUSY){
+      printf("Device state must be busy\n");
+      return;
+    }
     m_txMachineState = READY;
     // printf("Reset device status using GPU\n");
 
@@ -446,10 +446,10 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::D_TransmitComplete_test(){
-    // if(m_txMachineState != BUSY){
-    //   printf("Device state must be busy\n");
-    //   return;
-    // }
+    if(m_txMachineState != BUSY){
+      printf("Device state must be busy\n");
+      return;
+    }
     m_txMachineState = READY;
     // printf("Reset device status using GPU\n");
 
