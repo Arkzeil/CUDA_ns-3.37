@@ -17,8 +17,8 @@
 #include <unordered_map>
 
 #define DEVICE_QUEUE_LENGTH 2048
-#define EVENT_KINDS 3
-#define MAX_NEW_EVENTS 3
+#define EVENT_KINDS 4
+#define MAX_NEW_EVENTS 4
 #define DEVICE_EV_ID_OFFSET 1000000
 #define TPB 128  // Threads per block (block size)
 #define MAX_PACKET_PER_THREAD 4

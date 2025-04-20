@@ -62,6 +62,7 @@ public:
     __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
     __device__ bool TransmitStart_test(CudaPacket* packet, CUDA_cb_data* cb_data);
     __device__ void D_TransmitComplete();
+    __device__ void D_TransmitComplete_test();
     void TransmitComplete(cudaStream_t stream);
     // Helper functions
     __device__ bool EnqueuePacket(CudaPacket* packet);

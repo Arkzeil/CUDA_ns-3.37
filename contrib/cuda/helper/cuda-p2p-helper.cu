@@ -65,6 +65,8 @@ namespace ns3 {
         lookaheadTable.addValue(a->GetId(), b->GetId(), delay.GetNanoSeconds());
         lookaheadTable.addValue(b->GetId(), a->GetId(), delay.GetNanoSeconds());
         printf("Lookahead table: %lu\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
+        deviceA->lookahead = delay.GetNanoSeconds();
+        deviceB->lookahead = delay.GetNanoSeconds();
         
         return container;
     }

@@ -330,6 +330,12 @@ namespace ns3 {
         // printf("Processing Type 2 event\n");
         ((CudaNetDevice*)(ev->impl))->d_Receive((CudaPacket*)(ev->payload));
     }
+
+    __device__ void ProcessType3(DeviceEvent* ev) {
+        // Different event processing logic
+        // printf("Processing Type 2 event\n");
+        ((CudaNetDevice*)(ev->impl))->D_TransmitComplete_test();
+    }
     // General device function that processes an event based on its type.
     // ideal approach is to use function pointer to call the function, skip for now
     __device__ void cuda_ProcessOneEvent(DeviceEvent* ev) {
@@ -340,7 +346,7 @@ namespace ns3 {
         switch (ev->type) {
             case -1:
                 // No event
-                printf("No event\n");
+                // printf("No event\n");
                 ev->valid = false;
                 break;
             case 0:
@@ -357,6 +363,10 @@ namespace ns3 {
                 // printf("Recv ts: %lu\n", ev->ts);
                 ProcessType2(ev);
                 // mark as processed
+                ev->valid = false;
+                break;
+            case 3:
+                ProcessType3(ev);
                 ev->valid = false;
                 break;
             default:

@@ -371,6 +371,7 @@ namespace ns3 {
         // fill packet in backwards
         cuda_packet->m_data = d_packetRawBuf + (tid * MAX_PACKET_PER_THREAD + i) * d_pitch;
         cuda_packet->SetSize(m_size);
+        cuda_packet->ready = 1;
         // cuda_packet->Allocate(m_size);
         // cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));
         // if(ret != cudaSuccess){
