@@ -65,8 +65,9 @@ namespace ns3 {
         lookaheadTable.addValue(a->GetId(), b->GetId(), delay.GetNanoSeconds());
         lookaheadTable.addValue(b->GetId(), a->GetId(), delay.GetNanoSeconds());
         printf("Lookahead table: %lu\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
-        deviceA->lookahead = delay.GetNanoSeconds();
-        deviceB->lookahead = delay.GetNanoSeconds();
+        // just use mtu as packet size first to calculate the lookahead
+        deviceA->lookahead = delay.GetNanoSeconds() + (((float)(deviceA->GetMtu() * 8) / deviceA->GetBandwidth()) * 1e9);
+        deviceB->lookahead = delay.GetNanoSeconds() + (((float)(deviceA->GetMtu() * 8) / deviceB->GetBandwidth()) * 1e9);
         
         return container;
     }
