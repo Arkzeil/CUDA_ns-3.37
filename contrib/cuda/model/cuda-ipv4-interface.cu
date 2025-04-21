@@ -1,6 +1,6 @@
 #include "cuda-ipv4-interface.h"
 #include "ns3/log.h"
-#include "cuda-net-device.h"
+#include "ns3/cuda-net-device.h"
 #include "ns3/cuda-packet.h"
 
 namespace ns3{
@@ -94,15 +94,18 @@ namespace ns3{
         //     printf("\n");
         // }
 
-        device->Send(d_packet, destination, 0, cb_data);
+        device->Send(d_packet, device->d_GetBroadcast(), 0, cb_data);
 
         // skip the check of local interface
     }
 
     __device__ void CudaIpv4Interface::OptimizeSend(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data) {
         // Optimize the send operation
+        if(device->d_NeedsArp()){
+            // do ARP
+        }
 
-        device->Send(d_packet, destination, 0, cb_data);
+        device->Send(d_packet, device->d_GetBroadcast(), 0, cb_data);
     }
 
     __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {

@@ -71,12 +71,17 @@ namespace ns3 {
 
   void CudaNetDevice::SetAddress(Address address) {
       m_address = Mac48Address::ConvertFrom(address);
-      m_address.CopyTo(m_macAddress);
+      m_address.CopyTo(m_macAddress.addr);
       printf("Set address at CudaNetDevice\n");
   }
 
   Address CudaNetDevice::GetAddress() const {
       return m_address;
+  }
+
+  MACAddress CudaNetDevice::GetMacAddress() const {
+      // return const_cast<uint8_t*>(m_macAddress); // Ensure m_macAddress is of type uint8_t[]
+      return m_macAddress;
   }
 
   bool CudaNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber) {
@@ -202,6 +207,19 @@ namespace ns3 {
       NodeID = node->GetId();
   }
 
+  __device__ bool CudaNetDevice::d_IsBroadcast() const {
+      return true;
+  }
+
+  __device__ MACAddress CudaNetDevice::d_GetBroadcast() const {
+      uint8_t broadcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+      return MACAddress(broadcastAddr);
+  }
+
+  __device__ bool CudaNetDevice::d_NeedsArp() const {
+      return false;
+  }
+
   __host__ __device__ uint64_t CudaNetDevice::GetBandwidth(){
       return d_bps;
   }
@@ -293,32 +311,33 @@ namespace ns3 {
       // }
   }
 
-  __device__ void CudaNetDevice::Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data) {
-      // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
-      if(m_linkUp == false)
-        printf("Link is down\n");
+  __device__ void CudaNetDevice::Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data) {
+      // // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
+      // if(m_linkUp == false)
+      //   printf("Link is down\n");
 
-      // if(m_txMachineState != READY)
-      //   printf("Transmitter is not ready\n");
-      // else
-      //   printf("Transmitter is ready\n");
+      // // if(m_txMachineState != READY)
+      // //   printf("Transmitter is not ready\n");
+      // // else
+      // //   printf("Transmitter is ready\n");
 
-      if(EnqueuePacket(d_packet) == false)
-        printf("Enqueue failed\n");
-      else{
-        if(m_txMachineState == READY){
-          // cudaFree((void*)data);
-          CudaPacket* packet = DequeuePacket();
-          if(packet == nullptr){
-            printf("dequeued packet is null\n");
-            return;
-          }
+      // if(EnqueuePacket(d_packet) == false)
+      //   printf("Enqueue failed\n");
+      // else{
+      //   if(m_txMachineState == READY){
+      //     // cudaFree((void*)data);
+      //     CudaPacket* packet = DequeuePacket();
+      //     if(packet == nullptr){
+      //       printf("dequeued packet is null\n");
+      //       return;
+      //     }
 
-          // cudaFree(d_packet->m_data);
+      //     // cudaFree(d_packet->m_data);
           
-          TransmitStart(packet, cb_data);
-        }
-      }
+      //     TransmitStart(packet, cb_data);
+      //   }
+      // }
+      SendFrom(d_packet, m_macAddress, destination, protocol);
   }
 
   __device__ void CudaNetDevice::SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol) {
@@ -355,43 +374,9 @@ namespace ns3 {
 
           // cudaFree(d_packet->m_data);
           
-          TransmitStart_test(packet, nullptr);
+          TransmitStart(packet, nullptr);
         }
       }
-  }
-
-  __device__ bool CudaNetDevice::TransmitStart_test(CudaPacket* packet, CUDA_cb_data* cb_data) {
-    // Start transmission
-    // assuming size is in bytes
-    if(m_txMachineState == BUSY) {
-      printf("Transmitter busy, dropping packet\n");
-      return false;
-    }
-    m_txMachineState = BUSY;
-    // assuming m_InterframeGap is 0
-    double TxTime = (double)(packet->GetSize() * 8) / d_bps; // in seconds
-    uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
-
-    if(cb_data != nullptr){
-      cb_data->empty = false;
-      // cudaMalloc((void**)&(cb_data->next), sizeof(CUDA_cb_data));
-      // cb_data->next->init();
-      cb_data->packetSize = 0;
-      cb_data->dst = this;
-      cb_data->delay = TxTime;
-      cb_data->func_id = 1;
-    }
-    // cudaEventSynchronize(m_event);
-    // cudaFree(cb_data->packet->m_data);
-    m_cudaSim->d_insert(this, d_interval, NodeID, 3, lookahead, nullptr);
-    // m_cudaSim->d_insert(this, 1, 0, 2, 0, (void*)packet);
-
-    bool result = m_channel->TransmitStart_test(packet, this, d_interval, cb_data);
-    if(result == false) {
-      printf("Channel TransmitStart failed\n");
-    }
-
-    return result;
   }
 
   __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data) {
@@ -429,23 +414,6 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::D_TransmitComplete(){
-    if(m_txMachineState != BUSY){
-      printf("Device state must be busy\n");
-      return;
-    }
-    m_txMachineState = READY;
-    // printf("Reset device status using GPU\n");
-
-    CudaPacket* packet = DequeuePacket();
-    if(packet == nullptr){
-      // printf("packet queue is empty\n");
-      return;
-    }
-    
-    TransmitStart(packet, nullptr);
-  }
-
-  __device__ void CudaNetDevice::D_TransmitComplete_test(){
     if(m_txMachineState != BUSY){
       printf("Device state must be busy\n");
       return;

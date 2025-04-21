@@ -1,6 +1,6 @@
 #include "cuda-ipv4-l3-protocol.h"
 #include "ns3/node.h"
-#include "cuda-ipv4-interface.h"
+#include "ns3/cuda-ipv4-interface.h"
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-net-device.h"
 #include "ns3/cuda-packet.h"
@@ -99,7 +99,7 @@ namespace ns3 {
         //         return i;
         //     }
         // }
-        for(uint32_t i = 0; i < m_interfaceCount; i++){
+        for(int32_t i = 0; i < m_interfaceCount; i++){
             // printf("index: %d\n", i);
             if(m_ipv4Interface[i]->GetDevice() == device){
                 return i;

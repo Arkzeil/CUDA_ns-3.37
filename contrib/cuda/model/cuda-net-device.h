@@ -21,9 +21,27 @@ class CudaPacket;
 class CudaELPSimulator;
 class CudaIpv4L3Protocol;
 class CudaBridgeNetDevice;
-class MACAddress;
 
-class CudaNetDevice : public PointToPointNetDevice, public Managed{
+class alignas(8) MACAddress: public Managed{
+    public:
+        __host__ __device__ MACAddress() = default;
+        __host__ __device__ MACAddress(uint8_t mac[6]){
+            for (int i = 0; i < 6; ++i) {
+                addr[i] = mac[i];
+            }
+        }
+        uint8_t addr[6];
+        __host__ __device__ bool operator==(const MACAddress& other) const {
+            for (int i = 0; i < 6; ++i) {
+                if (addr[i] != other.addr[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+};
+
+class CudaNetDevice : public PointToPointNetDevice, public virtual Managed{
 public:
     static TypeId GetTypeId(void);
 
@@ -35,6 +53,8 @@ public:
     uint32_t GetIfIndex() const override;
     void SetAddress(Address address) override;
     Address GetAddress() const override;
+    // got 'function returning array is not allowed' when trying to return uint8_t [6]
+    MACAddress GetMacAddress() const;
     virtual bool Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNumber);
     virtual bool SupportsSendFrom(void) const;
     virtual void SetReceiveCallback(NetDevice::ReceiveCallback cb);
@@ -45,6 +65,9 @@ public:
     uint16_t GetMtu() const override;
     Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
+    __device__ bool d_IsBroadcast() const;
+    __device__ MACAddress d_GetBroadcast() const;
+    __device__ bool d_NeedsArp() const;
     void Receive(CudaPacket *packet);
     // __device__ virtual void ReceiveFromDevice();
     __device__ void d_Receive(CudaPacket *packet);
@@ -57,12 +80,10 @@ public:
     // this is just for setting the flag
     __host__ void register_callback(CudaNetDevice* device);
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
-    __device__ void Send(CudaPacket* d_packet, uint32_t destination, uint16_t protocol, CUDA_cb_data* cb_data);
+    __device__ void Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data);
     __device__ void SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol);
     __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
-    __device__ bool TransmitStart_test(CudaPacket* packet, CUDA_cb_data* cb_data);
     __device__ void D_TransmitComplete();
-    __device__ void D_TransmitComplete_test();
     void TransmitComplete(cudaStream_t stream);
     // Helper functions
     __device__ bool EnqueuePacket(CudaPacket* packet);
@@ -108,7 +129,7 @@ private:
 
     // CUDA-related members
     CudaELPSimulator* m_cudaSim; //!< CUDA simulator
-    uint8_t m_macAddress[6];                            //!< MAC address of this NetDevice
+    MACAddress m_macAddress;                            //!< MAC address of this NetDevice
     CudaIpv4L3Protocol* m_ipv4; //!< Pointer to the IPv4 L3 protocol, used for packet receive as we currently do not adopting callback mechanism
     cudaStream_t m_stream;
     cudaEvent_t m_event;        // !< CUDA event to synchronize packet enqueueing

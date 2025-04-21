@@ -161,40 +161,6 @@ namespace ns3 {
         // cudaMemcpy(d_packet, packet, size, cudaMemcpyDeviceToDevice);
         // m_link[1].m_dst->Receive(d_packet, size, 0, m_stream);
     }
-    __device__ bool CudaP2PChannel::TransmitStart_test(CudaPacket* d_packet, CudaNetDevice* src, uint64_t txTime, CUDA_cb_data* cb_data) {
-        if(m_link[0].m_state == INITIALIZING || m_link[1].m_state == INITIALIZING) {
-            printf("Channel not initialized\n");
-            return false;
-        }
-        uint32_t wire = src == m_link[0].m_src ? 0 : 1;
-
-        if(cb_data != nullptr){
-            if(cb_data->next == nullptr) {
-                printf("Next is null\n");
-            }
-            else{
-                cb_data->next->empty = false;
-                cb_data->packetSize = d_packet->GetSize();
-                cb_data->next->dst = m_link[wire].m_dst;
-                cb_data->next->delay = txTime + d_delay;
-                cb_data->next->func_id = 0;
-                cb_data->next->packetBuffer[0] = d_packet->m_data[0];
-                cb_data->next->packet = d_packet;
-            }
-        }
-
-        uint32_t context;
-
-        if(!wire)
-            context = dst_NodeID;
-        else
-            context = NodeID;
-
-        m_cudaSim->d_insert(m_link[wire].m_dst, txTime + d_delay, context, 2, UINT64_MAX, (void*)d_packet);
-
-
-        return true;
-    }
 
     __device__ void ReceivePacket(const uint8_t* packet, uint32_t size){
         // Receive packet from another device

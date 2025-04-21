@@ -14,6 +14,7 @@
 #include "ns3/cuda-ipv4-static-routing.h"
 #include "ns3/cuda-elp-simulator.h"
 #include "ns3/cuda-bridge-helper.h"
+#include "ns3/cuda-bridge-net-device.h"
 
 #include <ctime>
 
@@ -77,7 +78,11 @@ int main(int argc, char* argv[]) {
     switchDevices.Add(link1.Get(1));
     switchDevices.Add(link2.Get(1));
 
-    bridge.Install(switchNodes.Get(i), switchDevices);
+    NetDeviceContainer bridge_dev = bridge.Install(switchNodes.Get(i), switchDevices);
+
+    // manually make bridge learn
+    // ((CudaBridgeNetDevice*)GetPointer(bridge_dev.Get(0)))->Learn((CudaNetDevice*)GetPointer(link1.Get(1))->GetMacAddress());
+    // ((CudaBridgeNetDevice*)GetPointer(bridge_dev.Get(0)))->Learn((CudaNetDevice*)GetPointer(link2.Get(1))->GetMacAddress());
     
     // Assign IP addresses
     CudaIpv4AddressHelper ipv4;

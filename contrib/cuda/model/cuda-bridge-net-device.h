@@ -22,26 +22,13 @@ namespace ns3{
     class CudaIpv4L3Protocol;
     class CudaNetDevice;
 
-    class alignas(8) MACAddress{
-        public:
-            uint8_t addr[6];
-            __host__ __device__ bool operator==(const MACAddress& other) const {
-                for (int i = 0; i < 6; ++i) {
-                    if (addr[i] != other.addr[i]) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-    };
+    // struct EthernetHeader {
+    //     uint8_t dst[6];    // Destination MAC
+    //     uint8_t src[6];    // Source MAC
+    //     uint16_t ethType;  // EtherType (e.g., 0x0800 for IPv4)
+    // };
 
-    struct EthernetHeader {
-        uint8_t dst[6];    // Destination MAC
-        uint8_t src[6];    // Source MAC
-        uint16_t ethType;  // EtherType (e.g., 0x0800 for IPv4)
-    };
-
-    class CudaBridgeNetDevice: public CudaNetDevice, public Managed{
+    class CudaBridgeNetDevice: public CudaNetDevice, public virtual Managed{
         public:
             static TypeId GetTypeId(void);
 
