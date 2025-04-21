@@ -37,10 +37,6 @@
 
 #include "ns3/trace-helper.h"
 
-/*---------------Start of CUDA code-------------------*/
-#include "ns3/cuda_udp_wrapper.h"
-/*---------------End of CUDA code---------------------*/
-
 namespace ns3
 {
 
@@ -307,51 +303,7 @@ PointToPointHelper::Install(Ptr<Node> a, Ptr<Node> b)
     devB->Attach(channel);
     container.Add(devA);
     container.Add(devB);
-    /*---------------Start of CUDA code-------------------*/
-    cuda::GpuNetDevice gpuDevA;
-    cuda::GpuNetDevice gpuDevB; 
-    QueueSizeValue queueSize;
-    UintegerValue mtu;
-    DataRateValue dataRate;
-    Address macAddr;
-    Mac48Address mac48Addr;
-
-    // get the queue size (assuming the unit is in packets)
-    queueA->GetAttribute ("MaxSize", queueSize);
     
-    // get the MTU
-    devA->GetAttribute ("Mtu", mtu);
-    // get the bandwidth
-    devA->GetAttribute ("DataRate", dataRate);
-    // get the MAC address
-    macAddr = devA->GetAddress();
-    mac48Addr = Mac48Address::ConvertFrom (macAddr);
-
-    gpuDevA.queueCapacity = queueSize.Get().GetValue();
-    gpuDevA.mtu = mtu.Get();
-    gpuDevA.bandwidth = dataRate.Get().GetBitRate();
-    mac48Addr.CopyTo(gpuDevA.macAddress);
-    gpuDevA.uid = cuda::device_Uid++;
-    
-    // get the queue size (assuming the unit is in packets)
-    queueB->GetAttribute ("MaxSize", queueSize);
-    // get the MTU
-    devB->GetAttribute ("Mtu", mtu);
-    // get the bandwidth
-    devB->GetAttribute ("DataRate", dataRate);
-    // get the MAC address
-    macAddr = devB->GetAddress();
-    mac48Addr = Mac48Address::ConvertFrom (macAddr);
-
-    gpuDevB.queueCapacity = queueSize.Get().GetValue();
-    gpuDevB.mtu = mtu.Get();
-    gpuDevB.bandwidth = dataRate.Get().GetBitRate();
-    mac48Addr.CopyTo(gpuDevB.macAddress);
-    gpuDevB.uid = cuda::device_Uid++;
-
-    // d_netDevice = nullptr;           // in case it's not set
-    SaveDeviceInfoToCuda(gpuDevA);
-    /*---------------End of CUDA code---------------------*/
     return container;
 }
 

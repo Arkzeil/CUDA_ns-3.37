@@ -31,9 +31,6 @@
 #include "ns3/socket-factory.h"
 #include "ns3/socket.h"
 #include "ns3/uinteger.h"
-/*---------------Start of CUDA code-------------------*/
-#include "ns3/cuda_udp_wrapper.h"
-/*---------------End of CUDA code---------------------*/
 
 #include <cstdio>
 #include <cstdlib>
@@ -231,60 +228,6 @@ UdpClient::Send()
         m_sendEvent = Simulator::Schedule(m_interval, &UdpClient::Send, this);
     }
 }
-/*---------------Start of CUDA code-------------------*/
-void OffloadToCuda(uint32_t m_sent, size_t payloadSize, size_t numPackets) {
-  // TBD: access d_socketInfo->packetSize will lead to segmenation fault
-  const size_t packetSize = IP_HEADER_SIZE + UDP_HEADER_SIZE + payloadSize;
-  uint8_t *d_packets;
-
-  // printf("Offloading %zu packets to CUDA\n", numPackets);
-
-  cudaMalloc(&d_packets, packetSize * numPackets);
-
-  // dim3 blockSize(256);
-  // dim3 gridSize((numPackets + blockSize.x - 1) / blockSize.x);
-
-  cuda::GenerateIpUdpPacketsinCUDA(cuda::d_socketInfo, d_packets, payloadSize, numPackets);
-
-  cudaFree(d_packets);
-}
-
-void
-UdpClient::cudaSend(void){
-  NS_LOG_FUNCTION (this);
-  NS_ASSERT (m_sendEvent.IsExpired ());
-
-  if(cuda::d_socketInfo == NULL){
-      // NS_LOG_ERROR("Socket info not set!");
-      return;
-  }
-
-  std::stringstream peerAddressStringStream;
-  if (Ipv4Address::IsMatchingType (m_peerAddress))
-    {
-      peerAddressStringStream << Ipv4Address::ConvertFrom (m_peerAddress);
-    }
-  else if (Ipv6Address::IsMatchingType (m_peerAddress))
-    {
-      peerAddressStringStream << Ipv6Address::ConvertFrom (m_peerAddress);
-    }
-  ++m_sent;
-  NS_LOG_INFO ("TraceDelay TX " << m_size << " bytes to "
-                                << peerAddressStringStream.str () << " Uid: "
-                                << m_sent << " Time: "
-                                << (Simulator::Now ()).GetSeconds ());
-
-  // NS_LOG_INFO ("Error while sending " << m_size << " bytes to "
-                                      // << peerAddressStringStream.str ());
-  // Create a packet in the GPU
-  OffloadToCuda(m_sent, m_size-(8+4), 1);
-
-  if (m_sent < m_count)
-  {
-    m_sendEvent = Simulator::Schedule (m_interval, &UdpClient::cudaSend, this);
-  }
-}
-/*---------------End of CUDA code---------------------*/
 
 uint64_t
 UdpClient::GetTotalTx() const

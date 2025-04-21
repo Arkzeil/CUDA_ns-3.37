@@ -23,9 +23,6 @@
 #include "ns3/udp-server.h"
 #include "ns3/udp-trace-client.h"
 #include "ns3/uinteger.h"
-/*---------------Start of CUDA code-------------------*/
-#include "ns3/cuda_udp_wrapper.h"
-/*---------------End of CUDA code---------------------*/
 
 namespace ns3
 {
@@ -102,31 +99,6 @@ UdpClientHelper::Install(NodeContainer c)
         Ptr<UdpClient> client = m_factory.Create<UdpClient>();
         node->AddApplication(client);
         apps.Add(client);
-        /*---------------Start of CUDA code-------------------*/
-        // Transfer socket info to GPU
-        cuda::GpuSocketInfo socketInfo;
-        UintegerValue maxPackets;
-        TimeValue interval;
-        AddressValue remoteAddress;
-        UintegerValue remotePort;
-        UintegerValue packetSize;
-        client->GetAttribute("MaxPackets", maxPackets);
-        client->GetAttribute("Interval", interval);
-        client->GetAttribute("RemoteAddress", remoteAddress);
-        client->GetAttribute("RemotePort", remotePort);
-        client->GetAttribute("PacketSize", packetSize);
-
-        socketInfo.srcPort = 0;  // Assume source port is dynamically assigned
-        socketInfo.dstPort = remotePort.Get();
-        socketInfo.dstIp = Ipv4Address::ConvertFrom(remoteAddress.Get()).Get();
-        socketInfo.maxPackets = maxPackets.Get();
-        // socketInfo.interval = interval.Get();
-        socketInfo.packetSize = packetSize.Get();
-
-        // Transfer to CUDA once
-        cuda::d_socketInfo = nullptr;           // in case it's not set
-        SaveSocketInfoToCuda(socketInfo);
-        /*---------------End of CUDA code---------------------*/
     }
     return apps;
 }
