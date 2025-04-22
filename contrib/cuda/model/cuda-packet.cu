@@ -122,7 +122,7 @@ namespace ns3{
         
         m_size += headerSize;
     }
-
+    // this should be deprecated as we're appending packet in backwards
     __device__ void CudaPacket::AddTrailer(void* trailer, uint32_t trailerSize) {
         if (m_size + trailerSize > m_capacity) {
             printf("Error: Adding trailer exceeds packet capacity\n");

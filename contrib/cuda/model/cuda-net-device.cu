@@ -358,6 +358,7 @@ namespace ns3 {
 
       #ifdef CHECKSUM_CHECK
         // fcs CRC32 implementation
+        // AddTrailer is now deprecated
         d_packet->AddTrailer(&fcs, sizeof(fcs));
       #endif
 

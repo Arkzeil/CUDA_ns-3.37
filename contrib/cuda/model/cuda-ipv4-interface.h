@@ -11,6 +11,8 @@
 #include "ns3/traffic-control-layer.h"
 #include "helper.h"
 
+#include "ns3/cuda-arp-cache.h"
+
 namespace ns3{
     class CudaNetDevice;
     class CUDA_cb_data;
@@ -33,6 +35,7 @@ namespace ns3{
 
             void SetAddress (Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress (void) const;
+            __host__ __device__ uint32_t d_GetAddress (void) const;
             void SetMetric (uint16_t metric);
 
             __device__ void test(CudaNetDevice* device, const uint8_t *data, CUDA_cb_data* cb_data);
@@ -48,8 +51,11 @@ namespace ns3{
             Ptr<Node> m_node;
             Ptr<TrafficControlLayer> m_tc;
             Ipv4InterfaceAddress m_address;
+            uint32_t rawAddress;
             bool m_isUp;
             uint16_t m_metric;
+            // simplified version of the ARP cache
+            CudaArpCache m_arp;
     };
 }
 

@@ -376,6 +376,7 @@ build_cuda_lib(
         model/cuda-elp-simulator.cu
         model/cuda-ipv4-static-routing.cu
         model/cuda-bridge-net-device.cu
+        model/cuda-arp-cache.cu
         helper/cuda-helper.cu
         helper/cuda-p2p-helper.cu
         helper/cuda-ipv4-address-helper.cu
@@ -401,6 +402,7 @@ build_cuda_lib(
         model/cuda-elp-simulator.h
         model/cuda-ipv4-static-routing.h
         model/cuda-bridge-net-device.h
+        model/cuda-arp-cache.h
         helper/cuda-helper.h
         helper/cuda-p2p-helper.h
         helper/cuda-ipv4-address-helper.h

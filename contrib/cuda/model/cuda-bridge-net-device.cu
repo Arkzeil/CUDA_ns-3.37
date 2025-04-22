@@ -150,6 +150,7 @@ namespace ns3 {
             }
             // If the MAC address is not in the table, add it
             m_learningTable[tableSize].mac = source;
+            m_learningTable[tableSize++].associatedPort = port;
         }
     }
 

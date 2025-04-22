@@ -31,6 +31,7 @@ class alignas(8) MACAddress: public Managed{
             }
         }
         uint8_t addr[6];
+        
         __host__ __device__ bool operator==(const MACAddress& other) const {
             for (int i = 0; i < 6; ++i) {
                 if (addr[i] != other.addr[i]) {
@@ -38,6 +39,14 @@ class alignas(8) MACAddress: public Managed{
                 }
             }
             return true;
+        }
+        __host__ __device__ MACAddress& operator=(const MACAddress& other) {
+            if (this != &other) {
+                for (int i = 0; i < 6; ++i) {
+                    addr[i] = other.addr[i];
+                }
+            }
+            return *this;
         }
 };
 

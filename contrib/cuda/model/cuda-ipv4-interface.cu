@@ -19,6 +19,7 @@ namespace ns3{
     CudaIpv4Interface::CudaIpv4Interface() : m_isUp(false) {
         // Constructor
         printf("CudaIpv4Interface initialized\n");
+
     }
 
     CudaIpv4Interface::~CudaIpv4Interface() {
@@ -43,6 +44,7 @@ namespace ns3{
     void CudaIpv4Interface::SetAddress(Ipv4InterfaceAddress address) {
         // Set the address
         m_address = address;
+        rawAddress = address.GetLocal().Get();
     }
 
     __host__ __device__ CudaNetDevice* CudaIpv4Interface::GetDevice(void) const {
@@ -63,6 +65,11 @@ namespace ns3{
     Ipv4InterfaceAddress CudaIpv4Interface::GetAddress(void) const {
         // Get the address
         return m_address;
+    }
+
+    __host__ __device__ uint32_t CudaIpv4Interface::d_GetAddress(void) const {
+        // Get the address
+        return rawAddress;
     }
 
     void CudaIpv4Interface::SetMetric(uint16_t metric) {
@@ -101,11 +108,18 @@ namespace ns3{
 
     __device__ void CudaIpv4Interface::OptimizeSend(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data) {
         // Optimize the send operation
+        MACAddress mac = device->d_GetBroadcast();
+
         if(device->d_NeedsArp()){
             // do ARP
+            if(!m_arp.Lookup(destination, mac)){
+                // printf("CudaIpv4Interface OptimizeSend, ARP lookup failed\n");
+                // do ARP
+                return;
+            }
         }
 
-        device->Send(d_packet, device->d_GetBroadcast(), 0, cb_data);
+        device->Send(d_packet, mac, 0, cb_data);
     }
 
     __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {

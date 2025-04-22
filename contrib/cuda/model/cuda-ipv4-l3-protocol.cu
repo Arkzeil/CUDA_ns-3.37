@@ -402,7 +402,7 @@ namespace ns3 {
 
             // Skip the checking of device MTU
 
-            outInterface->Send(device, d_packet, 0, ipHeader, cb_data);
+            outInterface->Send(device, d_packet, destination, ipHeader, cb_data);
         }
     }
 
@@ -464,7 +464,7 @@ namespace ns3 {
 
             // Skip the checking of device MTU
 
-            outInterface->OptimizeSend(device, d_packet, 0, cb_data);
+            outInterface->OptimizeSend(device, d_packet, destination, cb_data);
         }
     }
 
