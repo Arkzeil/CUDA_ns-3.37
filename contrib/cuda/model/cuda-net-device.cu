@@ -36,7 +36,7 @@ namespace ns3 {
   }
 
   CudaNetDevice::CudaNetDevice(): m_queueSize(2048), m_rxCallback(nullptr), m_txMachineState(READY), 
-  m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr), m_rxCB_enable(false) {
+  m_channel(nullptr), m_linkUp(false), m_tInterframeGap(0), m_node(nullptr), m_rxCB_enable(false), m_mtu(DEFAULT_MTU) {
       // Allocate GPU memory for packet buffers
       // m_queueSize = 1024;
       // cudaStreamCreate(&m_stream);

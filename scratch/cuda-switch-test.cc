@@ -21,6 +21,21 @@
 
 using namespace ns3;
 
+// Network topology
+//
+//        n0     
+//        |      
+//       -----------
+//       | Switch0 |
+//       -----------
+//        |
+//       -----------
+//       | Switch1 |
+//       -----------
+//        |     
+//        n1     
+//
+
 int main(int argc, char* argv[]) {
   LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
 //   LogComponentEnable("Socket", LOG_LEVEL_INFO);
@@ -40,7 +55,7 @@ int main(int argc, char* argv[]) {
   NodeContainer nodes;
   nodes.Create(2 * numPairs);
   NodeContainer switchNodes;
-  switchNodes.Create(numPairs);
+  switchNodes.Create(2 * numPairs);
 
   // Install the Internet stack
   Cuda_InternetStackHelper internet;
@@ -67,22 +82,28 @@ int main(int argc, char* argv[]) {
     cudaP2P.SetBandwidth(DataRate("10Mbps"));
     // NetDeviceContainer cudaDevices = cudaP2P.Install(nodes.Get(2 * i), nodes.Get(2 * i + 1));
     // Connect client to switch
-    NetDeviceContainer link1 = cudaP2P.Install(nodes.Get(2 * i), switchNodes.Get(i));
-    NetDeviceContainer link2 = cudaP2P.Install(nodes.Get(2 * i + 1), switchNodes.Get(i));
+    NetDeviceContainer link1 = cudaP2P.Install(nodes.Get(2 * i), switchNodes.Get(2 * i));
+    NetDeviceContainer link2 = cudaP2P.Install(nodes.Get(2 * i + 1), switchNodes.Get(2 * i + 1));
+    NetDeviceContainer link3 = cudaP2P.Install(switchNodes.Get(2 * i), switchNodes.Get(2 * i + 1));
 
     // Save the endpoint devices for IP assignment
     NetDeviceContainer endpoints;
     // Save the corrsponding switch device
-    NetDeviceContainer switchDevices;
+    NetDeviceContainer switch0Devices;
+    NetDeviceContainer switch1Devices;
     endpoints.Add(link1.Get(0));
     endpoints.Add(link2.Get(0));
-    switchDevices.Add(link1.Get(1));
-    switchDevices.Add(link2.Get(1));
+    switch0Devices.Add(link1.Get(1));
+    switch0Devices.Add(link3.Get(0));
+    switch1Devices.Add(link2.Get(1));
+    switch1Devices.Add(link3.Get(1));
 
-    NetDeviceContainer bridge_dev = bridge.Install(switchNodes.Get(i), switchDevices);
+    NetDeviceContainer bridge_dev0 = bridge.Install(switchNodes.Get(2 * i), switch0Devices);
+    NetDeviceContainer bridge_dev1 = bridge.Install(switchNodes.Get(2 * i + 1), switch1Devices);
 
     // manually make bridge learn
-    ((CudaBridgeNetDevice*)GetPointer(bridge_dev.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(link2.Get(1))));
+    ((CudaBridgeNetDevice*)GetPointer(bridge_dev0.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(link3.Get(0))));
+    ((CudaBridgeNetDevice*)GetPointer(bridge_dev1.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(link2.Get(1))));
     
     // Assign IP addresses
     CudaIpv4AddressHelper ipv4;

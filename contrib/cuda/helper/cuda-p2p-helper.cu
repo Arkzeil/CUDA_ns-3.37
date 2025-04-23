@@ -68,7 +68,7 @@ namespace ns3 {
         // just use mtu as packet size first to calculate the lookahead
         deviceA->lookahead = delay.GetNanoSeconds() + (((float)(deviceA->GetMtu() * 8) / deviceA->GetBandwidth()) * 1e9);
         deviceB->lookahead = delay.GetNanoSeconds() + (((float)(deviceA->GetMtu() * 8) / deviceB->GetBandwidth()) * 1e9);
-        
+        // printf("MTU: %u\n", deviceA->GetMtu());
         return container;
     }
 }

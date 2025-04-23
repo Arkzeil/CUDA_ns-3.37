@@ -120,7 +120,7 @@ namespace ns3{
             dst[i] = src[i];
         }
         
-        m_size += headerSize;
+        // m_size += headerSize;
     }
     // this should be deprecated as we're appending packet in backwards
     __device__ void CudaPacket::AddTrailer(void* trailer, uint32_t trailerSize) {
@@ -130,7 +130,7 @@ namespace ns3{
         }
         memcpy(m_data + m_size, trailer, trailerSize); // Append trailer
         // cudaMemcpyAsync(m_data + m_size, trailer, trailerSize, cudaMemcpyDeviceToDevice); // Append trailer
-        m_size += trailerSize;
+        // m_size += trailerSize;
     }
 
     __device__ void CudaPacket::ExtractPayload(uint8_t* dstBuffer, uint32_t off, uint32_t length) const {
@@ -153,7 +153,7 @@ namespace ns3{
         
         // just shift the offset, no need to shift the data
         offset += headerSize;
-        m_size -= headerSize;
+        // m_size -= headerSize;
     }
 
     __host__ __device__ void CudaPacket::SetSize(uint32_t size) {

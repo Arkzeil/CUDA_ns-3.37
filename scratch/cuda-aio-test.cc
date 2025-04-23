@@ -18,6 +18,17 @@
 
 using namespace ns3;
 
+// Network topology
+//
+//        n0    
+//        |      
+//        |
+//        |  x numPairs
+//        |
+//        |      
+//        n1     
+//
+
 int main(int argc, char* argv[]) {
   LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
 //   LogComponentEnable("Socket", LOG_LEVEL_INFO);
