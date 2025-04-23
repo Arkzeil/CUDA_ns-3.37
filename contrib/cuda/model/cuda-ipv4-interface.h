@@ -36,6 +36,7 @@ namespace ns3{
             void SetAddress (Ipv4InterfaceAddress address);
             Ipv4InterfaceAddress GetAddress (void) const;
             __host__ __device__ uint32_t d_GetAddress (void) const;
+            __host__ __device__ CudaArpCache *GetArpCache (void);
             void SetMetric (uint16_t metric);
 
             __device__ void test(CudaNetDevice* device, const uint8_t *data, CUDA_cb_data* cb_data);

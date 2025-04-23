@@ -72,6 +72,11 @@ namespace ns3{
         return rawAddress;
     }
 
+    __host__ __device__ CudaArpCache* CudaIpv4Interface::GetArpCache(void) {
+        // Get the ARP cache
+        return &m_arp;
+    }
+
     void CudaIpv4Interface::SetMetric(uint16_t metric) {
         // Set the metric
         m_metric = metric;
@@ -113,7 +118,7 @@ namespace ns3{
         if(device->d_NeedsArp()){
             // do ARP
             if(!m_arp.Lookup(destination, mac)){
-                // printf("CudaIpv4Interface OptimizeSend, ARP lookup failed\n");
+                printf("CudaIpv4Interface OptimizeSend, ARP lookup failed\n");
                 // do ARP
                 return;
             }

@@ -53,7 +53,7 @@ namespace ns3{
             CudaNetDevice* m_device; //!< Pointer to the associated NetDevice
             CudaIpv4Interface* m_interface; //!< Pointer to the associated Ipv4Interface
             Entry* m_entries; //!< Pointer to the array of ARP cache entries
-            int m_entryCount; //!< Number of entries in the cache
+            uint32_t m_entryCount; //!< Number of entries in the cache
     };
 }
 #endif

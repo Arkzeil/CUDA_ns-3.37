@@ -217,7 +217,7 @@ namespace ns3 {
   }
 
   __device__ bool CudaNetDevice::d_NeedsArp() const {
-      return false;
+      return true;
   }
 
   __host__ __device__ uint64_t CudaNetDevice::GetBandwidth(){

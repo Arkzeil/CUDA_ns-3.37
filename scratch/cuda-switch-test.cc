@@ -8,6 +8,7 @@
 #include "ns3/cuda-helper.h"
 #include "ns3/cuda-ipv4-l3-protocol.h"
 #include "ns3/cuda-udp-l4-protocol.h"
+#include "ns3/cuda-ipv4-interface.h"
 #include "ns3/cuda-internet-stack-helper.h"
 #include "ns3/cuda-ipv4-address-helper.h"
 #include "ns3/cuda-udp-server.h"
@@ -93,11 +94,15 @@ int main(int argc, char* argv[]) {
     ipv4.SetBase(subnet.str().c_str(), "255.255.255.0");
 
     Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(endpoints);
+    // manually set up the ARP table
+    DynamicCast<CudaIpv4L3Protocol>(cudaInterfaces.Get(0).first)->GetInterface(cudaInterfaces.Get(0).second)->GetArpCache()->AddEntry(
+        cudaInterfaces.GetAddress(1).Get(), 
+        ((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress());
 
     Ptr<CudaUdpClient> app = CreateObject<CudaUdpClient>();
     Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
-
-    nodes.Get(2 * i)->GetObject<CudaIpv4L3Protocol>()->m_routing->AddRoute(cudaInterfaces.GetAddress(1).Get(), 0xffffff00, cudaInterfaces.Get(1).second);
+    // manually set up the routing table
+    nodes.Get(2 * i)->GetObject<CudaIpv4L3Protocol>()->m_routing->AddRoute(cudaInterfaces.GetAddress(1).Get(), 0xffffff00, cudaInterfaces.Get(0).second);
 
     app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
     app->SetPacketSize(256);
