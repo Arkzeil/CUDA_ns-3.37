@@ -72,6 +72,7 @@ public:
     void SetDataRate(DataRate bps);
     bool SetMtu(const uint16_t mtu) override;
     uint16_t GetMtu() const override;
+    __device__ uint16_t d_GetMtu() const;
     Ptr<Node> GetNode() const override;
     void SetNode(Ptr<Node> node);
     __device__ bool d_IsBroadcast() const;
@@ -88,6 +89,7 @@ public:
     // we have not implement callback mechanism for now, so the callback is actually pre-defined fixed function, 
     // this is just for setting the flag
     __host__ void register_callback(CudaNetDevice* device);
+    __device__ bool isPortInBridge();
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
     __device__ void Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data);
     __device__ void SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol);

@@ -197,6 +197,10 @@ namespace ns3 {
       return m_mtu;
   }
 
+  __device__ uint16_t CudaNetDevice::d_GetMtu() const{
+      return m_mtu;
+  }
+
   Ptr<Node> CudaNetDevice::GetNode() const {
       return m_node;
   }
@@ -288,6 +292,11 @@ namespace ns3 {
       // m_rxCallback = device->m_rxCallback;
       m_rxCB_enable = true;
       bridge = device;
+  }
+
+  __device__ bool CudaNetDevice::isPortInBridge() {
+      // Check if the device is in a bridge
+      return m_rxCB_enable;
   }
 
   __device__ void CudaNetDevice::test(const uint8_t *data, CUDA_cb_data* cb_data) {

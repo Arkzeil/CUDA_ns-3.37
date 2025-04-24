@@ -152,7 +152,11 @@ namespace ns3 {
         // printf("delay: %f\n", txTime + d_delay);
         // cudaSim_d->deviceMethod(this, 0);
         // d_packet->ready = 1;
-        m_cudaSim->d_insert(m_link[wire].m_dst, txTime + d_delay, context, 2, UINT64_MAX, (void*)d_packet);
+        uint64_t lookahead = UINT64_MAX;
+        if(m_link[wire].m_dst->isPortInBridge()){
+            lookahead = (((float)(m_link[wire].m_dst->d_GetMtu() * 8) / m_link[wire].m_dst->GetBandwidth()) * 1e9 + d_delay);
+        }
+        m_cudaSim->d_insert(m_link[wire].m_dst, txTime + d_delay, context, 2, lookahead, (void*)d_packet);
         // __threadfence();
 
         return true;
