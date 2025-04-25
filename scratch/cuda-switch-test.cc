@@ -50,16 +50,17 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numPairs = 100; // Default number of client-server pairs
+  uint32_t numGroups = 20; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
+  uint32_t numPairs = 5; // Default number of client-server pair group
   uint32_t numSwitches = 2; // Number of switches between each pairs
 
   NodeContainer clients;
   NodeContainer servers;
-  clients.Create(numPairs);
-  servers.Create(numPairs);
+  clients.Create(numGroups * numPairs);
+  servers.Create(numGroups * numPairs);
   // nodes.Create(2 * numPairs);
   NodeContainer switchNodes;
-  switchNodes.Create(numSwitches * numPairs);
+  switchNodes.Create(numSwitches * numGroups);
 
   // Install the Internet stack
   Cuda_InternetStackHelper internet;
@@ -80,83 +81,87 @@ int main(int argc, char* argv[]) {
 
   uint32_t j = 1;
 
-  for (uint32_t i = 0; i < numPairs; i++){
+  for (uint32_t i = 0; i < numGroups; i++){
     cudaP2P.SetDelay(MilliSeconds(2.0));
     cudaP2P.SetBandwidth(DataRate("10Mbps"));
     // NetDeviceContainer cudaDevices = cudaP2P.Install(nodes.Get(2 * i), nodes.Get(2 * i + 1));
-    
-    std::vector<NetDeviceContainer> switchLinks(numSwitches + 1); // Link between each segment
-    // Connect client to switch
-    switchLinks[0] = cudaP2P.Install(clients.Get(i), switchNodes.Get(numSwitches * i));
-    // Connect server to switch
-    switchLinks[numSwitches] = cudaP2P.Install(switchNodes.Get(numSwitches * (i + 1) - 1), servers.Get(i));
-    // Connect switch to switch
-    for(uint32_t k = 1; k < numSwitches; k++)
-      switchLinks[k] = cudaP2P.Install(switchNodes.Get(numSwitches * i + k - 1), switchNodes.Get(numSwitches * i + k));
-    // NetDeviceContainer link3 = cudaP2P.Install(switchNodes.Get(2 * i), switchNodes.Get(2 * i + 1));
+    for(uint32_t pair = 0; pair < numPairs; pair++){
+      uint32_t pairIndex = i * numPairs + pair;
+      std::vector<NetDeviceContainer> switchLinks(numSwitches + 1); // Link between each segment
+      // Connect client to switch
+      switchLinks[0] = cudaP2P.Install(clients.Get(pairIndex), switchNodes.Get(numSwitches * i));
+      // Connect server to switch
+      switchLinks[numSwitches] = cudaP2P.Install(switchNodes.Get(numSwitches * (i + 1) - 1), servers.Get(pairIndex));
+      // Connect switch to switch
+      for(uint32_t k = 1; k < numSwitches; k++)
+        switchLinks[k] = cudaP2P.Install(switchNodes.Get(numSwitches * i + k - 1), switchNodes.Get(numSwitches * i + k));
+      // NetDeviceContainer link3 = cudaP2P.Install(switchNodes.Get(2 * i), switchNodes.Get(2 * i + 1));
 
-    // Save the endpoint devices for IP assignment
-    NetDeviceContainer endpoints;
-    // Save the corrsponding switch device
-    // NetDeviceContainer switch0Devices;
-    // NetDeviceContainer switch1Devices;
-    endpoints.Add(switchLinks[0].Get(0));
-    endpoints.Add(switchLinks[numSwitches].Get(1));
-    // switch0Devices.Add(link1.Get(1));
-    // switch0Devices.Add(switchLinks[0].Get(0));
-    // switch1Devices.Add(link2.Get(1));
-    // switch1Devices.Add(switchLinks[0].Get(1));
+      // Save the endpoint devices for IP assignment
+      NetDeviceContainer endpoints;
+      // Save the corrsponding switch device
+      // NetDeviceContainer switch0Devices;
+      // NetDeviceContainer switch1Devices;
+      endpoints.Add(switchLinks[0].Get(0));
+      endpoints.Add(switchLinks[numSwitches].Get(1));
+      // switch0Devices.Add(link1.Get(1));
+      // switch0Devices.Add(switchLinks[0].Get(0));
+      // switch1Devices.Add(link2.Get(1));
+      // switch1Devices.Add(switchLinks[0].Get(1));
 
-    // NetDeviceContainer bridge_dev0 = bridge.Install(switchNodes.Get(2 * i), switch0Devices);
-    // NetDeviceContainer bridge_dev1 = bridge.Install(switchNodes.Get(2 * i + 1), switch1Devices);
+      // NetDeviceContainer bridge_dev0 = bridge.Install(switchNodes.Get(2 * i), switch0Devices);
+      // NetDeviceContainer bridge_dev1 = bridge.Install(switchNodes.Get(2 * i + 1), switch1Devices);
 
 
-    for(uint32_t k = 0; k < numSwitches; k++){
-      NetDeviceContainer switchPorts; // Collect all port netdevices
-      switchPorts.Add(switchLinks[k].Get(1));
-      switchPorts.Add(switchLinks[k + 1].Get(0));
-      NetDeviceContainer bridge_dev = bridge.Install(switchNodes.Get(numSwitches * i + k), switchPorts);
-      // manually make bridge learn the destination MAC address
-      ((CudaBridgeNetDevice*)GetPointer(bridge_dev.Get(0)))->Learn(((CudaNetDevice*)GetPointer(switchLinks[numSwitches].Get(1)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(switchLinks[k + 1].Get(0))));
+      for(uint32_t k = 0; k < numSwitches; k++){
+        NetDeviceContainer switchPorts; // Collect all port netdevices
+        switchPorts.Add(switchLinks[k].Get(1));
+        switchPorts.Add(switchLinks[k + 1].Get(0));
+        NetDeviceContainer bridge_dev = bridge.Install(switchNodes.Get(numSwitches * i + k), switchPorts);
+        // manually make bridge learn the destination MAC address
+        ((CudaBridgeNetDevice*)GetPointer(bridge_dev.Get(0)))->Learn(((CudaNetDevice*)GetPointer(switchLinks[numSwitches].Get(1)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(switchLinks[k + 1].Get(0))));
+      }
+      // manually make bridge learn
+      // ((CudaBridgeNetDevice*)GetPointer(bridge_dev0.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(switchLinks[0].Get(0))));
+      // ((CudaBridgeNetDevice*)GetPointer(bridge_dev1.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(link2.Get(1))));
+      
+      // Assign IP addresses
+      CudaIpv4AddressHelper ipv4;
+      std::ostringstream subnet;
+      // if(i / 256 >= j)
+      //   j++;
+      uint32_t subnetIndex = i * numPairs + pair;
+      subnet << "10." << (subnetIndex / 256 + 1) << "." << (subnetIndex % 256) << ".0";
+      // subnet << "10.1." << i + 1 << ".0";
+      ipv4.SetBase(subnet.str().c_str(), "255.255.255.0");
+
+      Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(endpoints);
+      // manually set up the ARP table
+      DynamicCast<CudaIpv4L3Protocol>(cudaInterfaces.Get(0).first)->GetInterface(cudaInterfaces.Get(0).second)->GetArpCache()->AddEntry(
+          cudaInterfaces.GetAddress(1).Get(), 
+          ((CudaNetDevice*)GetPointer(switchLinks[numSwitches].Get(1)))->GetMacAddress());
+
+      Ptr<CudaUdpClient> app = CreateObject<CudaUdpClient>();
+      Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
+      // manually set up the routing table
+      clients.Get(pairIndex)->GetObject<CudaIpv4L3Protocol>()->m_routing->AddRoute(cudaInterfaces.GetAddress(1).Get(), 0xffffff00, cudaInterfaces.Get(0).second);
+
+      app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
+      app->SetPacketSize(256);
+      app->SetSendInterval(Seconds(1.0));
+      clients.Get(pairIndex)->AddApplication(app);
+      app->SetStartTime(Seconds(1.0));
+      app->SetStopTime(Seconds(3001.0));
+
+      // app1 = app;
+
+      server->SetPort(9);
+      servers.Get(pairIndex)->AddApplication(server);
+      server->SetStartTime(Seconds(0.0));
+      server->SetStopTime(Seconds(3002.0));
     }
-    // manually make bridge learn
-    // ((CudaBridgeNetDevice*)GetPointer(bridge_dev0.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(switchLinks[0].Get(0))));
-    // ((CudaBridgeNetDevice*)GetPointer(bridge_dev1.Get(0)))->Learn(((CudaNetDevice*)GetPointer(link2.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(link2.Get(1))));
-    
-    // Assign IP addresses
-    CudaIpv4AddressHelper ipv4;
-    std::ostringstream subnet;
-    if(i / 256 >= j)
-      j++;
-    subnet << "10." << j << "." << (i + 1) % 256 << ".0";
-    // subnet << "10.1." << i + 1 << ".0";
-    ipv4.SetBase(subnet.str().c_str(), "255.255.255.0");
-
-    Ipv4InterfaceContainer cudaInterfaces = ipv4.Assign(endpoints);
-    // manually set up the ARP table
-    DynamicCast<CudaIpv4L3Protocol>(cudaInterfaces.Get(0).first)->GetInterface(cudaInterfaces.Get(0).second)->GetArpCache()->AddEntry(
-        cudaInterfaces.GetAddress(1).Get(), 
-        ((CudaNetDevice*)GetPointer(switchLinks[numSwitches].Get(1)))->GetMacAddress());
-
-    Ptr<CudaUdpClient> app = CreateObject<CudaUdpClient>();
-    Ptr<CudaUdpServer> server = CreateObject<CudaUdpServer>();
-    // manually set up the routing table
-    clients.Get(i)->GetObject<CudaIpv4L3Protocol>()->m_routing->AddRoute(cudaInterfaces.GetAddress(1).Get(), 0xffffff00, cudaInterfaces.Get(0).second);
-
-    app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
-    app->SetPacketSize(256);
-    app->SetSendInterval(Seconds(1.0));
-    clients.Get(i)->AddApplication(app);
-    app->SetStartTime(Seconds(1.0));
-    app->SetStopTime(Seconds(3001.0));
-
-    // app1 = app;
-
-    server->SetPort(9);
-    servers.Get(i)->AddApplication(server);
-    server->SetStartTime(Seconds(0.0));
-    server->SetStopTime(Seconds(3002.0));
   }
+
   InitCudaSim();
 
   // ((CudaELPSimulator*)GetPointer(Simulator::GetImplementation()))->print_test();
