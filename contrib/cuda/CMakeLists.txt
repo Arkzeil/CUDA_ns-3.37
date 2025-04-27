@@ -377,11 +377,14 @@ build_cuda_lib(
         model/cuda-ipv4-static-routing.cu
         model/cuda-bridge-net-device.cu
         model/cuda-arp-cache.cu
+        model/bridged-p2p-net-device.cc
+        model/bridged-p2p-channel.cc
         helper/cuda-helper.cu
         helper/cuda-p2p-helper.cu
         helper/cuda-ipv4-address-helper.cu
         helper/cuda-internet-stack-helper.cc
         helper/cuda-bridge-helper.cu
+        helper/bridged-p2p-helper.cc
     HEADER_FILES                          # Header files
         model/cuda-udp-client.h
         # model/cuda-packet-kernel.cuh
@@ -403,11 +406,14 @@ build_cuda_lib(
         model/cuda-ipv4-static-routing.h
         model/cuda-bridge-net-device.h
         model/cuda-arp-cache.h
+        model/bridged-p2p-net-device.h
+        model/bridged-p2p-channel.h
         helper/cuda-helper.h
         helper/cuda-p2p-helper.h
         helper/cuda-ipv4-address-helper.h
         helper/cuda-internet-stack-helper.h
         helper/cuda-bridge-helper.h
+        helper/bridged-p2p-helper.h
     LIBRARIES_TO_LINK             # Optional: link additional CUDA libraries
         CUDA::cudart
 )
