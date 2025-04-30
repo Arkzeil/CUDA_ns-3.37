@@ -106,12 +106,12 @@ namespace ns3{
         //     printf("\n");
         // }
 
-        device->Send(d_packet, device->d_GetBroadcast(), 0, cb_data);
+        device->Send(d_packet, device->d_GetBroadcast(), 0, cb_data, nullptr);
 
         // skip the check of local interface
     }
 
-    __device__ void CudaIpv4Interface::OptimizeSend(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data) {
+    __device__ void CudaIpv4Interface::OptimizeSend(CudaNetDevice* device, CudaPacket *d_packet, uint32_t destination, CUDA_cb_data* cb_data, uint64_t *currentTs) {
         // Optimize the send operation
         MACAddress mac = device->d_GetBroadcast();
 
@@ -124,7 +124,7 @@ namespace ns3{
             }
         }
 
-        device->Send(d_packet, mac, 0, cb_data);
+        device->Send(d_packet, mac, 0, cb_data, currentTs);
     }
 
     __host__ __device__ bool CudaIpv4Interface::IsUp(void) const {

@@ -44,7 +44,7 @@ namespace ns3{
             __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
             __device__ void Send(CudaPacket *d_packet, uint32_t source, uint32_t destination, uint8_t protocol, uint32_t route, CUDA_cb_data* cb_data);
             __device__ void PrepareHeader(CudaIpv4Header* ip_hdr_ptr, uint32_t source, uint32_t destination, uint8_t protocol, uint16_t len, CUDA_cb_data* cb_data);
-            __device__ void OptimizeSend(CudaPacket *d_packet, uint32_t destination, uint32_t route, CUDA_cb_data* cb_data);
+            __device__ void OptimizeSend(CudaPacket *d_packet, uint32_t destination, uint32_t route, CUDA_cb_data* cb_data, uint64_t *currentTs);
             void SendRealOut(Ptr<Ipv4Route> route, Ptr<Packet> packet, const Ipv4Header& ipHeader);
         
             // simple routing, uint32_t address with corresponding interface index, only one hop is supported

@@ -159,7 +159,7 @@ namespace ns3 {
     }
 
     __global__ void testKernel(void *obj){
-        ((CudaUdpClient*)obj)->ELP_Send();
+        // ((CudaUdpClient*)obj)->ELP_Send();
     }
 
     void 
@@ -209,7 +209,7 @@ namespace ns3 {
         // m_sendEvent = Simulator::Schedule(Seconds(0.0), &CudaUdpClient::Send, this);
         CalculateLookAhead(Ipv4Address::ConvertFrom(m_peerAddress).Get());
         NodeID = GetNode()->GetId();
-        m_cudaSim->ELP_Schedule(NodeID, Seconds(0.0), this, 0, lookahead, nullptr);
+        m_cudaSim->ELP_Schedule(NodeID, Simulator::Now() + Seconds(0.0), this, 0, lookahead, nullptr);
 
         // testKernel<<<1, 1, 0, m_cudaStream>>>(this);
         // cudaStreamSynchronize(m_cudaStream);
@@ -349,7 +349,7 @@ namespace ns3 {
         m_cudaSocket->test();
     }
 
-    __device__ void CudaUdpClient::ELP_Send(){
+    __device__ void CudaUdpClient::ELP_Send(uint64_t *currentTs) {
         if(m_stop)
             return;
 
@@ -384,7 +384,7 @@ namespace ns3 {
         // cuda_packet->m_data[0] = 69;
         // printf("socket default address: %p\n", (m_cudaSocket->d_defaultAddress));
         // printf("test's test address: %p\n", (testClass->test));
-        if(m_cudaSocket->Send(cuda_packet, nullptr) >= 0){
+        if(m_cudaSocket->Send(cuda_packet, nullptr, currentTs) >= 0){
             // only one thread should update the sent and totalTx
             // atomicAdd((uint32_t*)m_sent, 1);
             (*m_sent)++;
@@ -394,7 +394,7 @@ namespace ns3 {
 
         // Schedule the next send event
         // if(*m_sent < 2)    
-        d_sendEvent = m_cudaSim->d_insert(this, d_interval, NodeID, 0, lookahead, nullptr);
+        d_sendEvent = m_cudaSim->d_insert(this, *currentTs + d_interval, NodeID, 0, lookahead, nullptr);
     }
 
     __host__ void CudaUdpClient::Send() {
@@ -447,7 +447,7 @@ namespace ns3 {
             //     }
             //     printf("\n");
             // }
-            if(socket->Send(cuda_packet, d_data) >= 0){
+            if(socket->Send(cuda_packet, d_data, nullptr) >= 0){
                 atomicAdd(m_sent, 1);
                 atomicAdd(m_totalTx, cuda_packet->GetSize());
             }

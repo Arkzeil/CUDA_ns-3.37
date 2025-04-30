@@ -112,7 +112,7 @@ namespace ns3 {
         return m_link[wire].m_dst;
     }
 
-    __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, uint64_t txTime, CUDA_cb_data* cb_data) {
+    __device__ bool CudaP2PChannel::TransmitStart(CudaPacket* d_packet, CudaNetDevice* src, uint64_t txTime, CUDA_cb_data* cb_data, uint64_t *currentTs) {
         // Transmit packet from one device to another
         // printf("TransmitStart function in channel, packet id: %d, data0: %d\n", d_packet->GetUid(), d_packet->m_data[0]);
         // printf("Device address: %p\n", src);
@@ -154,9 +154,10 @@ namespace ns3 {
         // d_packet->ready = 1;
         uint64_t lookahead = UINT64_MAX;
         if(m_link[wire].m_dst->isPortInBridge()){
-            lookahead = (((float)(m_link[wire].m_dst->d_GetMtu() * 8) / m_link[wire].m_dst->GetBandwidth()) * 1e9 + d_delay);
+            lookahead = (((float)(m_link[wire].m_src->d_GetMtu() * 8) / m_link[wire].m_src->GetBandwidth()) * 1e9 + d_delay);
+            // lookahead = m_link[wire].m_dst->lookahead;
         }
-        m_cudaSim->d_insert(m_link[wire].m_dst, txTime + d_delay, context, 2, lookahead, (void*)d_packet);
+        m_cudaSim->d_insert(m_link[wire].m_dst, *currentTs + txTime + d_delay, context, 2, lookahead, (void*)d_packet);
         // __threadfence();
 
         return true;

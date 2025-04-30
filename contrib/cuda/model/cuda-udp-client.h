@@ -41,7 +41,7 @@ namespace ns3{
             void RecvTest(Time sendTime);
 
             __device__ void test();
-            __device__ void ELP_Send();
+            __device__ void ELP_Send(uint64_t *currentTs);
             void StartApplication() override;
 
         protected:

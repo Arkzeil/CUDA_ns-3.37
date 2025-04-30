@@ -80,7 +80,7 @@ public:
     __device__ bool d_NeedsArp() const;
     void Receive(CudaPacket *packet);
     // __device__ virtual void ReceiveFromDevice();
-    __device__ void d_Receive(CudaPacket *packet);
+    __device__ void d_Receive(CudaPacket *packet, uint64_t *currentTs);
 
     // GPU-specific methods
     void InitializeCudaBuffers();
@@ -91,10 +91,10 @@ public:
     __host__ void register_callback(CudaNetDevice* device);
     __device__ bool isPortInBridge();
     __device__ void test(const uint8_t *data, CUDA_cb_data* cb_data);
-    __device__ void Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data);
-    __device__ void SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol);
-    __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data);
-    __device__ void D_TransmitComplete();
+    __device__ void Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data, uint64_t *currentTs);
+    __device__ void SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol, uint64_t *currentTs);
+    __device__ bool TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data, uint64_t *currentTs);
+    __device__ void D_TransmitComplete(uint64_t *currentTs);
     void TransmitComplete(cudaStream_t stream);
     // Helper functions
     __device__ bool EnqueuePacket(CudaPacket* packet);

@@ -236,7 +236,7 @@ namespace ns3{
         return 0;
     }
 
-    __device__ int CudaSocket::Send(CudaPacket* d_packet, CUDA_cb_data* cb_data){
+    __device__ int CudaSocket::Send(CudaPacket* d_packet, CUDA_cb_data* cb_data, uint64_t *currentTs){
         // Send data to the socket
         // cudaMemcpy(d_sendBuffer, d_buffer, size, cudaMemcpyDeviceToDevice);
         // Send data to the network device
@@ -253,13 +253,13 @@ namespace ns3{
         //     }
         //     printf("\n");
         // }
-        return DoSendTo(d_packet, *d_defaultAddress, *m_defaultPort, 0, cb_data);
+        return DoSendTo(d_packet, *d_defaultAddress, *m_defaultPort, 0, cb_data, currentTs);
         // d_m_udp->Send(d_buffer, nullptr, nullptr, 0, size);
         // DoSendTo(d_buffer, Ipv4Address::ConvertFrom(*m_defaultAddress), *m_defaultPort, 0, size);
         // m_netDevice->EnqueuePacket(d_buffer, size);
     }
 
-    __device__ int CudaSocket::DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data){
+    __device__ int CudaSocket::DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data, uint64_t *currentTs){
         // Send data to the specified address
         // Send data to the network device
         // SendToNetDevice(d_buffer, size);
@@ -294,7 +294,7 @@ namespace ns3{
         // }
         
         // should get source address
-        return d_m_udp->OptimizeSend(d_packet, 0, dest, 0, port, cb_data);
+        return d_m_udp->OptimizeSend(d_packet, 0, dest, 0, port, cb_data, currentTs);
         // m_udp->Send(d_buffer, m_endPoint->GetLocalAddress(), dest, m_endPoint->GetLocalPort(), port);
     }
 
@@ -343,6 +343,11 @@ namespace ns3{
         CudaPair<CudaPacket*, uint32_t> pair = m_deliveryQueue->pop_front();
         CudaPacket* d_packet = pair.first;
         *from = pair.second;
+
+        if(d_packet == nullptr){
+            printf("Packet is null\n");
+            return nullptr;
+        }
 
         if(d_packet->GetSize() < maxSize){
             m_rxAvailable -= d_packet->GetSize();

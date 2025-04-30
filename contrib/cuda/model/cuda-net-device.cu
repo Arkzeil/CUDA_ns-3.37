@@ -236,7 +236,7 @@ namespace ns3 {
       // ProcessPacketOnCuda(packet);
   } 
 
-  __device__ void CudaNetDevice::d_Receive(CudaPacket* packet) {
+  __device__ void CudaNetDevice::d_Receive(CudaPacket* packet, uint64_t *currentTs) {
       // for(int i = 0; i < 28; i++){
       //   printf("%d ", packet->m_data[i]);
       // }
@@ -271,7 +271,7 @@ namespace ns3 {
         // the inheritance does not work in CUDA(I have to make descructor __device__, but its parent is in host space)
         // so I can only explictly do static cast
         etherType = ethertype_padded & 0xFFFF;
-        ((CudaBridgeNetDevice*)bridge)->ReceiveFromDevice(this, packet, etherType, src, dst, PacketType::PACKET_OTHERHOST);
+        ((CudaBridgeNetDevice*)bridge)->ReceiveFromDevice(this, packet, etherType, src, dst, PacketType::PACKET_OTHERHOST, currentTs);
       }
       else
         m_ipv4->d_Receive(this, packet);
@@ -320,7 +320,7 @@ namespace ns3 {
       // }
   }
 
-  __device__ void CudaNetDevice::Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data) {
+  __device__ void CudaNetDevice::Send(CudaPacket* d_packet, MACAddress destination, uint16_t protocol, CUDA_cb_data* cb_data, uint64_t *currentTs) {
       // // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
       // if(m_linkUp == false)
       //   printf("Link is down\n");
@@ -346,10 +346,10 @@ namespace ns3 {
       //     TransmitStart(packet, cb_data);
       //   }
       // }
-      SendFrom(d_packet, m_macAddress, destination, protocol);
+      SendFrom(d_packet, m_macAddress, destination, protocol, currentTs);
   }
 
-  __device__ void CudaNetDevice::SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol) {
+  __device__ void CudaNetDevice::SendFrom(CudaPacket* d_packet, MACAddress src, MACAddress dst, uint16_t protocol, uint64_t *currentTs) {
       // printf("CudaNetDevice: Send function, packet id: %d\n", d_packet->GetUid());
       if(m_linkUp == false)
         printf("Link is down\n");
@@ -384,12 +384,12 @@ namespace ns3 {
 
           // cudaFree(d_packet->m_data);
           
-          TransmitStart(packet, nullptr);
+          TransmitStart(packet, nullptr, currentTs);
         }
       }
   }
 
-  __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data) {
+  __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data, uint64_t *currentTs) {
     // Start transmission
     // assuming size is in bytes
     if(m_txMachineState == BUSY) {
@@ -412,10 +412,10 @@ namespace ns3 {
     }
     // cudaEventSynchronize(m_event);
     // cudaFree(cb_data->packet->m_data);
-    m_cudaSim->d_insert(this, d_interval, NodeID, 1, lookahead, nullptr);
+    m_cudaSim->d_insert(this, *currentTs + d_interval, NodeID, 1, lookahead, nullptr);
     // m_cudaSim->d_insert(this, 1, 0, 2, 0, (void*)packet);
 
-    bool result = m_channel->TransmitStart(packet, this, d_interval, cb_data);
+    bool result = m_channel->TransmitStart(packet, this, d_interval, cb_data, currentTs);
     if(result == false) {
       printf("Channel TransmitStart failed\n");
     }
@@ -423,7 +423,7 @@ namespace ns3 {
     return result;
   }
 
-  __device__ void CudaNetDevice::D_TransmitComplete(){
+  __device__ void CudaNetDevice::D_TransmitComplete(uint64_t *currentTs){
     if(m_txMachineState != BUSY){
       printf("Device state must be busy\n");
       return;
@@ -437,7 +437,7 @@ namespace ns3 {
       return;
     }
     
-    TransmitStart(packet, nullptr);
+    TransmitStart(packet, nullptr, currentTs);
   }
 
   __global__ void d_TransmitComplete(CudaNetDevice* device, cudaStream_t stream, CUDA_cb_data* cb_data) {
@@ -447,7 +447,7 @@ namespace ns3 {
       return;
     }
     
-    device->TransmitStart(packet, cb_data);
+    // device->TransmitStart(packet, cb_data);
   }
 
   void CudaNetDevice::TransmitComplete(cudaStream_t stream) {

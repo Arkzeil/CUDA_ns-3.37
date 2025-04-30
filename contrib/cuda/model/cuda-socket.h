@@ -37,8 +37,8 @@ namespace ns3{
             int ShutdownRecv() override;
             int ShutdownSend() override;
             int Send(Ptr<Packet> p, uint32_t flags) override;
-            __device__ int Send(CudaPacket* d_packet, CUDA_cb_data* cb_data);
-            __device__ int DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data);
+            __device__ int Send(CudaPacket* d_packet, CUDA_cb_data* cb_data, uint64_t *currentTs);
+            __device__ int DoSendTo(CudaPacket* d_packet, uint32_t dest, uint16_t port, uint8_t tos, CUDA_cb_data* cb_data, uint64_t *currentTs);
             // We can't use host-only class in device code
             // __device__ void DoSendTo(const uint8_t* d_buffer, Ipv4Address dest, uint16_t port, uint8_t tos, uint32_t size);
             Ptr<Packet> Recv(uint32_t maxSize, uint32_t flags) override;

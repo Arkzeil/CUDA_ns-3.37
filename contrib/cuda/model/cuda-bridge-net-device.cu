@@ -65,7 +65,8 @@ namespace ns3 {
                                                             uint16_t protocol,
                                                             MACAddress& source,
                                                             MACAddress& destination,
-                                                            PacketType packetType) {
+                                                            PacketType packetType, 
+                                                            uint64_t *currentTs) {
         // Receive a packet from the device
         // This function is called from the GPU
         // Handle the received packet
@@ -76,7 +77,7 @@ namespace ns3 {
             case PacketType::PACKET_BROADCAST:
             case PacketType::PACKET_MULTICAST:
             case PacketType::PACKET_OTHERHOST:
-                ForwardUnicast(device, packet, protocol, source, destination);
+                ForwardUnicast(device, packet, protocol, source, destination, currentTs);
                 break;
         }
     }
@@ -85,19 +86,20 @@ namespace ns3 {
                                                         CudaPacket* packet,
                                                         uint16_t protocol,
                                                         MACAddress src,
-                                                        MACAddress dst) {
+                                                        MACAddress dst, 
+                                                        uint64_t *currentTs) {
         Learn(src, incomingPort);
         CudaNetDevice* outgoingPort = GetLearnedState(dst);
         if (outgoingPort != nullptr) {
             // Forward the packet to the outgoing port
             // printf("Forwarding packet to outgoing port\n");
-            outgoingPort->SendFrom(packet, src, dst, protocol);
+            outgoingPort->SendFrom(packet, src, dst, protocol, currentTs);
         } else {
             // printf("Flooding packet to all ports\n");
             // Flood the packet to all ports except the incoming port
             for (uint32_t i = 0; i < portCnt; i++) {
                 if (m_ports[i] != incomingPort) {
-                    m_ports[i]->SendFrom(packet, src, dst, protocol);
+                    m_ports[i]->SendFrom(packet, src, dst, protocol, currentTs);
                 }
             }
         }

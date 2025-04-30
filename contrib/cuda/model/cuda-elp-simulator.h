@@ -21,7 +21,7 @@
 #define MAX_NEW_EVENTS 4
 #define DEVICE_EV_ID_OFFSET 1000000
 #define TPB 128  // Threads per block (block size)
-#define MAX_PACKET_PER_THREAD 4
+#define MAX_PACKET_PER_THREAD 16
 #define WARP_SIZE 32
 #define BPSM 2   // Blocks per SM
 
@@ -192,7 +192,8 @@ namespace ns3
             __host__ void ELP_Cleanup();
             __host__ void ELP_Run();
             __host__ void ELP_RunSK();
-            __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, uint64_t lookahead, void *payload);
+            // __host__ void ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, uint64_t lookahead, void *payload);
+            __host__ void ELP_Schedule(uint32_t context, const Time &ts, void *obj, int type, uint64_t lookahead, void *payload);
             // void test(void *obj);
             __host__ __device__ void print_test() const;
             __device__ void deviceMethod(void *obj, int func_id);
@@ -293,6 +294,8 @@ namespace ns3
             // volatile int *h_idle;
             uint32_t m_test;
             uint32_t d_uid;
+            // current timestamp for kernel to insert events into next-event buffer
+            // uint64_t *d_currentTs;
 
             uint32_t m_uid;
             uint32_t m_currentUid;

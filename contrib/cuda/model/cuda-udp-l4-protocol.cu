@@ -258,7 +258,7 @@ namespace ns3 {
         return len; // UDP header size is 8 bytes
     }
 
-    __device__ int CudaUdpL4Protocol::OptimizeSend(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data) {
+    __device__ int CudaUdpL4Protocol::OptimizeSend(CudaPacket *d_packet, uint32_t saddr, uint32_t daddr, uint16_t sport, uint16_t dport, CUDA_cb_data* cb_data, uint64_t *currentTs) {
         uint16_t udp_length = d_packet->GetSize() + 8;
         // 1. Create the combined header structure on the stack (target: registers)
         CombinedIpUdpHeaders combined_headers;
@@ -269,7 +269,7 @@ namespace ns3 {
 
         d_packet->AddHeader(&combined_headers, sizeof(CombinedIpUdpHeaders));
 
-        m_ipv4->OptimizeSend(d_packet, daddr, 0, cb_data);
+        m_ipv4->OptimizeSend(d_packet, daddr, 0, cb_data, currentTs);
     }
 
     __device__ bool verify_udp_checksum(const uint8_t *udp_header, const uint8_t *payload, int length, uint32_t pseudo_header_sum, uint16_t received_checksum) {

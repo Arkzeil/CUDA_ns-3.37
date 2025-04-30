@@ -423,7 +423,7 @@ namespace ns3 {
         #endif
     }
 
-    __device__ void CudaIpv4L3Protocol::OptimizeSend(CudaPacket *d_packet, uint32_t destination, uint32_t route, CUDA_cb_data* cb_data){
+    __device__ void CudaIpv4L3Protocol::OptimizeSend(CudaPacket *d_packet, uint32_t destination, uint32_t route, CUDA_cb_data* cb_data, uint64_t *currentTs){
         uint32_t outInterfaceIndex;
         if(m_routing->LookupRoute(destination, &outInterfaceIndex) == false){
             printf("No route found\n");
@@ -464,7 +464,7 @@ namespace ns3 {
 
             // Skip the checking of device MTU
 
-            outInterface->OptimizeSend(device, d_packet, destination, cb_data);
+            outInterface->OptimizeSend(device, d_packet, destination, cb_data, currentTs);
         }
     }
 

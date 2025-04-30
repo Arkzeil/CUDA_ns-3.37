@@ -52,7 +52,8 @@ namespace ns3{
                                                 uint16_t protocol,
                                                 MACAddress& source,
                                                 MACAddress& destination,
-                                                PacketType packetType);
+                                                PacketType packetType, 
+                                                uint64_t *currentTs);
             __host__ void AddBridgePort(Ptr<NetDevice> bridgePort) override;
 
             __host__ __device__ void Learn(MACAddress source, CudaNetDevice* port);
@@ -61,7 +62,8 @@ namespace ns3{
                                             CudaPacket* packet,
                                             uint16_t protocol,
                                             MACAddress src,
-                                            MACAddress dst);
+                                            MACAddress dst, 
+                                            uint64_t *currentTs);
 
             // GPU-specific methods
             CudaP2PChannel* GetChannel();

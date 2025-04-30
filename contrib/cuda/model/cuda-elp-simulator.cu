@@ -309,30 +309,30 @@ namespace ns3 {
     }
 
     // Device functions to process different event types
-    __device__ void ProcessType0(DeviceEvent* ev) {
+    __device__ void ProcessType0(DeviceEvent* ev, uint64_t *currentTs) {
         // Insert logic analogous to what your C++ ns-3 event might do
         // For example, a UDP send operation or a simulated network event.
         // printf("Processing Type 0 event\n");
-        ((CudaUdpClient*)(ev->impl))->ELP_Send();
+        ((CudaUdpClient*)(ev->impl))->ELP_Send(currentTs);
     }
     // Device functions to process different event types
-    __device__ void ProcessType1(DeviceEvent* ev) {
+    __device__ void ProcessType1(DeviceEvent* ev, uint64_t *currentTs) {
         // Insert logic analogous to what your C++ ns-3 event might do
         // For example, a UDP send operation or a simulated network event.
         // printf("Processing Type 1 event\n");
-        ((CudaNetDevice*)(ev->impl))->D_TransmitComplete();
+        ((CudaNetDevice*)(ev->impl))->D_TransmitComplete(currentTs);
         // cudaSim->insert(ev->impl, 0, 0, 2);
         // ev->type = -1;
     }
 
-    __device__ void ProcessType2(DeviceEvent* ev) {
+    __device__ void ProcessType2(DeviceEvent* ev, uint64_t *currentTs) {
         // Different event processing logic
         // printf("Processing Type 2 event\n");
-        ((CudaNetDevice*)(ev->impl))->d_Receive((CudaPacket*)(ev->payload));
+        ((CudaNetDevice*)(ev->impl))->d_Receive((CudaPacket*)(ev->payload), currentTs);
     }
     // General device function that processes an event based on its type.
     // ideal approach is to use function pointer to call the function, skip for now
-    __device__ void cuda_ProcessOneEvent(DeviceEvent* ev) {
+    __device__ void cuda_ProcessOneEvent(DeviceEvent* ev, uint64_t* currentTs) {
         // You might include pre-event hooks here if needed.
         // For example: PreEventHook(ev->ts, ev->context, ev->uid);
     
@@ -345,17 +345,17 @@ namespace ns3 {
                 break;
             case 0:
                 // printf("Send ts: %lu\n", ev->ts);
-                ProcessType0(ev);
+                ProcessType0(ev, currentTs);
                 // mark as processed
                 ev->valid = false;
                 break;
             case 1:
-                ProcessType1(ev);
+                ProcessType1(ev, currentTs);
                 ev->valid = false;
                 break;
             case 2:
                 // printf("Recv ts: %lu\n", ev->ts);
-                ProcessType2(ev);
+                ProcessType2(ev, currentTs);
                 // mark as processed
                 ev->valid = false;
                 break;
@@ -411,14 +411,13 @@ namespace ns3 {
 
             if(ev->valid){
                 // printf("tid: %d\n", tid);
-                cuda_ProcessOneEvent(ev);
+                cuda_ProcessOneEvent(ev, nullptr);
             }
         }
     }
 
     __global__ void SingleBufKernel(CudaELPSimulator *sim, 
-                                    DeviceEvent* h_safeEventQueue, volatile int *h_bufrdy, 
-                                    volatile int *d_bufrdy, volatile uint64_t* d_safe_ts){
+                                    DeviceEvent* h_safeEventQueue, volatile uint64_t* d_safe_ts){
         const int tid = threadIdx.x + blockIdx.x * blockDim.x;
         const int totalThreads = gridDim.x * gridDim.y * gridDim.z * blockDim.x * blockDim.y * blockDim.z;
         // const int localThreadId = threadIdx.x;
@@ -434,7 +433,7 @@ namespace ns3 {
             // Process the event based on its type.
             if(ev->valid){
                 // printf("tid: %d\n", tid);
-                cuda_ProcessOneEvent(ev);
+                cuda_ProcessOneEvent(ev, &(ev->ts));
             }
             // Mark the event as processed (or remove it from the queue).
             // if(ev->ts < *d_safe_ts)
@@ -533,7 +532,7 @@ namespace ns3 {
                 // Process the event based on its type.
                 if(ev->valid){
                     // printf("tid: %d\n", tid);
-                    cuda_ProcessOneEvent(ev);
+                    cuda_ProcessOneEvent(ev, nullptr);
                 }
                 // Mark the event as processed (or remove it from the queue).
                 // if(ev->ts < *d_safe_ts)
@@ -800,13 +799,17 @@ namespace ns3 {
         m_unscheduledEvents--;
         m_eventCount++;
 
-        NS_ASSERT(next.key.m_ts >= m_currentTs);
+        // printf("next ts: %lu, current ts: %lu, type: %d\n", next.key.m_ts, m_currentTs);
+        HostEvent* h_ev = (HostEvent*)next.impl;
+        // printf("event type: %d, event ts: %lu, current ts: %lu\n", h_ev->type, next.key.m_ts, m_currentTs);
+
+        // NS_ASSERT(next.key.m_ts >= m_currentTs);
         m_currentTs = next.key.m_ts;
         m_currentContext = next.key.m_context;
 
         // printf("current ts: %lu\n", m_currentTs);
 
-        HostEvent* h_ev = (HostEvent*)next.impl;
+        
         h_insert_sort(h_ev->obj, next.key.m_ts, next.key.m_context, next.key.m_uid, h_ev->type, h_ev->lookahead, h_ev->payload);
         // printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
@@ -846,9 +849,10 @@ namespace ns3 {
         // if this line if put after kernel invocation, there's a chance that the host will hang in h_insert_sort 
         // as *h_curHostBufRdy might be 1 as long as the kernel execution is faster than host
         *h_curHostBufRdy = 1;
-        SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
+        // SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
+        SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_safe_ts);
         cudaEventRecord(eventK, streamK);
-
+        
         // d_curHostBufRdy = h_curHostBufRdy;
         // d_safe_ts = h_safe_ts;
         
@@ -1229,13 +1233,19 @@ namespace ns3 {
     }
 
     // take a event from the device event queue and insert it into the host queue
-    __host__ void CudaELPSimulator::ELP_Schedule(uint32_t context, const Time &delay, void *obj, int type, uint64_t lookahead, void *payload){
-        NS_LOG_FUNCTION(this << delay.GetTimeStep());
+    // use absolute timestamp instead of delay, as unlike CPU, the m_currentTs might be changed when GPU is executing.
+    // so we need to use the absolute timestamp (through d_currentTs) to ensure that the events in this buffer are in correct time
+    __host__ void CudaELPSimulator::ELP_Schedule(uint32_t context, const Time &ts, void *obj, int type, uint64_t lookahead, void *payload){
+        NS_LOG_FUNCTION(this << ts.GetTimeStep());
         NS_ASSERT_MSG(m_mainThreadId == std::this_thread::get_id(),
                     "Simulator::Schedule Thread-unsafe invocation!");
 
-        NS_ASSERT_MSG(delay.IsPositive(), "CudaELPSimulator::Schedule(): Negative delay");
-        Time tAbsolute = delay + TimeStep(m_currentTs);
+        // NS_ASSERT_MSG(delay.IsPositive(), "CudaELPSimulator::Schedule(): Negative delay");
+        // Time tAbsolute = delay + TimeStep(m_currentTs);
+
+
+        // if(type == 0)
+        //     printf("%lu\n", tAbsolute.GetTimeStep());
 
         Scheduler::Event ev;
         HostEvent *h_ev;
@@ -1253,7 +1263,7 @@ namespace ns3 {
         // Not a good way to do this, can be modified in the future(best way is probably to use member function pointer like in ns3,
         // but I am not sure if it's achievable in CUDA and unified memory)
         ev.impl = (EventImpl*)h_ev;
-        ev.key.m_ts = (uint64_t)tAbsolute.GetTimeStep();
+        ev.key.m_ts = (uint64_t)ts.GetTimeStep();
         ev.key.m_context = context;
         // mark the event as CUDA event
         ev.key.m_uid = d_uid;
@@ -1482,7 +1492,7 @@ namespace ns3 {
 
     __global__ void test_kernel(void* obj) {
         // printf("Hello\n");
-        ((CudaUdpClient*)obj)->ELP_Send();
+        // ((CudaUdpClient*)obj)->ELP_Send();
     }
 
     void testSend(void* obj) {

@@ -16,14 +16,14 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("SimpleCudaUdpHelperExample");
 
 int main(int argc, char *argv[]) {
-    // LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
-    // LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
+    LogComponentEnable("UdpClient", LOG_LEVEL_INFO);
+    LogComponentEnable("UdpServer", LOG_LEVEL_INFO);
     // LogComponentEnable("BridgeNetDevice", LOG_LOGIC);
     // LogComponentEnableAll(LOG_LEVEL_INFO);
     
-    uint32_t numGroups = 20; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
-    uint32_t numPairs = 5; // Default number of client-server pair group
-    uint32_t numSwitches = 2; // Number of switches between each pairs
+    uint32_t numGroups = 1; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
+    uint32_t numPairs = 1; // Default number of client-server pair group
+    uint32_t numSwitches = 1; // Number of switches between each pairs
     
     // NodeContainer nodes;
     NodeContainer clients;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
             UdpServerHelper server(port);
             ApplicationContainer serverApp = server.Install(servers.Get(pairIndex));
             serverApp.Start(Seconds(0.0));
-            serverApp.Stop(Seconds(3002.0));
+            serverApp.Stop(Seconds(12.0));
             
             UdpClientHelper client(interfaces.GetAddress(1), port);
             client.SetAttribute("MaxPackets", UintegerValue(4096));
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
             
             ApplicationContainer clientApp = client.Install(clients.Get(pairIndex));
             clientApp.Start(Seconds(1.0));
-            clientApp.Stop(Seconds(3001.0));
+            clientApp.Stop(Seconds(11.0));
         }
     }
 

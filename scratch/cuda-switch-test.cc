@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numGroups = 20; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
-  uint32_t numPairs = 5; // Default number of client-server pair group
-  uint32_t numSwitches = 2; // Number of switches between each pairs
+  uint32_t numGroups = 6; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
+  uint32_t numPairs = 1; // Default number of client-server pair group
+  uint32_t numSwitches = 4; // Number of switches between each pairs
 
   NodeContainer clients;
   NodeContainer servers;
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
   uint32_t j = 1;
 
   for (uint32_t i = 0; i < numGroups; i++){
-    cudaP2P.SetDelay(MilliSeconds(2.0));
+    cudaP2P.SetDelay(MilliSeconds(2000.0));
     cudaP2P.SetBandwidth(DataRate("10Mbps"));
     // NetDeviceContainer cudaDevices = cudaP2P.Install(nodes.Get(2 * i), nodes.Get(2 * i + 1));
     for(uint32_t pair = 0; pair < numPairs; pair++){
@@ -148,17 +148,17 @@ int main(int argc, char* argv[]) {
 
       app->SetRemote(cudaInterfaces.GetAddress(1), 9); // Send to node 1
       app->SetPacketSize(256);
-      app->SetSendInterval(Seconds(1.0));
+      app->SetSendInterval(Seconds(1));
       clients.Get(pairIndex)->AddApplication(app);
       app->SetStartTime(Seconds(1.0));
-      app->SetStopTime(Seconds(3001.0));
+      app->SetStopTime(Seconds(12.0));
 
       // app1 = app;
 
       server->SetPort(9);
       servers.Get(pairIndex)->AddApplication(server);
       server->SetStartTime(Seconds(0.0));
-      server->SetStopTime(Seconds(3002.0));
+      server->SetStopTime(Seconds(50.0));
     }
   }
 
