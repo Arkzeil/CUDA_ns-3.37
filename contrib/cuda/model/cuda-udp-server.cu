@@ -108,7 +108,7 @@ namespace ns3 {
         // Handle a packet reception
         CudaPacket* packet;
         uint32_t from;
-        while((packet = socket->CudaRecv(UINT32_MAX, 0, &from)) != nullptr){
+        if((packet = socket->CudaRecv(UINT32_MAX, 0, &from)) != nullptr){
             if(packet->GetSize() > 0){
                 // printf("CudaUdpServer Received packet: %d, total: %llu\n", packet->GetUid(), m_received + 1);
                 uint32_t receivedSize = packet->GetSize();

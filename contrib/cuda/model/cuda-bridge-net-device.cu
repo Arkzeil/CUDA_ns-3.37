@@ -146,11 +146,13 @@ namespace ns3 {
             for (uint32_t i = 0; i < tableSize; i++) {
                 if (m_learningTable[i].mac == source) {
                     // Update the port if the MAC address is already in the table
+                    // race condition?
                     m_learningTable[i].associatedPort = port;
                     return;
                 }
             }
             // If the MAC address is not in the table, add it
+            // race condition?
             m_learningTable[tableSize].mac = source;
             m_learningTable[tableSize++].associatedPort = port;
         }

@@ -394,10 +394,10 @@ namespace ns3 {
         // printf("test's test address: %p\n", (testClass->test));
         if(m_cudaSocket->Send(cuda_packet, nullptr, currentTs) >= 0){
             // only one thread should update the sent and totalTx
-            // atomicAdd((uint32_t*)m_sent, 1);
-            (*m_sent)++;
-            // atomicAdd((uint64_cu*)m_totalTx, cuda_packet->GetSize());
-            (*m_totalTx) += cuda_packet->GetSize();
+            atomicAdd((uint32_t*)m_sent, 1);
+            // (*m_sent)++;
+            atomicAdd((uint64_cu*)m_totalTx, cuda_packet->GetSize());
+            // (*m_totalTx) += cuda_packet->GetSize();
         }
 
         // Schedule the next send event
