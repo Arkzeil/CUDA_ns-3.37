@@ -371,8 +371,11 @@ namespace ns3 {
         d_packet->AddTrailer(&fcs, sizeof(fcs));
       #endif
 
-      if(EnqueuePacket(d_packet) == false)
+      if(EnqueuePacket(d_packet) == false){
         printf("Enqueue failed\n");
+        // release the packet
+        d_packet->ready = 0;
+      }
       else{
         if(m_txMachineState == READY){
           // cudaFree((void*)data);
@@ -395,7 +398,9 @@ namespace ns3 {
     // Atomically check and set state to BUSY
     int expected = READY;
     if (atomicCAS(&m_txMachineState, expected, BUSY) != READY) {
-        printf("Transmitter busy, dropping packet\n");
+        // printf("Transmitter busy, dropping packet\n");
+        if(EnqueuePacket(packet) == false)
+          printf("Enqueue failed\n");
         return false;
     }
     // assuming m_InterframeGap is 0

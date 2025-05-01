@@ -349,7 +349,7 @@ namespace ns3 {
                 // return;
             }
         #endif
-
+        // fixed for now, one endpoint is used
         m_endPoints[0].GetSocket()->ForwardPacket(packet);
     }
 

@@ -359,19 +359,27 @@ namespace ns3 {
         int tid = threadIdx.x + blockIdx.x * blockDim.x;
         CudaPacket* cuda_packet;
         int i = 0;
-        while(1){
-            if(d_threadBuf[tid * MAX_PACKET_PER_THREAD+ i].ready == 0){
+        while (true) {
+            int index = tid * MAX_PACKET_PER_THREAD + i;
+        
+            // Attempt to atomically claim the slot
+            int old_val = atomicCAS(&d_threadBuf[index].ready, 0, 1);
+        
+            if (old_val == 0) {
+                // Successfully claimed it
+                cuda_packet = &d_threadBuf[index];
                 break;
             }
+        
+            // Try next slot (with wrap-around)
             i = (i + 1) & (MAX_PACKET_PER_THREAD - 1);
         }
         
-        cuda_packet = (d_threadBuf + tid * MAX_PACKET_PER_THREAD + i);
+        // cuda_packet = (d_threadBuf + tid * MAX_PACKET_PER_THREAD + i);
         new(cuda_packet) CudaPacket();
         // fill packet in backwards
         cuda_packet->m_data = d_packetRawBuf + (tid * MAX_PACKET_PER_THREAD + i) * d_pitch;
         cuda_packet->SetSize(m_size);
-        cuda_packet->ready = 1;
         // cuda_packet->Allocate(m_size);
         // cudaError_t ret = cudaMalloc(&cuda_packet, sizeof(CudaPacket));
         // if(ret != cudaSuccess){
