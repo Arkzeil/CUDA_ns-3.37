@@ -13,7 +13,6 @@
 #include <cuda_runtime.h>
 #include "helper.h"
 
-
 namespace ns3 {
 
 class CUDA_cb_data;
@@ -127,7 +126,9 @@ private:
         BUSY   /**< The transmitter is busy transmitting a packet */
     };
 
-    TxMachineState m_txMachineState;
+    // TxMachineState m_txMachineState;
+    // the atomicExch do not support enum type, so we need to use int instead
+    int m_txMachineState; //!< State of the transmitter
     Mac48Address m_address;                              //!< Mac48Address of this NetDevice
 
     uint32_t m_ifIndex;                                  //!< Index of the interface

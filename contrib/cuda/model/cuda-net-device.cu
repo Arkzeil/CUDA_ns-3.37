@@ -428,7 +428,8 @@ namespace ns3 {
       printf("Device state must be busy\n");
       return;
     }
-    m_txMachineState = READY;
+    // m_txMachineState = READY;
+    atomicExch(&m_txMachineState, READY);
     // printf("Reset device status using GPU\n");
 
     CudaPacket* packet = DequeuePacket();

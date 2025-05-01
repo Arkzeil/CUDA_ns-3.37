@@ -151,14 +151,14 @@ int main(int argc, char* argv[]) {
       app->SetSendInterval(Seconds(1));
       clients.Get(pairIndex)->AddApplication(app);
       app->SetStartTime(Seconds(1.0));
-      app->SetStopTime(Seconds(12.0));
+      app->SetStopTime(Seconds(3002.0));
 
       // app1 = app;
 
       server->SetPort(9);
       servers.Get(pairIndex)->AddApplication(server);
       server->SetStartTime(Seconds(0.0));
-      server->SetStopTime(Seconds(50.0));
+      server->SetStopTime(Seconds(5000.0));
     }
   }
 

@@ -345,7 +345,7 @@ namespace ns3{
         *from = pair.second;
 
         if(d_packet == nullptr){
-            printf("Packet is null\n");
+            printf("CudaSocket::CudaRecv, Packet is null\n");
             return nullptr;
         }
 

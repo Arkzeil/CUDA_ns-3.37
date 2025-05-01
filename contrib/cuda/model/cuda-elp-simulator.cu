@@ -804,7 +804,8 @@ namespace ns3 {
         // printf("event type: %d, event ts: %lu, current ts: %lu\n", h_ev->type, next.key.m_ts, m_currentTs);
 
         // NS_ASSERT(next.key.m_ts >= m_currentTs);
-        m_currentTs = next.key.m_ts;
+        if(next.key.m_ts > m_currentTs)
+            m_currentTs = next.key.m_ts;
         m_currentContext = next.key.m_context;
 
         // printf("current ts: %lu\n", m_currentTs);
@@ -851,6 +852,7 @@ namespace ns3 {
         *h_curHostBufRdy = 1;
         // SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
         SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_safe_ts);
+        // printf("kernel launched\n");
         cudaEventRecord(eventK, streamK);
         
         // d_curHostBufRdy = h_curHostBufRdy;
