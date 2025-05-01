@@ -392,11 +392,12 @@ namespace ns3 {
   __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data, uint64_t *currentTs) {
     // Start transmission
     // assuming size is in bytes
-    if(m_txMachineState == BUSY) {
-      printf("Transmitter busy, dropping packet\n");
-      return false;
+    // Atomically check and set state to BUSY
+    int expected = READY;
+    if (atomicCAS(&m_txMachineState, expected, BUSY) != READY) {
+        printf("Transmitter busy, dropping packet\n");
+        return false;
     }
-    m_txMachineState = BUSY;
     // assuming m_InterframeGap is 0
     double TxTime = (double)(packet->GetSize() * 8) / d_bps; // in seconds
     uint64_t d_interval = (uint64_t)(TxTime * 1e9); // in nanoseconds
@@ -424,12 +425,10 @@ namespace ns3 {
   }
 
   __device__ void CudaNetDevice::D_TransmitComplete(uint64_t *currentTs){
-    if(m_txMachineState != BUSY){
+    if (atomicCAS(&m_txMachineState, BUSY, READY) != BUSY) {
       printf("Device state must be busy\n");
       return;
     }
-    // m_txMachineState = READY;
-    atomicExch(&m_txMachineState, READY);
     // printf("Reset device status using GPU\n");
 
     CudaPacket* packet = DequeuePacket();
@@ -468,16 +467,24 @@ namespace ns3 {
   }
   // enqueue packet and start transmit(as kernel return queue status at different fucntion is troublesome)
   __device__ bool CudaNetDevice::EnqueuePacket(CudaPacket* packet) {
-    // Check if the queue is full
+    int rear, front;
+    
+    do {
+        rear = *d_queueRear;
+        front = *d_queueFront;
 
-    if ((*d_queueRear + 1) == *d_queueFront) {
-      printf("Queue is full, dropping packet\n");
-      return false;
-    }
+        // Check if queue is full: one slot always left empty to distinguish full vs empty
+        if (((rear + 1) & (m_queueSize - 1)) == (front & (m_queueSize - 1))) {
+            printf("Queue is full, dropping packet\n");
+            return false;
+        }
+
+        // Attempt to claim a slot atomically
+    } while (atomicCAS(d_queueRear, rear, rear + 1) != rear);
 
     // use AND to replace MOD operation, which require queue size to be power of 2
-    int pos = atomicAdd(d_queueRear, 1) & (m_queueSize - 1); // Use atomic operation for thread safety
-
+    // int pos = atomicAdd(d_queueRear, 1) & (m_queueSize - 1); // Use atomic operation for thread safety
+    int pos = rear & (m_queueSize - 1);
     // CudaPacket* entry = d_packetQueue[pos];           // Get position in the queue
 
     // *entry = *packet; // Assign packet (uses device-side assignment operator)
@@ -490,12 +497,20 @@ namespace ns3 {
   }
 
   __device__ CudaPacket* CudaNetDevice::DequeuePacket() {
-    // Dequeue packet from GPU
-    if (*d_queueFront == *d_queueRear) {
-      return nullptr; // Queue is empty
-    }
+    int rear, front;
 
-    int pos = atomicAdd(d_queueFront, 1) & (m_queueSize - 1); // Use atomic operation for thread safety
+    do {
+        rear = *d_queueRear;
+        front = *d_queueFront;
+
+        if ((front & (m_queueSize - 1)) == (rear & (m_queueSize - 1))) {
+            return nullptr; // Queue is empty
+        }
+
+    } while (atomicCAS(d_queueFront, front, front + 1) != front);
+
+    // int pos = atomicAdd(d_queueFront, 1) & (m_queueSize - 1); // Use atomic operation for thread safety
+    int pos = front & (m_queueSize - 1);
     // int pos = *d_queueFront & (m_queueSize - 1); // Get position in the queue
     // CudaPacket* entry = d_packetQueue[pos];  // Access packet
 

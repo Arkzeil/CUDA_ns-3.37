@@ -324,12 +324,13 @@ namespace ns3{
             if(m_deliveryQueue->Add(d_packet, 0) == false){
                 printf("Failed to add packet to delivery queue\n");
             }
-            m_rxAvailable += d_packet->GetSize();
+            // m_rxAvailable += d_packet->GetSize();
+            atomicAdd(&m_rxAvailable, d_packet->GetSize());
 
             m_server->HandleRead(this);
         }
         else{
-            printf("No space in receive buffer\n");
+            printf("No space in receive buffer, avail: %d, pkt size: %d, buf size: %d\n", m_rxAvailable, d_packet->GetSize(), m_rcvBufSize);
         }
     }
 
@@ -350,7 +351,8 @@ namespace ns3{
         }
 
         if(d_packet->GetSize() < maxSize){
-            m_rxAvailable -= d_packet->GetSize();
+            // m_rxAvailable -= d_packet->GetSize();
+            atomicSub(&m_rxAvailable, d_packet->GetSize());
             // m_deliveryQueue->pop_front();
             return d_packet;
         }

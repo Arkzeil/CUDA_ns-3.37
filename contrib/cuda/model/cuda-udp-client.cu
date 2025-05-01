@@ -114,10 +114,10 @@ namespace ns3 {
     {
         // NS_LOG_FUNCTION(this << size);
         m_size = size;
-        cudaFree(d_packetBuffer);
-        checkCudaErr();
-        cudaMallocManaged(&d_packetBuffer, m_size);
-        checkCudaErr();
+        // cudaFree(d_packetBuffer);
+        // checkCudaErr();
+        // cudaMallocManaged(&d_packetBuffer, m_size);
+        // checkCudaErr();
     }
 
     void
@@ -239,10 +239,10 @@ namespace ns3 {
 
     __host__ void CudaUdpClient::InitCudaResources() {
         cudaStreamCreate(&m_cudaStream);
-        cudaMalloc(&d_packetBuffer, m_size); // Allocate GPU memory for packets (MTU size).
-        if(d_packetBuffer == nullptr){
-            printf("Failed to allocate GPU memory for packet buffer\n");
-        }
+        // cudaMalloc(&d_packetBuffer, m_size); // Allocate GPU memory for packets (MTU size).
+        // if(d_packetBuffer == nullptr){
+        //     printf("Failed to allocate GPU memory for packet buffer\n");
+        // }
         checkCudaErr();
 
         cudaMallocManaged(&m_sent, sizeof(uint32_t));
@@ -256,12 +256,12 @@ namespace ns3 {
     }
 
     __host__ void CudaUdpClient::CleanupCudaResources() {
-        cudaFree(d_packetBuffer);
-        checkCudaErr();
+        // cudaFree(d_packetBuffer);
+        // checkCudaErr();
         cudaFree((void*)m_sent);
-        checkCudaErr();
+        // checkCudaErr();
         cudaFree((void*)m_totalTx);
-        checkCudaErr();
+        // checkCudaErr();
         cudaStreamDestroy(m_cudaStream);
         checkCudaErr(); 
 

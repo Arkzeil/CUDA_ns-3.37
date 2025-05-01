@@ -111,7 +111,7 @@ namespace ns3 {
         // printf("UdpL4: %p\n", this);
         socket->SetNode(m_node);
         socket->SetUdp(this);
-        socket->SetRcvBufSize(131072);
+        socket->SetRcvBufSize(262144);
         m_sockets.push_back(socket);
         return socket;
     }

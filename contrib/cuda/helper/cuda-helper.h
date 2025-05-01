@@ -241,23 +241,27 @@ namespace ns3
             __host__ __device__ bool Add(T1 key, T2 protocol){
                 if(m_size < m_capacity){
                     #ifdef __CUDA_ARCH__
-                        if ((*rear + 1) == *front) {
-                            return false; // Queue full
-                        }
-                        // only one thread can access this function at the same time (as socket usually bind to one application)
-                        // int t_rear = atomicAdd(rear, 1) & (m_capacity - 1);
-                        // pair_elements[t_rear] = CudaPair(key, protocol);
-                        int t_rear = *rear & (m_capacity - 1);
-                        (*rear)++;
+                        int rear_val, front_val;
+                        do {
+                            rear_val = *rear;
+                            front_val = *front;
+                    
+                            if (((rear_val + 1) & (m_capacity - 1)) == (front_val & (m_capacity - 1))) {
+                                return false; // Queue full
+                            }
+                    
+                        } while (atomicCAS(rear, rear_val, rear_val + 1) != rear_val);
+                    
+                        int t_rear = rear_val & (m_capacity - 1);
                         pair_elements[t_rear] = CudaPair(key, protocol);
+                        return true;
                     #else
                         if ((*rear + 1) == *front) {
                             return false; // Queue full
                         }
                         pair_elements[(*rear)++] = CudaPair(key, protocol);
+                        return true;
                     #endif
-
-                    return true;
                 }
                 return false;
             }
@@ -286,19 +290,23 @@ namespace ns3
 
             __host__ __device__ CudaPair<T1, T2> pop_front(){
                 #ifdef __CUDA_ARCH__
-                    if (*front == *rear) {
-                        return CudaPair<T1, T2>(nullptr, 0); // Queue empty
-                    }
-                    // int t_front = atomicAdd(front, 1) & (m_capacity - 1);
-                    // return pair_elements[t_front];
-                    int t_front = *front & (m_capacity - 1);
-                    (*front)++;
+                    int rear_val = *rear;
+                    int front_val;
+                
+                    do {
+                        front_val = *front;
+                        if (front_val == rear_val) {
+                            return CudaPair<T1, T2>(nullptr, 0); // Queue empty
+                        }
+                    } while (atomicCAS(front, front_val, front_val + 1) != front_val);
+                
+                    int t_front = front_val & (m_capacity - 1);
                     return pair_elements[t_front];
                 #else
                     if (*front == *rear) {
                         return CudaPair<T1, T2>(nullptr, 0); // Queue empty
                     }
-                    return pair_elements[front++];
+                    return pair_elements[(*front)++];
                 #endif
             }
 
