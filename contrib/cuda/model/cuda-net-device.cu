@@ -72,7 +72,7 @@ namespace ns3 {
   void CudaNetDevice::SetAddress(Address address) {
       m_address = Mac48Address::ConvertFrom(address);
       m_address.CopyTo(m_macAddress.addr);
-      printf("Set address at CudaNetDevice\n");
+      // printf("Set address at CudaNetDevice\n");
   }
 
   Address CudaNetDevice::GetAddress() const {
@@ -102,7 +102,7 @@ namespace ns3 {
 
   void CudaNetDevice::SetReceiveCallback(NetDevice::ReceiveCallback cb) {
       m_rxCallback = cb;
-      printf("Set receive callback at CudaNetDevice\n");
+      // printf("Set receive callback at CudaNetDevice\n");
   }
 
   __host__ void CudaNetDevice::AddBridgePort(Ptr<NetDevice> bridgePort){
@@ -179,7 +179,7 @@ namespace ns3 {
       m_channel = channel;
       m_channel->Attach(this);
       m_linkUp = true;
-      printf("Attached CudaNetDevice to channel\n");
+      // printf("Attached CudaNetDevice to channel\n");
       return true;
   }
 
@@ -288,7 +288,7 @@ namespace ns3 {
       // Register the callback function
       // m_rxCallback = device->m_rxCallback;
       // m_rxCB_enable = true;
-      printf("Registering callback at CudaNetDevice\n");
+      // printf("Registering callback at CudaNetDevice\n");
       // m_rxCallback = device->m_rxCallback;
       m_rxCB_enable = true;
       bridge = device;
@@ -390,6 +390,16 @@ namespace ns3 {
           TransmitStart(packet, nullptr, currentTs);
         }
       }
+      // if(m_txMachineState == READY){
+      //   TransmitStart(d_packet, nullptr, currentTs);
+      // }
+      // else{
+      //   if(EnqueuePacket(d_packet) == false){
+      //     printf("Enqueue failed\n");
+      //     // release the packet
+      //     d_packet->ready = 0;
+      //   }
+      // }
   }
 
   __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data, uint64_t *currentTs) {
@@ -399,8 +409,11 @@ namespace ns3 {
     int expected = READY;
     if (atomicCAS(&m_txMachineState, expected, BUSY) != READY) {
         // printf("Transmitter busy, dropping packet\n");
-        if(EnqueuePacket(packet) == false)
+        if(EnqueuePacket(packet) == false){
           printf("Enqueue failed\n");
+          // release the packet
+          packet->ready = 0;
+        }
         return false;
     }
     // assuming m_InterframeGap is 0

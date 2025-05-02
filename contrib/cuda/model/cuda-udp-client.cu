@@ -82,12 +82,12 @@ namespace ns3 {
         *m_totalTx = 0;
         testClient = this;
         
-        printf("CudaUdpClient initialized\n");
-        printf("Packet size: %d bytes\n", m_size);
-        printf("Interval: %f seconds\n", m_interval.GetSeconds());
-        printf("Max packets: %d\n", m_count);
-        // printf("Remote address: %s\n", Ipv4Address::ConvertFrom(m_peerAddress.Get()).Get());
-        printf("Remote port: %d\n", m_peerPort);
+        // printf("CudaUdpClient initialized\n");
+        // printf("Packet size: %d bytes\n", m_size);
+        // printf("Interval: %f seconds\n", m_interval.GetSeconds());
+        // printf("Max packets: %d\n", m_count);
+        // // printf("Remote address: %s\n", Ipv4Address::ConvertFrom(m_peerAddress.Get()).Get());
+        // printf("Remote port: %d\n", m_peerPort);
     }
 
     CudaUdpClient::~CudaUdpClient() {

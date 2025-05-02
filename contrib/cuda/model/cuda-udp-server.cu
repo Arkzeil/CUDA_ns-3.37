@@ -31,7 +31,7 @@ namespace ns3 {
 
     CudaUdpServer::CudaUdpServer(): m_cudaSocket(nullptr), m_lossCounter(0), m_received(0) {
         // Constructor
-        printf("CudaUdpServer initialized\n");
+        // printf("CudaUdpServer initialized\n");
     }
 
     CudaUdpServer::CudaUdpServer(uint16_t port): m_cudaSocket(nullptr), m_lossCounter(0), m_received(0) {
@@ -112,6 +112,16 @@ namespace ns3 {
             if(packet->GetSize() > 0){
                 // printf("CudaUdpServer Received packet: %d, total: %llu\n", packet->GetUid(), m_received + 1);
                 uint32_t receivedSize = packet->GetSize();
+                // Simulate realistic compute workload
+                // float data[64];
+                // for (int i = 0; i < 64; ++i) data[i] = receivedSize * 0.001f + i;
+                // for (int i = 0; i < 64; ++i) {
+                //     float x = data[i];
+                //     for (int j = 0; j < 50; ++j) {
+                //         x = sinf(x) + cosf(x);
+                //     }
+                //     data[i] = x;
+                // }
                 // this line might execute after destructor is executed --> Illegal memory access
                 atomicAdd((uint64_cu*)&m_received, 1);
                 // m_received++;

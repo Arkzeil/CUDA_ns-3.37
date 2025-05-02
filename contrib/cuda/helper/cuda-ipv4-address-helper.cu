@@ -103,7 +103,7 @@ namespace ns3{
             // interface->SetAddress(address);
             // m_address = (m_address + 1) & m_max;
         }
-        printf("retval.GetN() = %d\n", retval.GetN());
+        // printf("retval.GetN() = %d\n", retval.GetN());
         return retval;
     }
 

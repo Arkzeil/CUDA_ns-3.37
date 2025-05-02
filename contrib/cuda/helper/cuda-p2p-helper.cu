@@ -51,8 +51,8 @@ namespace ns3 {
         
         a->AddDevice(deviceA);
         b->AddDevice(deviceB);
-        printf("Node 0 address: %p, device 0 address: %p\n", GetPointer(a), deviceA);
-        printf("Node 1 address: %p, device 1 address: %p\n", GetPointer(b), deviceB);
+        // printf("Node 0 address: %p, device 0 address: %p\n", GetPointer(a), deviceA);
+        // printf("Node 1 address: %p, device 1 address: %p\n", GetPointer(b), deviceB);
 
         // deviceA->Attach(GetPointer(channel));
         // deviceB->Attach(GetPointer(channel));
@@ -64,7 +64,7 @@ namespace ns3 {
 
         lookaheadTable.addValue(a->GetId(), b->GetId(), delay.GetNanoSeconds());
         lookaheadTable.addValue(b->GetId(), a->GetId(), delay.GetNanoSeconds());
-        printf("Lookahead table: %lu\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
+        // printf("Lookahead table: %lu\n", lookaheadTable.getValue(a->GetId(), b->GetId()));
         // just use mtu as packet size first to calculate the lookahead
         deviceA->lookahead = delay.GetNanoSeconds() + (((float)(deviceA->GetMtu() * 8) / deviceA->GetBandwidth()) * 1e9);
         deviceB->lookahead = delay.GetNanoSeconds() + (((float)(deviceA->GetMtu() * 8) / deviceB->GetBandwidth()) * 1e9);

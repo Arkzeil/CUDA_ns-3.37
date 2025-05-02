@@ -7,13 +7,13 @@
 namespace ns3{
     CudaArpCache::CudaArpCache() : m_entryCount(0) {
         // Constructor
-        printf("CudaArpCache initialized\n");
+        // printf("CudaArpCache initialized\n");
         cudaMallocManaged(&m_entries, sizeof(Entry) * MAX_CACHE_SIZE);
     }
 
     CudaArpCache::~CudaArpCache() {
         // Destructor
-        printf("CudaArpCache destroyed\n");
+        // printf("CudaArpCache destroyed\n");
     }
 
     void CudaArpCache::AddEntry(uint32_t ip, MACAddress mac) {

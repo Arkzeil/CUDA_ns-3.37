@@ -25,7 +25,7 @@ namespace ns3 {
     }
     CudaBridgeNetDevice::CudaBridgeNetDevice() : m_linkUp(false), m_enableLearning(true) {
         // Constructor
-        printf("CudaBridgeNetDevice initialized\n");
+        // printf("CudaBridgeNetDevice initialized\n");
         cudaMallocManaged(&m_ports, sizeof(CudaNetDevice*) * MAX_MAC_ENTRIES);
         cudaMallocManaged(&m_channel, sizeof(CudaP2PChannel*) * MAX_MAC_ENTRIES);
         cudaMallocManaged(&m_learningTable, sizeof(LearnedState) * MAX_MAC_ENTRIES);
@@ -37,7 +37,7 @@ namespace ns3 {
         cudaFree(m_channel);
         cudaFree(m_learningTable);
         checkCudaErr();
-        printf("CudaBridgeNetDevice destroyed\n");
+        // printf("CudaBridgeNetDevice destroyed\n");
     }
     void CudaBridgeNetDevice::SetNode(Ptr<Node> node) {
         // Set the node

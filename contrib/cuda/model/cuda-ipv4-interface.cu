@@ -18,7 +18,7 @@ namespace ns3{
 
     CudaIpv4Interface::CudaIpv4Interface() : m_isUp(false) {
         // Constructor
-        printf("CudaIpv4Interface initialized\n");
+        // printf("CudaIpv4Interface initialized\n");
 
     }
 

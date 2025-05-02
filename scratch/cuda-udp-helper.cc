@@ -21,9 +21,9 @@ int main(int argc, char *argv[]) {
     // LogComponentEnable("BridgeNetDevice", LOG_LOGIC);
     // LogComponentEnableAll(LOG_LEVEL_INFO);
     
-    uint32_t numGroups = 6; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
+    uint32_t numGroups = 40; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
     uint32_t numPairs = 1; // Default number of client-server pair group
-    uint32_t numSwitches = 4; // Number of switches between each pairs
+    uint32_t numSwitches = 1; // Number of switches between each pairs
     
     // NodeContainer nodes;
     NodeContainer clients;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     
     for (uint32_t i = 0; i < numGroups; i++) {        
         pointToPoint.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
-        pointToPoint.SetChannelAttribute("Delay", StringValue("2000ms"));
+        pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
 
         for(uint32_t pair = 0; pair < numPairs; pair++){
             uint32_t pairIndex = i * numPairs + pair;

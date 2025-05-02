@@ -49,7 +49,7 @@ namespace ns3 {
             NodeID = m_link[0].m_src->GetNode()->GetId();
             dst_NodeID = m_link[0].m_dst->GetNode()->GetId();
 
-            printf("Device 0: %p, Device 1: %p\n", m_link[0].m_src, m_link[1].m_src);
+            // printf("Device 0: %p, Device 1: %p\n", m_link[0].m_src, m_link[1].m_src);
         }
     }
 

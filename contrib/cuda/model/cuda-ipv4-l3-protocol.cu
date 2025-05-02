@@ -77,7 +77,7 @@ namespace ns3 {
         // Add an IPv4 interface
         // m_ipv4Interfaces.push_back(interface);
         m_ipv4Interface[m_interfaceCount++] = interface;
-        printf("Interface count: %d\n", m_interfaceCount);
+        // printf("Interface count: %d\n", m_interfaceCount);
         return m_interfaceCount - 1;
     }
 
