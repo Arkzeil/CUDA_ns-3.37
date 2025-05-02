@@ -371,35 +371,35 @@ namespace ns3 {
         d_packet->AddTrailer(&fcs, sizeof(fcs));
       #endif
 
-      if(EnqueuePacket(d_packet) == false){
-        printf("Enqueue failed\n");
-        // release the packet
-        d_packet->ready = 0;
-      }
-      else{
-        if(m_txMachineState == READY){
-          // cudaFree((void*)data);
-          CudaPacket* packet = DequeuePacket();
-          if(packet == nullptr){
-            printf("dequeued packet is null\n");
-            return;
-          }
-
-          // cudaFree(d_packet->m_data);
-          
-          TransmitStart(packet, nullptr, currentTs);
-        }
-      }
-      // if(m_txMachineState == READY){
-      //   TransmitStart(d_packet, nullptr, currentTs);
+      // if(EnqueuePacket(d_packet) == false){
+      //   printf("Enqueue failed\n");
+      //   // release the packet
+      //   d_packet->ready = 0;
       // }
       // else{
-      //   if(EnqueuePacket(d_packet) == false){
-      //     printf("Enqueue failed\n");
-      //     // release the packet
-      //     d_packet->ready = 0;
+      //   if(m_txMachineState == READY){
+      //     // cudaFree((void*)data);
+      //     CudaPacket* packet = DequeuePacket();
+      //     if(packet == nullptr){
+      //       printf("dequeued packet is null\n");
+      //       return;
+      //     }
+
+      //     // cudaFree(d_packet->m_data);
+          
+      //     TransmitStart(packet, nullptr, currentTs);
       //   }
       // }
+      if(m_txMachineState == READY){
+        TransmitStart(d_packet, nullptr, currentTs);
+      }
+      else{
+        if(EnqueuePacket(d_packet) == false){
+          printf("Enqueue failed\n");
+          // release the packet
+          d_packet->ready = 0;
+        }
+      }
   }
 
   __device__ bool CudaNetDevice::TransmitStart(CudaPacket* packet, CUDA_cb_data* cb_data, uint64_t *currentTs) {
@@ -538,7 +538,7 @@ namespace ns3 {
 
     // printf("Dequeued packet on GPU, pos: %d\n", pos);
     if(d_packetQueue[pos] == nullptr || d_packetQueue[pos]->ready == 0){
-      printf("Dequeued packet is not ready\n");
+      // printf("Dequeued packet is not ready\n");
       return nullptr;
     }
 

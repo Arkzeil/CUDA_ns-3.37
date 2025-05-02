@@ -50,8 +50,8 @@ int main(int argc, char *argv[]) {
     uint32_t j = 1;
     
     for (uint32_t i = 0; i < numGroups; i++) {        
-        pointToPoint.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
-        pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
+        pointToPoint.SetDeviceAttribute("DataRate", StringValue("1000Mbps"));
+        pointToPoint.SetChannelAttribute("Delay", StringValue("1ms"));
 
         for(uint32_t pair = 0; pair < numPairs; pair++){
             uint32_t pairIndex = i * numPairs + pair;
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
             client.SetAttribute("PacketSize", UintegerValue(256));
             
             ApplicationContainer clientApp = client.Install(clients.Get(pairIndex));
-            clientApp.Start(Seconds(1.0));
+            clientApp.Start(Seconds(32.0));
             clientApp.Stop(Seconds(3002.0));
         }
     }

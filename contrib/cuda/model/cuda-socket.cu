@@ -322,7 +322,10 @@ namespace ns3{
 
         if(m_rxAvailable + d_packet->GetSize() <= m_rcvBufSize){
             if(m_deliveryQueue->Add(d_packet, 0) == false){
-                printf("Failed to add packet to delivery queue\n");
+                // printf("Failed to add packet to delivery queue\n");
+                // release the packet
+                d_packet->ready = 0;
+                return;
             }
             // m_rxAvailable += d_packet->GetSize();
             atomicAdd(&m_rxAvailable, d_packet->GetSize());
@@ -346,7 +349,7 @@ namespace ns3{
         *from = pair.second;
 
         if(d_packet == nullptr){
-            printf("CudaSocket::CudaRecv, Packet is null\n");
+            // printf("CudaSocket::CudaRecv, Packet is null\n");
             return nullptr;
         }
 
