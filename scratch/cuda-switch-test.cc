@@ -50,9 +50,9 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numGroups = 6; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
+  uint32_t numGroups = 40; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
   uint32_t numPairs = 1; // Default number of client-server pair group
-  uint32_t numSwitches = 4; // Number of switches between each pairs
+  uint32_t numSwitches = 2; // Number of switches between each pairs
 
   NodeContainer clients;
   NodeContainer servers;
@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
       app->SetSendInterval(Seconds(1));
       clients.Get(pairIndex)->AddApplication(app);
       app->SetStartTime(Seconds(1.0));
-      app->SetStopTime(Seconds(3002.0));
+      app->SetStopTime(Seconds(12.0));
 
       // app1 = app;
 

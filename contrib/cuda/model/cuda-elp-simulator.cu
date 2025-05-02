@@ -638,7 +638,7 @@ namespace ns3 {
         // while(h_curHostBuf[h_insertIndex].valid)
         //     h_insertIndex++;
 
-        int index = warp_index[type] * WARP_SIZE + (warp_thread_index[type]++);
+        int index = h_insertIndex;
         h_curHostBuf[index] = DeviceEvent{impl, ts, context, UID, type, lookahead, true, payload, nullptr};
         // what if the event amount is not even? then there might be not enough space for the next event
         if(warp_thread_index[type] == WARP_SIZE){
@@ -801,7 +801,7 @@ namespace ns3 {
 
         // printf("next ts: %lu, current ts: %lu, type: %d\n", next.key.m_ts, m_currentTs);
         HostEvent* h_ev = (HostEvent*)next.impl;
-        // printf("event type: %d, event ts: %lu, current ts: %lu\n", h_ev->type, next.key.m_ts, m_currentTs);
+        printf("event type: %d, event ts: %lu, current ts: %lu, context: %d\n", h_ev->type, next.key.m_ts, m_currentTs, next.key.m_context);
 
         // NS_ASSERT(next.key.m_ts >= m_currentTs);
         if(next.key.m_ts > m_currentTs)
@@ -809,19 +809,21 @@ namespace ns3 {
         m_currentContext = next.key.m_context;
 
         // printf("current ts: %lu\n", m_currentTs);
-
+        h_insertIndex = warp_index[h_ev->type] * WARP_SIZE + (warp_thread_index[h_ev->type]++);
+        // change the current event queue if condition is met
+        if(h_insertIndex >= DEVICE_QUEUE_LENGTH){
+            // printf("Host buffer ready: %p\n", h_curHostBufRdy);
+            ChangeHostQueue();
+            h_insertIndex = warp_index[h_ev->type] * WARP_SIZE + (warp_thread_index[h_ev->type]++);
+            // cur_buffer_safe_ts = UINT64_MAX;
+        }
         
         h_insert_sort(h_ev->obj, next.key.m_ts, next.key.m_context, next.key.m_uid, h_ev->type, h_ev->lookahead, h_ev->payload);
         // printf("-----------------h_ev type: %d-----------------\n", h_ev->type);
         // printf("h_ev obj: %p\n", h_ev->obj);
         // printf("h_ev address: %p\n", h_ev);
         delete h_ev;
-        // change the current event queue if condition is met
-        if(h_insertIndex == DEVICE_QUEUE_LENGTH){
-            // printf("Host buffer ready: %p\n", h_curHostBufRdy);
-            ChangeHostQueue();
-            // cur_buffer_safe_ts = UINT64_MAX;
-        }
+
     }
 
     __host__ __device__ void CudaELPSimulator::ChangeDevQueue(){
@@ -852,7 +854,7 @@ namespace ns3 {
         *h_curHostBufRdy = 1;
         // SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_curHostBufRdy, d_curDevBufRdy, h_safe_ts);
         SingleBufKernel<<<mp, TPB, 0, streamK>>>(this, h_curHostBuf, h_safe_ts);
-        // printf("kernel launched\n");
+        printf("kernel launched\n");
         cudaEventRecord(eventK, streamK);
         
         // d_curHostBufRdy = h_curHostBufRdy;

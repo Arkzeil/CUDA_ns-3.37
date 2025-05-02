@@ -524,7 +524,7 @@ namespace ns3 {
     // }
 
     // printf("Dequeued packet on GPU, pos: %d\n", pos);
-    if(d_packetQueue[pos]->ready == 0){
+    if(d_packetQueue[pos] == nullptr || d_packetQueue[pos]->ready == 0){
       printf("Dequeued packet is not ready\n");
       return nullptr;
     }
