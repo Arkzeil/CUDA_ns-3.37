@@ -22,8 +22,8 @@ int main(int argc, char *argv[]) {
     // LogComponentEnableAll(LOG_LEVEL_INFO);
     
     uint32_t numGroups = 250; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
-    uint32_t numPairs = 1; // Default number of client-server pair group
-    uint32_t numSwitches = 2; // Number of switches between each pairs
+    uint32_t numPairs = 2; // Default number of client-server pair group
+    uint32_t numSwitches = 5; // Number of switches between each pairs
     
     // NodeContainer nodes;
     NodeContainer clients;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     
     for (uint32_t i = 0; i < numGroups; i++) {        
         pointToPoint.SetDeviceAttribute("DataRate", StringValue("1000Mbps"));
-        pointToPoint.SetChannelAttribute("Delay", StringValue("20ms"));
+        pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
 
         for(uint32_t pair = 0; pair < numPairs; pair++){
             uint32_t pairIndex = i * numPairs + pair;
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
             
             ApplicationContainer clientApp = client.Install(clients.Get(pairIndex));
             clientApp.Start(Seconds(1.0));
-            clientApp.Stop(Seconds(32.0));
+            clientApp.Stop(Seconds(31.0));
         }
     }
 

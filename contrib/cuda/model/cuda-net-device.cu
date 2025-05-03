@@ -492,7 +492,8 @@ namespace ns3 {
         front = *d_queueFront;
 
         // Check if queue is full: one slot always left empty to distinguish full vs empty
-        if (((rear + 1) & (m_queueSize - 1)) == (front & (m_queueSize - 1))) {
+        // if (((rear + 1) & (m_queueSize - 1)) == (front & (m_queueSize - 1))) {
+        if((unsigned int)(rear - front) >= m_queueSize){
             printf("Queue is full, dropping packet\n");
             return false;
         }
@@ -521,7 +522,7 @@ namespace ns3 {
         rear = *d_queueRear;
         front = *d_queueFront;
 
-        if ((front & (m_queueSize - 1)) == (rear & (m_queueSize - 1))) {
+        if (rear - front <= 0) {
             return nullptr; // Queue is empty
         }
 
@@ -545,7 +546,7 @@ namespace ns3 {
     CudaPacket* packet = d_packetQueue[pos]; // Access packet
     d_packetQueue[pos] = nullptr; // Clear the slot in the queue
 
-    return d_packetQueue[pos];
+    return packet;
   }
 
   CudaP2PChannel *CudaNetDevice::GetChannel(){

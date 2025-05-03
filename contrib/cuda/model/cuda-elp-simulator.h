@@ -16,7 +16,7 @@
 #include <vector>
 #include <unordered_map>
 
-#define DEVICE_QUEUE_LENGTH 2048
+#define DEVICE_QUEUE_LENGTH 4096
 #define EVENT_KINDS 4
 #define MAX_NEW_EVENTS 4
 #define DEVICE_EV_ID_OFFSET 1000000

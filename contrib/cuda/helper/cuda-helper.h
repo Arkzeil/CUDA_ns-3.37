@@ -246,7 +246,7 @@ namespace ns3
                             rear_val = *rear;
                             front_val = *front;
                     
-                            if (((rear_val + 1) & (m_capacity - 1)) == (front_val & (m_capacity - 1))) {
+                            if ((unsigned int)(rear_val - front_val) >= m_capacity) {
                                 return false; // Queue full
                             }
                     
@@ -295,7 +295,7 @@ namespace ns3
                 
                     do {
                         front_val = *front;
-                        if (front_val == rear_val) {
+                        if ((unsigned int)(rear_val - front_val) == 0) {
                             return CudaPair<T1, T2>(nullptr, 0); // Queue empty
                         }
                     } while (atomicCAS(front, front_val, front_val + 1) != front_val);
