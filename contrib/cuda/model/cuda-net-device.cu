@@ -538,9 +538,12 @@ namespace ns3 {
 
     // printf("Dequeued packet on GPU, pos: %d\n", pos);
     if(d_packetQueue[pos] == nullptr || d_packetQueue[pos]->ready == 0){
-      // printf("Dequeued packet is not ready\n");
+      printf("Dequeued packet is not ready, pos: %d\n", pos);
       return nullptr;
     }
+
+    CudaPacket* packet = d_packetQueue[pos]; // Access packet
+    d_packetQueue[pos] = nullptr; // Clear the slot in the queue
 
     return d_packetQueue[pos];
   }
