@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
   // Refactored MR-FFT topology with 2-hop structure
 
     uint32_t numGroups = 100;
-    uint32_t numPairsPerGroup = 4;
+    uint32_t numPairsPerGroup = 2;
     uint32_t edgeSwitches = numGroups * 2; // Two edge switches per group (one for clients, one for servers)
     uint32_t coreSwitches = 16; // Shared across groups
     
@@ -82,6 +82,13 @@ int main(int argc, char* argv[]) {
         uint32_t serverEdgeIndex = 2 * i + 1;
         Ptr<Node> clientEdge = edgeSwitchNodes.Get(clientEdgeIndex);
         Ptr<Node> serverEdge = edgeSwitchNodes.Get(serverEdgeIndex);
+
+        NetDeviceContainer clientBridgePorts;
+        NetDeviceContainer serverBridgePorts;
+        NetDeviceContainer ClientBridgeDsts;
+        NetDeviceContainer ServerBridgeDsts;
+        NetDeviceContainer Dsts;
+        
         
         for (uint32_t pair = 0; pair < numPairsPerGroup; ++pair) {
             uint32_t pairIndex = i * numPairsPerGroup + pair;
@@ -98,22 +105,24 @@ int main(int argc, char* argv[]) {
             NetDeviceContainer downLink = cudaP2P.Install(coreSwitch, serverEdge);
         
             // Bridge client edge switch
-            NetDeviceContainer clientBridgePorts;
+            
             clientBridgePorts.Add(clientLink.Get(1));
             clientBridgePorts.Add(upLink.Get(0));
-            NetDeviceContainer clientBridge = bridge.Install(clientEdge, clientBridgePorts);
+            ClientBridgeDsts.Add(upLink.Get(0));
         
             // Bridge server edge switch
-            NetDeviceContainer serverBridgePorts;
+            
             serverBridgePorts.Add(serverLink.Get(1));
             serverBridgePorts.Add(downLink.Get(1));
-            NetDeviceContainer serverBridge = bridge.Install(serverEdge, serverBridgePorts);
-        
+            ServerBridgeDsts.Add(serverLink.Get(1));
+            
+            Dsts.Add(serverLink.Get(0));
             // Bridge core switch
             NetDeviceContainer coreBridgePorts;
             coreBridgePorts.Add(upLink.Get(1));
             coreBridgePorts.Add(downLink.Get(0));
             NetDeviceContainer coreBridge = bridge.Install(coreSwitch, coreBridgePorts);
+            ((CudaBridgeNetDevice*)GetPointer(coreBridge.Get(0)))->Learn(((CudaNetDevice*)GetPointer(serverLink.Get(0)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(downLink.Get(0))));
         
             // Save endpoints for IP config
             NetDeviceContainer endpoints;
@@ -150,6 +159,13 @@ int main(int argc, char* argv[]) {
             servers.Get(pairIndex)->AddApplication(server);
             server->SetStartTime(Seconds(0.0));
             server->SetStopTime(Seconds(5000.0));
+        }
+        NetDeviceContainer clientBridge = bridge.Install(clientEdge, clientBridgePorts);
+        NetDeviceContainer serverBridge = bridge.Install(serverEdge, serverBridgePorts);
+        for(uint32_t pair = 0; pair < numPairsPerGroup; pair++){
+          // manually set the MAC address of the bridge ports
+          ((CudaBridgeNetDevice*)GetPointer(clientBridge.Get(0)))->Learn(((CudaNetDevice*)GetPointer(Dsts.Get(pair)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(ClientBridgeDsts.Get(pair))));
+          ((CudaBridgeNetDevice*)GetPointer(serverBridge.Get(0)))->Learn(((CudaNetDevice*)GetPointer(Dsts.Get(pair)))->GetMacAddress(), GetPointer(DynamicCast<CudaNetDevice>(ServerBridgeDsts.Get(pair))));
         }
     }
       

@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
                     StringValue("ns3::CudaELPSimulator"));
   // GlobalValue::Bind("SchedulerImplementationType",
   //                   StringValue("ns3::MapScheduler"));
-  uint32_t numGroups = 1; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
+  uint32_t numGroups = 100; // Default number of test groups (multiple client-server pairs with shared intermediate switches)
   uint32_t numPairs = 2; // Default number of client-server pair group
   uint32_t numSwitches = 3; // Number of switches between each pairs
 

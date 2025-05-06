@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     typedef std::vector<Ptr<Node>> NodeList;
 
     uint32_t numGroups = 100;
-    uint32_t numPairs = 4;
+    uint32_t numPairs = 2;
     uint32_t numCoreSwitches = 16; // Shared across all groups
 
     NodeContainer clients;
@@ -57,6 +57,12 @@ int main(int argc, char *argv[]) {
         edgeClientSwitches.push_back(clientSwitch);
         edgeServerSwitches.push_back(serverSwitch);
 
+        NetDeviceContainer clientPorts;
+        NetDeviceContainer serverPorts;
+        NetDeviceContainer ClientBridgeDsts;
+        NetDeviceContainer ServerBridgeDsts;
+        NetDeviceContainer Dsts;
+
         for (uint32_t pair = 0; pair < numPairs; pair++) {
             uint32_t pairIndex = i * numPairs + pair;
             NetDeviceContainer link1 = pointToPoint.Install(clients.Get(pairIndex), clientSwitch);
@@ -68,16 +74,18 @@ int main(int argc, char *argv[]) {
             NetDeviceContainer linkDown = pointToPoint.Install(core, serverSwitch);
 
             // Bridge client edge switch
-            NetDeviceContainer clientPorts;
+            
             clientPorts.Add(link1.Get(1));
             clientPorts.Add(linkUp.Get(0));
-            NetDeviceContainer bridgeDev1 = bridge.Install(clientSwitch, clientPorts);
+            ClientBridgeDsts.Add(linkUp.Get(0));
 
             // Bridge server edge switch
-            NetDeviceContainer serverPorts;
+            
             serverPorts.Add(link2.Get(1));
             serverPorts.Add(linkDown.Get(1));
-            NetDeviceContainer bridgeDev2 = bridge.Install(serverSwitch, serverPorts);
+            ServerBridgeDsts.Add(link2.Get(1));
+
+            Dsts.Add(link2.Get(0));
 
             // Bridge core switch
             NetDeviceContainer corePorts;
@@ -129,6 +137,13 @@ int main(int argc, char *argv[]) {
             clientApp.Start(Seconds(1.0));
             clientApp.Stop(Seconds(31.0));
         }
+        NetDeviceContainer bridgeDev1 = bridge.Install(clientSwitch, clientPorts);
+        NetDeviceContainer bridgeDev2 = bridge.Install(serverSwitch, serverPorts);
+        for(int pair = 0; pair < numPairs; pair++) {
+            // manually make bridge learn the destination MAC address
+            DynamicCast<BridgeNetDevice>(bridgeDev1.Get(0))->Learn(Mac48Address::ConvertFrom(Dsts.Get(pair)->GetAddress()), DynamicCast<PointToPointNetDevice>(ClientBridgeDsts.Get(pair)));
+            DynamicCast<BridgeNetDevice>(bridgeDev2.Get(0))->Learn(Mac48Address::ConvertFrom(Dsts.Get(pair)->GetAddress()), DynamicCast<PointToPointNetDevice>(ServerBridgeDsts.Get(pair)));
+        }    
     }
 
 
